@@ -1,0 +1,49 @@
+Table User {
+  UserID int [pk]
+  Username varchar
+  Role enum
+  CreatedAt timestamp
+}
+
+Table Event {
+  EventID int [pk]
+  DJUserID int [ref: > User.UserID]
+  Name varchar
+  Slug varchar
+  CreatedAt timestamp
+  IsActive boolean
+}
+
+Table Request {
+  RequestID int [pk]
+  UserID int [ref: > User.UserID]
+  EventID int [ref: > Event.EventID]
+  SongName varchar
+  ArtistName varchar
+  Status enum
+  CreatedAt timestamp
+}
+
+Table Vote {
+  VoteID int [pk]
+  RequestID int [ref: > Request.RequestID]
+  UserID int [ref: > User.UserID]
+  CreatedAt timestamp
+}
+
+Table Session {
+  SessionID int [pk]
+  UserID int [ref: > User.UserID]
+  EventID int [ref: > Event.EventID]
+  ClientIP varchar
+  LastSeen timestamp
+  RequestCount int
+}
+
+Table TrackMetadata {
+  TrackID int [pk]
+  SpotifyID varchar
+  YoutubeID varchar
+  Duration int
+  AlbumArtURL varchar
+}
