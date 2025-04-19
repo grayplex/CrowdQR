@@ -15,10 +15,47 @@ builder.Services.AddDbContext<CrowdQRContext>(options =>
     options.UseNpgsql(connectionString);
 });
 
+// Add controllers and other services
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Check for --wait-for-db argument - doing this AFTER app.Build() to avoid BuildServiceProvider issue
+if (args.Contains("--wait-for-db"))
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<CrowdQRContext>();
+
+    // Try to connect to the database
+    bool connected = false;
+    int retries = 0;
+    const int maxRetries = 10;
+
+    while (!connected && retries < maxRetries)
+    {
+        try
+        {
+            Console.WriteLine("Attempting to connect to the database...");
+            connected = dbContext.Database.CanConnect();
+            if (connected)
+            {
+                Console.WriteLine("Successfully connected to the database.");
+                Environment.Exit(0);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Database connection failed: {ex.Message}");
+        }
+
+        retries++;
+        Thread.Sleep(1000);
+    }
+
+    Environment.Exit(1);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -40,6 +77,9 @@ if (app.Environment.IsDevelopment())
         logger.LogError(ex, "An error occurred while migrating or seeding the database.");
     }
 }
+
+app.UseHttpsRedirection();
+app.MapControllers();
 
 app.Run();
 

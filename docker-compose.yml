@@ -11,15 +11,15 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_NAME=${DB_NAME:-crowdqr}
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
   
   db:
-    image: postgres:15
+    image: postgres:17
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
