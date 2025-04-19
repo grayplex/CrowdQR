@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 // Add environment variables configuration source
 builder.Configuration.AddEnvironmentVariables();
 
@@ -26,12 +25,26 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    // Apply migrations and seed data in development environment
+    using var scope = app.Services.CreateScope();
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<CrowdQRContext>();
+        DbSeeder.SeedAsync(context).Wait();
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+    }
 }
 
 app.Run();
 
 // Helper method to build connection string from individual environment variables
-string BuildConnectionString(IConfiguration configuration)
+static string BuildConnectionString(IConfiguration configuration)
 {
     var host = configuration["DB_HOST"] ?? "localhost";
     var port = configuration["DB_PORT"] ?? "5432";
