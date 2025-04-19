@@ -41,8 +41,7 @@ Empower independent DJs and small venue performers to create more interactive, e
 | **Authentication** | Session-based or JWT |
 | **Caching/Rate Limiting** | Redis (optional) |
 | **Containerization** | Docker + Docker Compose |
-| **CI/CD (optional)** | GitHub Actions (for build/test)
-
+| **CI/CD (optional)** | GitHub Actions (for build/test) |
 ---
 
 ## 🗺 Roadmap
