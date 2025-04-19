@@ -51,7 +51,7 @@ if (args.Contains("--wait-for-db"))
         }
 
         retries++;
-        Thread.Sleep(1000);
+        await Task.Delay(1000);
     }
 
     Environment.Exit(1);
