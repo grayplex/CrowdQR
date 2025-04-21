@@ -24,9 +24,20 @@ public class VoteController(CrowdQRContext context, ILogger<VoteController> logg
     /// </summary>
     /// <returns>A list of all votes.</returns>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Vote>>> GetVotes()
+    public async Task<ActionResult<IEnumerable<object>>> GetVotes()
     {
-        return await _context.Votes.ToListAsync();
+        var votes = await _context.Votes.ToListAsync();
+
+        // Convert to plain objects without reference tracking
+        var plainVotes = votes.Select(v => new
+        {
+            v.VoteId,
+            v.RequestId,
+            v.UserId,
+            v.CreatedAt
+        }).ToList();
+
+        return Ok(plainVotes);
     }
 
     // GET: api/vote/5
@@ -36,7 +47,7 @@ public class VoteController(CrowdQRContext context, ILogger<VoteController> logg
     /// <param name="id">The ID of the vote to retrieve.</param>
     /// <returns>The requested vote or a 404 Not Found response.</returns>
     [HttpGet("{id}")]
-    public async Task<ActionResult<Vote>> GetVote(int id)
+    public async Task<ActionResult<object>> GetVote(int id)
     {
         var vote = await _context.Votes.FindAsync(id);
 
@@ -45,7 +56,16 @@ public class VoteController(CrowdQRContext context, ILogger<VoteController> logg
             return NotFound();
         }
 
-        return vote;
+        // Convert to plain object
+        var plainVote = new
+        {
+            vote.VoteId,
+            vote.RequestId,
+            vote.UserId,
+            vote.CreatedAt
+        };
+
+        return plainVote;
     }
 
     // GET: api/vote/request/5
@@ -55,11 +75,22 @@ public class VoteController(CrowdQRContext context, ILogger<VoteController> logg
     /// <param name="requestId">The ID of the request.</param>
     /// <returns>A list of votes for the specified request.</returns>
     [HttpGet("request/{requestId}")]
-    public async Task<ActionResult<IEnumerable<Vote>>> GetVotesByRequest(int requestId)
+    public async Task<ActionResult<IEnumerable<object>>> GetVotesByRequest(int requestId)
     {
-        return await _context.Votes
+        var votes = await _context.Votes
             .Where(v => v.RequestId == requestId)
             .ToListAsync();
+
+        // Convert to plain objects without reference tracking
+        var plainVotes = votes.Select(v => new
+        {
+            v.VoteId,
+            v.RequestId,
+            v.UserId,
+            v.CreatedAt
+        }).ToList();
+
+        return Ok(plainVotes);
     }
 
     // POST: api/vote

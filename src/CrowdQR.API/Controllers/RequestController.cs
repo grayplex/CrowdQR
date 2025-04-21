@@ -25,9 +25,23 @@ public class RequestController(CrowdQRContext context, ILogger<RequestController
     /// </summary>
     /// <returns>A list of all requests.</returns>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Request>>> GetRequests()
+    public async Task<ActionResult<IEnumerable<object>>> GetRequests()
     {
-        return await _context.Requests.ToListAsync();
+        var requests = await _context.Requests.ToListAsync();
+
+        // Format the response to avoid circular references
+        var formattedRequests = requests.Select(r => new
+        {
+            r.RequestId,
+            r.UserId,
+            r.EventId,
+            r.SongName,
+            r.ArtistName,
+            r.Status,
+            r.CreatedAt
+        }).ToList();
+
+        return Ok(formattedRequests);
     }
 
     // GET: api/request/5
@@ -37,7 +51,7 @@ public class RequestController(CrowdQRContext context, ILogger<RequestController
     /// <param name="id">The ID of the request to be retrieved.</param>
     /// <returns>The requested request or a 404 Not Found response.</returns>
     [HttpGet("{id}")]
-    public async Task<ActionResult<Request>> GetRequest(int id)
+    public async Task<ActionResult<object>> GetRequest(int id)
     {
         var request = await _context.Requests
             .Include(r => r.Votes)
@@ -48,7 +62,21 @@ public class RequestController(CrowdQRContext context, ILogger<RequestController
             return NotFound();
         }
 
-        return request;
+        // Create a version of the request with vote count but without circular references
+        var formattedRequest = new
+        {
+            request.RequestId,
+            request.UserId,
+            request.EventId,
+            request.SongName,
+            request.ArtistName,
+            request.Status,
+            request.CreatedAt,
+            VoteCount = request.Votes.Count,
+            Votes = request.Votes.Select(v => new { v.VoteId, v.UserId, v.CreatedAt }).ToList()
+        };
+
+        return formattedRequest;
     }
 
     // GET: api/request/event/5
@@ -58,12 +86,28 @@ public class RequestController(CrowdQRContext context, ILogger<RequestController
     /// <param name="eventId">The ID of the event.</param>
     /// <returns>A list of requests for the specified event.</returns>
     [HttpGet("event/{eventId}")]
-    public async Task<ActionResult<IEnumerable<Request>>> GetRequestsByEvent(int eventId)
+    public async Task<ActionResult<IEnumerable<object>>> GetRequestsByEvent(int eventId)
     {
-        return await _context.Requests
+        var requests = await _context.Requests
             .Where(r => r.EventId == eventId)
             .Include(r => r.Votes)
             .ToListAsync();
+
+        // Create a version of the requests with vote counts but without circular references
+        var formattedRequests = requests.Select(r => new
+        {
+            r.RequestId,
+            r.UserId,
+            r.EventId,
+            r.SongName,
+            r.ArtistName,
+            r.Status,
+            r.CreatedAt,
+            VoteCount = r.Votes.Count,
+            Votes = r.Votes.Select(v => new { v.VoteId, v.UserId, v.CreatedAt }).ToList()
+        }).ToList(); // Make sure to call ToList() to materialize the query
+
+        return Ok(formattedRequests);
     }
 
     // POST: api/request
