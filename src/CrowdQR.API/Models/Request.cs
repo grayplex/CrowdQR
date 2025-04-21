@@ -7,7 +7,6 @@ namespace CrowdQR.Api.Models;
 /// <summary>
 /// Represents a song request made by an audience member.
 /// </summary>
-
 public class Request
 {
     /// <summary>

@@ -6,7 +6,6 @@ namespace CrowdQR.Api.Models;
 /// <summary>
 /// Represents a DJ event or set.
 /// </summary>
-
 public class Event
 {
     /// <summary>
