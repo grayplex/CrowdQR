@@ -1,0 +1,321 @@
+﻿@page "{eventId?}"
+@model CrowdQR.Web.Pages.Admin.DashboardModel
+@{
+    ViewData["Title"] = "DJ Dashboard";
+    Layout = "_Layout";
+}
+
+<div class="container-fluid mt-4">
+    <!-- Event Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="display-6">
+                DJ Dashboard: @Model.EventName
+                <span class="badge bg-primary ms-2">@Model.EventSlug</span>
+            </h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group" role="group">
+                <a href="/qr/@Model.EventSlug" class="btn btn-outline-primary" target="_blank">
+                    <i class="bi bi-qr-code"></i> QR Code
+                </a>
+                <a href="/event/@Model.EventSlug" class="btn btn-outline-secondary" target="_blank">
+                    <i class="bi bi-eye"></i> View Event
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats and Search Row -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                <div class="col">
+                    <div class="card text-white bg-primary">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="bi bi-music-note"></i> Pending Requests</h5>
+                            <p class="card-text display-6">@Model.PendingRequests.Count</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card text-white bg-success">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="bi bi-check2-circle"></i> Approved</h5>
+                            <p class="card-text display-6">@Model.ApprovedRequests.Count</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card text-white bg-info">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="bi bi-people"></i> Active Users</h5>
+                            <p class="card-text display-6">@Model.ActiveUsers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Search Requests</h5>
+                    <form method="get" class="d-flex">
+                        <input type="hidden" name="eventId" value="@Model.EventId" />
+                        <input type="hidden" name="tab" value="@Model.Tab" />
+                        <input type="text" name="searchTerm" class="form-control me-2" placeholder="Song, artist, or requester..." value="@Model.SearchTerm">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link @(Model.Tab == "pending" ? "active" : "")" 
+               href="?eventId=@Model.EventId&tab=pending&searchTerm=@Model.SearchTerm">
+                Pending
+                <span class="badge bg-primary ms-1">@Model.PendingRequests.Count</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(Model.Tab == "approved" ? "active" : "")" 
+               href="?eventId=@Model.EventId&tab=approved&searchTerm=@Model.SearchTerm">
+                Approved
+                <span class="badge bg-success ms-1">@Model.ApprovedRequests.Count</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(Model.Tab == "rejected" ? "active" : "")" 
+               href="?eventId=@Model.EventId&tab=rejected&searchTerm=@Model.SearchTerm">
+                Rejected
+                <span class="badge bg-secondary ms-1">@Model.RejectedRequests.Count</span>
+            </a>
+        </li>
+    </ul>
+
+    <!-- Request Tables -->
+    @if (Model.Tab == "pending")
+    {
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="h5 mb-0">Pending Requests</h3>
+                <div>
+                    <button class="btn btn-sm btn-outline-success" disabled>
+                        <i class="bi bi-check-all"></i> Approve All
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Song</th>
+                            <th>Artist</th>
+                            <th>Requester</th>
+                            <th>Votes</th>
+                            <th>Time</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.PendingRequests.Any())
+                        {
+                            @foreach (var request in Model.PendingRequests.OrderByDescending(r => r.VoteCount))
+                            {
+                                <tr>
+                                    <td class="fw-bold">@request.SongName</td>
+                                    <td>@request.ArtistName</td>
+                                    <td>@request.Requester</td>
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            <i class="bi bi-hand-thumbs-up"></i> @request.VoteCount
+                                        </span>
+                                    </td>
+                                    <td>@request.RequestTime.ToString("HH:mm")</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-success">
+                                                <i class="bi bi-check"></i> Approve
+                                            </button>
+                                            <button class="btn btn-sm btn-secondary">
+                                                <i class="bi bi-x"></i> Reject
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-4">No pending requests</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else if (Model.Tab == "approved")
+    {
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="h5 mb-0">Approved Requests</h3>
+                <div>
+                    <button class="btn btn-sm btn-outline-danger" disabled>
+                        <i class="bi bi-trash"></i> Clear All
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Song</th>
+                            <th>Artist</th>
+                            <th>Requester</th>
+                            <th>Votes</th>
+                            <th>Requested</th>
+                            <th>Approved</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.ApprovedRequests.Any())
+                        {
+                            @foreach (var request in Model.ApprovedRequests.OrderByDescending(r => r.ActionTime))
+                            {
+                                <tr class="table-success table-opacity-25">
+                                    <td class="fw-bold">@request.SongName</td>
+                                    <td>@request.ArtistName</td>
+                                    <td>@request.Requester</td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-hand-thumbs-up"></i> @request.VoteCount
+                                        </span>
+                                    </td>
+                                    <td>@request.RequestTime.ToString("HH:mm")</td>
+                                    <td>@(request.ActionTime?.ToString("HH:mm") ?? "-")</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Move to Pending
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-4">No approved requests</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else if (Model.Tab == "rejected")
+    {
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="h5 mb-0">Rejected Requests</h3>
+                <div>
+                    <button class="btn btn-sm btn-outline-danger" disabled>
+                        <i class="bi bi-trash"></i> Clear All
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Song</th>
+                            <th>Artist</th>
+                            <th>Requester</th>
+                            <th>Votes</th>
+                            <th>Requested</th>
+                            <th>Rejected</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.RejectedRequests.Any())
+                        {
+                            @foreach (var request in Model.RejectedRequests.OrderByDescending(r => r.ActionTime))
+                            {
+                                <tr class="table-secondary">
+                                    <td class="fw-bold">@request.SongName</td>
+                                    <td>@request.ArtistName</td>
+                                    <td>@request.Requester</td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-hand-thumbs-up"></i> @request.VoteCount
+                                        </span>
+                                    </td>
+                                    <td>@request.RequestTime.ToString("HH:mm")</td>
+                                    <td>@(request.ActionTime?.ToString("HH:mm") ?? "-")</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Move to Pending
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-4">No rejected requests</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <!-- Real-time Update Indicator -->
+    <div class="mt-4 text-end">
+        <span class="badge bg-success">
+            <i class="bi bi-broadcast"></i> Live Updates Active
+        </span>
+        <small class="text-muted ms-2">Last updated: @DateTime.Now.ToString("HH:mm:ss")</small>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // This would be replaced with actual SignalR code in a real implementation
+        console.log("DJ Dashboard loaded");
+        
+        // For demo purposes - simulate a notification
+        setTimeout(() => {
+            const notificationSound = new Audio("/audio/notification.mp3");
+            // notificationSound.play(); // Uncomment to enable sound
+            
+            const toast = new bootstrap.Toast(document.getElementById('newRequestToast'));
+            toast.show();
+        }, 5000);
+    </script>
+    
+    <!-- Toast Notification for new requests -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="newRequestToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-primary text-white">
+                <i class="bi bi-music-note me-2"></i>
+                <strong class="me-auto">New Request</strong>
+                <small>Just now</small>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                <strong>The Hustle</strong> by Van McCoy was just requested by <strong>rhythm_fanatic</strong>
+            </div>
+        </div>
+    </div>
+}
