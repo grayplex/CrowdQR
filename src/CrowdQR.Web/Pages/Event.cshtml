@@ -1,0 +1,142 @@
+﻿@page "{slug?}"
+@model EventModel
+@{
+    ViewData["Title"] = string.IsNullOrEmpty(Model.EventName) ? "Event" : Model.EventName;
+}
+
+<div class="container mt-4">
+    @if (string.IsNullOrEmpty(Model.Slug))
+    {
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h1 class="h4 mb-0">CrowdQR</h1>
+                    </div>
+                    <div class="card-body">
+                        <p class="lead mb-4">Enter an event code to join and start requesting songs!</p>
+                        <form method="get">
+                            <div class="form-group mb-3">
+                                <label for="slug" class="form-label">Event Code</label>
+                                <input type="text" class="form-control" id="slug" name="slug" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Join Event</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-12 mb-4">
+                <h1 class="h3 mb-0">@Model.EventName</h1>
+                <p class="text-muted">Event Code: @Model.Slug</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Request Form -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="h5 mb-0">Request a Song</h2>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            <div class="form-group mb-3">
+                                <label asp-for="NewSongRequest.SongName" class="form-label"></label>
+                                <input asp-for="NewSongRequest.SongName" class="form-control" required>
+                                <span asp-validation-for="NewSongRequest.SongName" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="NewSongRequest.ArtistName" class="form-label"></label>
+                                <input asp-for="NewSongRequest.ArtistName" class="form-control">
+                                <span asp-validation-for="NewSongRequest.ArtistName" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label asp-for="NewSongRequest.Notes" class="form-label"></label>
+                                <textarea asp-for="NewSongRequest.Notes" class="form-control" rows="2"></textarea>
+                                <span asp-validation-for="NewSongRequest.Notes" class="text-danger"></span>
+                                <div class="form-text">Any additional information for the DJ</div>
+                            </div>
+                            <input type="hidden" name="slug" value="@Model.Slug" />
+                            <button type="submit" class="btn btn-primary w-100">Submit Request</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Song Requests List -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h2 class="h5 mb-0">Current Requests</h2>
+                        <span class="badge bg-light text-dark">@Model.Requests.Count total</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            @if (Model.Requests.Any())
+                            {
+                                @foreach (var request in Model.Requests.OrderByDescending(r => r.VoteCount).ThenBy(r => r.Status == "Approved" ? 0 : 1))
+                                {
+                                    <div class="list-group-item @(request.Status == "Approved" ? "bg-light" : request.Status == "Rejected" ? "bg-light text-muted" : "")">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="mb-1">@request.SongName</h5>
+                                                <p class="mb-1 text-muted">@request.ArtistName</p>
+                                                <small class="text-muted">Requested by @request.Requester</small>
+                                                @if (request.Status == "Approved")
+                                                {
+                                                    <span class="badge bg-success ms-2">Approved</span>
+                                                }
+                                                else if (request.Status == "Rejected")
+                                                {
+                                                    <span class="badge bg-secondary ms-2">Rejected</span>
+                                                }
+                                            </div>
+                                            <div class="d-flex flex-column align-items-center">
+                                                @if (request.Status == "Pending")
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary mb-1" onclick="voteForSong(@request.Id)">
+                                                        <i class="bi bi-hand-thumbs-up"></i>
+                                                    </button>
+                                                }
+                                                <span class="badge bg-secondary">@request.VoteCount @(request.VoteCount == 1 ? "vote" : "votes")</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="list-group-item">
+                                    <p class="text-center my-3">No requests yet. Be the first to request a song!</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function voteForSong(requestId) {
+            // In a real implementation, this would send an AJAX request to vote for the song
+            alert('Vote submitted for request ID: ' + requestId);
+
+            // For demo purposes, reload the page to simulate the vote being counted
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }
+    </script>
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
