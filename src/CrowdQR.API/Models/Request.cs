@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using CrowdQR.Api.Models.Enums;
+using CrowdQR.Shared.Models.Enums;
 
 namespace CrowdQR.Api.Models;
 

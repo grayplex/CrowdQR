@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CrowdQR.Api.Models.DTOs;
+namespace CrowdQR.Shared.Models.DTOs;
 
 /// <summary>
 /// Data transfer object for creating a new event.

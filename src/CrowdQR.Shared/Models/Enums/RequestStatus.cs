@@ -1,4 +1,4 @@
-﻿namespace CrowdQR.Api.Models.Enums;
+﻿namespace CrowdQR.Shared.Models.Enums;
 
 /// <summary>
 /// Represents the status of a song request.
