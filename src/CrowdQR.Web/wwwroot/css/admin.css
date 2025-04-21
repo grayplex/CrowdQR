@@ -1,0 +1,79 @@
+﻿/* src/CrowdQR.Web/wwwroot/css/admin.css */
+
+/* Table row hover effect */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Improved card styles */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    border-radius: calc(0.5rem - 1px) calc(0.5rem - 1px) 0 0;
+}
+
+/* Status indicators */
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.status-pending {
+    background-color: #ffc107;
+}
+
+.status-approved {
+    background-color: #28a745;
+}
+
+.status-rejected {
+    background-color: #6c757d;
+}
+
+/* Better tab styling */
+.nav-tabs .nav-link.active {
+    border-top: 3px solid #007bff;
+    font-weight: 500;
+}
+
+/* Animation for new items */
+@keyframes highlightNew {
+    from {
+        background-color: rgba(40, 167, 69, 0.2);
+    }
+
+    to {
+        background-color: transparent;
+    }
+}
+
+.new-item {
+    animation: highlightNew 2s ease-out;
+}
+
+/* Table opacity for different statuses */
+.table-opacity-25 {
+    opacity: 0.8;
+}
+
+/* Auto-hide toast after 5 seconds */
+.toast {
+    animation: fadeOut 0.5s ease-in-out 5s forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
