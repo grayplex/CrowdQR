@@ -10,7 +10,7 @@ namespace CrowdQR.Api.Controllers;
 /// <summary>
 /// API controller for managing song requests.
 /// </summary>
-/// <param name="context">The datbase context.</param>
+/// <param name="context">The database context.</param>
 /// <param name="logger">The logger.</param>
 [ApiController]
 [Route("api/[controller]")]
