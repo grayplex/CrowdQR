@@ -1,0 +1,882 @@
+{
+	"info": {
+		"_postman_id": "7a1e7f9d-0b98-4c5a-b8c5-6a8e48d234fd",
+		"name": "CrowdQR API",
+		"description": "API endpoints for the CrowdQR application to manage DJ events, song requests, and voting.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/user",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"user"
+							]
+						},
+						"description": "Retrieves all users in the system."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/user/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"1"
+							]
+						},
+						"description": "Retrieves a specific user by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Users By Role",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/user/role/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"role",
+								"1"
+							]
+						},
+						"description": "Retrieves all users with a specific role (0 = Audience, 1 = DJ)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User By Username",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/user/username/dj_master",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"username",
+								"dj_master"
+							]
+						},
+						"description": "Retrieves a user by their username."
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"new_user\",\n    \"role\": 0\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/user",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"user"
+							]
+						},
+						"description": "Creates a new user."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"updated_username\",\n    \"role\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/user/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"1"
+							]
+						},
+						"description": "Updates an existing user."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/user/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"1"
+							]
+						},
+						"description": "Deletes a user."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing users."
+		},
+		{
+			"name": "Event",
+			"item": [
+				{
+					"name": "Get All Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/event",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"event"
+							]
+						},
+						"description": "Retrieves all events in the system."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Event By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/event/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"event",
+								"1"
+							]
+						},
+						"description": "Retrieves a specific event by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Event By Slug",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/event/slug/saturday-night-fever",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"event",
+								"slug",
+								"saturday-night-fever"
+							]
+						},
+						"description": "Retrieves a specific event by its slug."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Events By DJ",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/event/dj/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"event",
+								"dj",
+								"1"
+							]
+						},
+						"description": "Retrieves all events for a specific DJ."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"djUserId\": 1,\n    \"name\": \"New Event\",\n    \"slug\": \"new-event\",\n    \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/event",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"event"
+							]
+						},
+						"description": "Creates a new event."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Event",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Event Name\",\n    \"slug\": \"updated-event-slug\",\n    \"isActive\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/event/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"event",
+								"1"
+							]
+						},
+						"description": "Updates an existing event."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Event",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/event/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"event",
+								"1"
+							]
+						},
+						"description": "Deletes an event."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing events."
+		},
+		{
+			"name": "Request",
+			"item": [
+				{
+					"name": "Get All Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/request",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"request"
+							]
+						},
+						"description": "Retrieves all song requests in the system."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Request By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/request/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"request",
+								"1"
+							]
+						},
+						"description": "Retrieves a specific request by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Requests By Event",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/request/event/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"request",
+								"event",
+								"1"
+							]
+						},
+						"description": "Retrieves all requests for a specific event."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": 3,\n    \"eventId\": 1,\n    \"songName\": \"Dancing Queen\",\n    \"artistName\": \"ABBA\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/request",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"request"
+							]
+						},
+						"description": "Creates a new song request."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Request Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/request/1/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"request",
+								"1",
+								"status"
+							]
+						},
+						"description": "Updates the status of a request (0 = Pending, 1 = Approved, 2 = Rejected)."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Request",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/request/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"request",
+								"1"
+							]
+						},
+						"description": "Deletes a request."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing song requests."
+		},
+		{
+			"name": "Vote",
+			"item": [
+				{
+					"name": "Get All Votes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/vote",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"vote"
+							]
+						},
+						"description": "Retrieves all votes in the system."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Vote By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/vote/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"vote",
+								"1"
+							]
+						},
+						"description": "Retrieves a specific vote by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Votes By Request",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/vote/request/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"vote",
+								"request",
+								"1"
+							]
+						},
+						"description": "Retrieves all votes for a specific request."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Vote",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": 3,\n    \"requestId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/vote",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"vote"
+							]
+						},
+						"description": "Creates a new vote for a request."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Vote",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/vote/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"vote",
+								"1"
+							]
+						},
+						"description": "Deletes a vote."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Vote By User And Request",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/vote/user/3/request/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"vote",
+								"user",
+								"3",
+								"request",
+								"1"
+							]
+						},
+						"description": "Deletes a vote by user ID and request ID."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing votes on song requests."
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Get Event Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/dashboard/event/1/summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"dashboard",
+								"event",
+								"1",
+								"summary"
+							]
+						},
+						"description": "Retrieves a summary of an event for the DJ dashboard."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Top Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/dashboard/event/1/top-requests?status=0&count=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"dashboard",
+								"event",
+								"1",
+								"top-requests"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "0",
+									"description": "0 = Pending, 1 = Approved, 2 = Rejected"
+								},
+								{
+									"key": "count",
+									"value": "10",
+									"description": "Number of requests to return"
+								}
+							]
+						},
+						"description": "Retrieves the top requests for an event, sorted by vote count."
+					},
+					"response": []
+				},
+				{
+					"name": "Get DJ Event Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/dashboard/dj/1/event-stats",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"dashboard",
+								"dj",
+								"1",
+								"event-stats"
+							]
+						},
+						"description": "Retrieves statistics for all events of a DJ."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for DJ dashboard operations."
+		},
+		{
+			"name": "Session",
+			"item": [
+				{
+					"name": "Get All Sessions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/session",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"session"
+							]
+						},
+						"description": "Retrieves all sessions in the system."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Session By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/session/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"session",
+								"1"
+							]
+						},
+						"description": "Retrieves a specific session by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sessions By Event",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/session/event/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"session",
+								"event",
+								"1"
+							]
+						},
+						"description": "Retrieves all sessions for a specific event."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sessions By User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/session/user/3",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"session",
+								"user",
+								"3"
+							]
+						},
+						"description": "Retrieves all sessions for a specific user."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Session By Event And User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/session/event/1/user/3",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"session",
+								"event",
+								"1",
+								"user",
+								"3"
+							]
+						},
+						"description": "Retrieves a session for a specific user in a specific event."
+					},
+					"response": []
+				},
+				{
+					"name": "Create or Update Session",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": 3,\n    \"eventId\": 1,\n    \"clientIP\": \"192.168.1.100\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/session",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"session"
+							]
+						},
+						"description": "Creates a new session or updates an existing one."
+					},
+					"response": []
+				},
+				{
+					"name": "Increment Request Count",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/session/1/increment-request-count",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"session",
+								"1",
+								"increment-request-count"
+							]
+						},
+						"description": "Increments the request count for a session."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Session",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/session/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"session",
+								"1"
+							]
+						},
+						"description": "Deletes a session."
+					},
+					"response": []
+                }
+            ],
+            "description": "Endpoints for managing user sessions."
+        }
+    ]
+}

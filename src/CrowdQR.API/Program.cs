@@ -1,4 +1,5 @@
 using CrowdQR.Api.Data;
+using CrowdQR.Api.Middleware;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,9 +17,26 @@ builder.Services.AddDbContext<CrowdQRContext>(options =>
 });
 
 // Add controllers and other services
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+
+    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Add CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader();
+        });
+});
 
 var app = builder.Build();
 
@@ -77,6 +95,11 @@ if (app.Environment.IsDevelopment())
         logger.LogError(ex, "An error occurred while migrating or seeding the database.");
     }
 }
+
+app.UseExceptionHandling();
+app.UseCors("AllowAll");
+app.UseRouting();
+app.UseAuthorization();
 
 app.UseHttpsRedirection();
 app.MapControllers();
