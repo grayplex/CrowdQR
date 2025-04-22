@@ -1,4 +1,4 @@
-﻿namespace CrowdQR.Api.Models.Enums;
+﻿namespace CrowdQR.Shared.Models.Enums;
 
 /// <summary>
 /// Represents the role of a user in the system.

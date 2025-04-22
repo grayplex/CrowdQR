@@ -1,7 +1,7 @@
 ﻿using CrowdQR.Api.Data;
 using CrowdQR.Api.Models;
-using CrowdQR.Api.Models.DTOs;
-using CrowdQR.Api.Models.Enums;
+using CrowdQR.Shared.Models.DTOs;
+using CrowdQR.Shared.Models.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 

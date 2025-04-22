@@ -1,0 +1,42 @@
+﻿@page
+@model ApiTestModel
+@{
+    ViewData["Title"] = "API Test";
+}
+
+<div class="container mt-4">
+    <h1>API Connectivity Test</h1>
+    <p class="lead">This page tests the connectivity to your backend APIs.</p>
+
+    <div class="card">
+        <div class="card-header">Test Results</div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>API Endpoint</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var test in Model.TestResults)
+                    {
+                        <tr>
+                            <td>@test.Key</td>
+                            <td>
+                                @if (test.Value)
+                                {
+                                    <span class="badge bg-success">Success</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Failed</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

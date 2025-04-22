@@ -16,4 +16,8 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CrowdQR.Shared\CrowdQR.Shared.csproj" />
+  </ItemGroup>
+
 </Project>
