@@ -5,6 +5,7 @@ using CrowdQR.Shared.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CrowdQR.Api.Controllers;
 
@@ -50,10 +51,16 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// <param name="id">The ID of the user to retrieve.</param>
     /// <returns>The requested user or a 404 Not Found response.</returns>
     [HttpGet("{id}")]
+    [Authorize]
     public async Task<ActionResult<object>> GetUser(int id)
     {
-        var user = await _context.Users.FindAsync(id);
+        // Regular users should only be able to get their own user info
+        if (!User.IsInRole("DJ") && id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
 
+        var user = await _context.Users.FindAsync(id);
         if (user == null)
         {
             return NotFound();
@@ -78,6 +85,7 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// <param name="role">The role to filter by.</param>
     /// <returns>A list of users with the specified role.</returns>
     [HttpGet("role/{role}")]
+    [Authorize]
     public async Task<ActionResult<IEnumerable<object>>> GetUsersByRole(UserRole role)
     {
         var users = await _context.Users
@@ -170,6 +178,12 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     [Authorize(Roles = "DJ")]
     public async Task<IActionResult> UpdateUser(int id, UserUpdateDto userDto)
     {
+        // Regular users should only be able to update their own info
+        if (!User.IsInRole("DJ") && id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         var user = await _context.Users.FindAsync(id);
         if (user == null)
         {

@@ -56,6 +56,7 @@ public class VoteController(
     /// <param name="id">The ID of the vote to retrieve.</param>
     /// <returns>The requested vote or a 404 Not Found response.</returns>
     [HttpGet("{id}")]
+    [Authorize]
     public async Task<ActionResult<object>> GetVote(int id)
     {
         var vote = await _context.Votes.FindAsync(id);
@@ -223,8 +224,15 @@ public class VoteController(
     /// <param name="requestId">The ID of the request.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpDelete("user/{userId}/request/{requestId}")]
+    [Authorize]
     public async Task<IActionResult> DeleteVoteByUserAndRequest(int userId, int requestId)
     {
+        // Only allow DJs or the vote owner to delete the vote
+        if (!User.IsInRole("DJ") && userId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         var vote = await _context.Votes
             .FirstOrDefaultAsync(v => v.UserId == userId && v.RequestId == requestId);
 

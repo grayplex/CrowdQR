@@ -4,6 +4,7 @@ using CrowdQR.Shared.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CrowdQR.Api.Controllers;
 
@@ -150,8 +151,15 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
     /// <param name="djUserId">The ID of the DJ user.</param>
     /// <returns>A list of events for the specified DJ.</returns>
     [HttpGet("dj/{djUserId}")]
+    [Authorize]
     public async Task<ActionResult<IEnumerable<object>>> GetEventsByDJ(int djUserId)
     {
+        // Regular users should only be able to get their own events
+        if (!User.IsInRole("DJ") && djUserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         var events = await _context.Events
             .Where(e => e.DjUserId == djUserId)
             .Include(e => e.DJ)
@@ -235,6 +243,12 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
             return NotFound();
         }
 
+        // DJs should only update their own events
+        if (@event.DjUserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         // Only update provided fields
         if (!string.IsNullOrEmpty(eventDto.Name))
         {
@@ -292,6 +306,12 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
         if (@event == null)
         {
             return NotFound();
+        }
+
+        // DJs should only delete their own events
+        if (@event.DjUserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
         }
 
         _context.Events.Remove(@event);

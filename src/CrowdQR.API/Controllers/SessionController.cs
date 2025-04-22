@@ -74,6 +74,12 @@ public class SessionController(
             return NotFound();
         }
 
+        // Users should only access their own sessions
+        if (!User.IsInRole("DJ") && session.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         // Format the response to avoid circular references
         var formattedSession = new
         {
@@ -98,6 +104,20 @@ public class SessionController(
     [Authorize]
     public async Task<ActionResult<IEnumerable<object>>> GetSessionsByEvent(int eventId)
     {
+        // Get the event to check if the requesting user is the event DJ
+        var @event = await _context.Events.FindAsync(eventId);
+        if (@event == null)
+        {
+            return NotFound("Event not found");
+        }
+
+        // Only allow the event's DJ or other DJs to access all sessions
+        if (!User.IsInRole("DJ") && @event.DjUserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
+        // Get all sessions for the event
         var sessions = await _context.Sessions
             .Where(s => s.EventId == eventId)
             .Include(s => s.User)
@@ -163,6 +183,16 @@ public class SessionController(
     [Authorize]
     public async Task<ActionResult<object>> GetSessionByEventAndUser(int eventId, int userId)
     {
+        // Check if this is the user's own session or the DJ for this event
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var @event = await _context.Events.FindAsync(eventId);
+
+        if (!User.IsInRole("DJ") && userId != currentUserId &&
+            (@event == null || @event.DjUserId != currentUserId))
+        {
+            return Forbid();
+        }
+
         var session = await _context.Sessions
             .Include(s => s.User)
             .Include(s => s.Event)
@@ -197,6 +227,12 @@ public class SessionController(
     [Authorize]
     public async Task<ActionResult<Session>> CreateOrUpdateSession(SessionCreateDto sessionDto)
     {
+        // Check to ensure users can only create sessions for themselves
+        if (!User.IsInRole("DJ") && sessionDto.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -283,6 +319,12 @@ public class SessionController(
             return NotFound();
         }
 
+        // Check if this is the user's own session or the DJ
+        if (!User.IsInRole("DJ") && session.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         session.RequestCount++;
         session.LastSeen = DateTime.UtcNow;
 
@@ -306,6 +348,12 @@ public class SessionController(
         if (session == null)
         {
             return NotFound();
+        }
+
+        // Check if this is the user's own session or the DJ
+        if (!User.IsInRole("DJ") && session.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
         }
 
         session.LastSeen = DateTime.UtcNow;

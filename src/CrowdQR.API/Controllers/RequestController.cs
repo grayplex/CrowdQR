@@ -6,6 +6,7 @@ using CrowdQR.Shared.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CrowdQR.Api.Controllers;
 
@@ -124,9 +125,15 @@ public class RequestController(
     /// <param name="requestDto">The request data.</param>
     /// <returns>The created request and a 201 Created response, or an error.</returns>
     [HttpPost]
-    [Authorize(Roles = "DJ")]
+    [Authorize]
     public async Task<ActionResult<Request>> CreateRequest (RequestCreateDto requestDto)
     {
+        // Check if the user is creating a request as themselves
+        if (!User.IsInRole("DJ") && requestDto.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
