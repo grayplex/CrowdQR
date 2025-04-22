@@ -136,6 +136,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandling();
+app.UseAuthorizationLogging();
 app.UseCors("AllowWebApp");
 app.UseRouting();
 app.UseAuthorization();
