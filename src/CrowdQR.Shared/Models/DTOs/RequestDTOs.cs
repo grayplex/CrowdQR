@@ -1,7 +1,49 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.Contracts;
 using CrowdQR.Shared.Models.Enums;
 
 namespace CrowdQR.Shared.Models.DTOs;
+
+/// <summary>
+/// Data transfer object representing a song request.
+/// </summary>
+public class RequestDto
+{
+    /// <summary>
+    /// The unique identifier for the request.
+    /// </summary>
+    public int RequestId { get; set; }
+
+    /// <summary>
+    /// The name of the requested song.
+    /// </summary>
+    public string SongName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The name of the artist for the requested song (optional).
+    /// </summary>
+    public string? AristName { get; set; }
+
+    /// <summary>
+    /// The ID of the event this request is for.
+    /// </summary>
+    public int EventId { get; set; }
+
+    /// <summary>
+    /// The ID of the user who made the request.
+    /// </summary>
+    public int UserId { get; set; }
+
+    /// <summary>
+    /// The current status of the request.
+    /// </summary>
+    public RequestStatus Status { get; set; } = RequestStatus.Pending;
+
+    /// <summary>
+    /// When the request was created.
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+}
 
 /// <summary>
 /// Data transfer object for creating a new song request.
@@ -44,4 +86,25 @@ public class RequestStatusUpdateDto
     /// </summary>
     [Required]
     public RequestStatus Status { get; set; }
+}
+
+/// <summary>
+/// Data transfer object for the top requests in an event.
+/// </summary>
+public class TopRequestDto
+{
+    /// <summary>
+    /// The unique identifier for the request.
+    /// </summary>
+    public int RequestId { get; set; }
+
+    /// <summary>
+    /// The name of the requested song.
+    /// </summary>
+    public string SongName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The number of votes this request has received.
+    /// </summary>
+    public int VoteCount { get; set; }
 }
