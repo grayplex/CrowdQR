@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Scroll to the first invalid field with some offset
                 setTimeout(() => {
                     window.scrollTo({
-                        top: firstInvalid.getBoundingClientRect().top + window.pageYOffset - 100,
+                        top: firstInvalid.getBoundingClientRect().top + window.scrollY - 100,
                         behavior: 'smooth'
                     });
                 }, 100);

@@ -96,43 +96,42 @@ public class EventModel(
     /// </summary>
     public async Task<IActionResult> OnGetAsync()
     {
-        // Check if user is authenticated
-        UserId = _sessionManager.GetCurrentUserId();
-        UserName = _sessionManager.GetCurrentUsername();
-        IsAuthenticated = _sessionManager.IsLoggedIn();
-
-        // If no user is logged in, automatically create a temporary user
-        if (!IsAuthenticated && !string.IsNullOrEmpty(Slug))
+        try
         {
-            string tempUsername = $"guest_{Guid.NewGuid().ToString()[..8]}";
-            bool registered = await _sessionManager.RegisterAndLoginAsync(tempUsername);
+            // Check if user is authenticated
+            UserId = _sessionManager.GetCurrentUserId();
+            UserName = _sessionManager.GetCurrentUsername();
+            IsAuthenticated = _sessionManager.IsLoggedIn();
 
-            if (!registered)
+            // If no user is logged in, automatically create a temporary user
+            if (!IsAuthenticated && !string.IsNullOrEmpty(Slug))
             {
-                ErrorMessage = "Failed to create temporary user. Please try again.";
+                string tempUsername = $"guest_{Guid.NewGuid().ToString()[..8]}";
+                bool registered = await _sessionManager.RegisterAndLoginAsync(tempUsername);
+
+                if (!registered)
+                {
+                    ErrorMessage = "Failed to create temporary user. Please try again.";
+                    return Page();
+                }
+
+                UserId = _sessionManager.GetCurrentUserId();
+                UserName = _sessionManager.GetCurrentUsername();
+                IsAuthenticated = true;
+            }
+
+            // If no slug is provided, show the join form
+            if (string.IsNullOrEmpty(Slug))
+            {
                 return Page();
             }
 
-            UserId = _sessionManager.GetCurrentUserId();
-            UserName = _sessionManager.GetCurrentUsername();
-            IsAuthenticated = true;
-        }
-
-        // If no slug is provided, show the join form
-        if (string.IsNullOrEmpty(Slug))
-        {
-            return Page();
-        }
-
-        // Get event data
-        try
-        {
             // Get event data
             var eventData = await _eventService.GetEventBySlugAsync(Slug);
             if (eventData == null)
             {
                 // If using demo slug, load demo data
-                if (Slug.Equals("demo", StringComparison.CurrentCultureIgnoreCase))
+                if (Slug.Equals("demo", StringComparison.OrdinalIgnoreCase))
                 {
                     LoadDemoData();
                     return Page();
@@ -158,21 +157,6 @@ public class EventModel(
 
             // Get requests for this event
             var requests = await _requestService.GetRequestsByEventAsync(EventId);
-
-            // Map API requests to view model
-            /*
-            Requests = [.. requests.Select(r => new RequestDto
-            {
-                RequestId = r.RequestId,
-                SongName = r.SongName,
-                ArtistName = r.ArtistName,
-                UserId = r.UserId, // We'll need to fetch usernames in a real implementation
-                VoteCount = r.VoteCount,
-                Status = r.Status,
-                // Store user's vote status to disable vote button if already voted
-                UserHasVoted = r.Votes?.Any(v => v.UserId == UserId) ?? false
-            })];
-            */
             Requests = requests;
 
             return Page();
@@ -183,7 +167,7 @@ public class EventModel(
             ErrorMessage = "An error occurred while loading the event. Please try again.";
 
             // Fall back to demo data for testing
-            if (Slug?.Equals("demo", StringComparison.CurrentCultureIgnoreCase) == true)
+            if (Slug?.Equals("demo", StringComparison.OrdinalIgnoreCase) == true)
             {
                 LoadDemoData();
             }

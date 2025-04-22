@@ -45,6 +45,11 @@ public class ApiService
     /// <summary>
     /// Custom exception for API errors.
     /// </summary>
+    /// <remarks>
+    /// Initializes a new instance of the ApiException class.
+    /// </remarks>
+    /// <param name="message">The error message.</param>
+    /// <param name="innerException">The inner exception.</param>
     public class ApiException(string message, Exception? innerException = null) : Exception(message, innerException)
     {
     }
@@ -90,11 +95,27 @@ public class ApiService
     {
         try
         {
-            return await GetAsync<T>(endpoint);
+            var response = await _httpClient.GetAsync(endpoint);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<T>(_jsonOptions);
+            }
+
+            _logger.LogWarning("API request failed: {Endpoint} - {StatusCode}",
+                endpoint, response.StatusCode);
+
+            var errorContent = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"API error: {response.StatusCode}. Details: {errorContent}");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error in GET request to {Endpoint}", endpoint);
+            throw new ApiException(defaultErrorMessage, ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "API GET request failed: {Endpoint}", endpoint);
+            _logger.LogError(ex, "Error making GET request to {Endpoint}", endpoint);
             throw new ApiException(defaultErrorMessage, ex);
         }
     }

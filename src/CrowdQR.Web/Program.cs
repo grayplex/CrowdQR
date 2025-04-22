@@ -1,4 +1,8 @@
 using CrowdQR.Web.Services;
+using System;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +21,8 @@ builder.Services.AddScoped<ApiService>(sp =>
     var config = sp.GetRequiredService<IConfiguration>();
     return new ApiService(client, logger, config);
 });
+
+// Add all API service clients
 builder.Services.AddScoped<EventService>();
 builder.Services.AddScoped<RequestService>();
 builder.Services.AddScoped<VoteService>();

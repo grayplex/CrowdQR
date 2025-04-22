@@ -411,8 +411,7 @@ public class SessionManager(
     /// <summary>
     /// Sets up an automatic session refresh for the current session.
     /// </summary>
-    /// <param name="intervalMinutes">The interval in minutes between refreshes.</param>
-    public void SetupSessionRefresh(int intervalMinutes = 5)
+    public void SetupSessionRefresh()
     {
         var sessionRefreshKey = "SessionRefreshActive";
         var session = _httpContextAccessor.HttpContext?.Session;
