@@ -1,6 +1,7 @@
 using CrowdQR.Api.Data;
 using CrowdQR.Api.Middleware;
 using CrowdQR.Api.Hubs;
+using CrowdQR.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +28,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
+builder.Services.AddScoped<IHubNotificationService, HubNotificationService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
