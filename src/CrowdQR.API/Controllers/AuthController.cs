@@ -27,7 +27,7 @@ public class AuthController(AuthService authService, ILogger<AuthController> log
     [HttpPost("login")]
     public async Task<ActionResult<AuthResultDto>> Login([FromBody] LoginDto request)
     {
-        if (string.IsNullOrEmpty(request.Username))
+        if (string.IsNullOrEmpty(request.UsernameOrEmail))
         {
             return BadRequest(new AuthResultDto
             {
@@ -36,7 +36,7 @@ public class AuthController(AuthService authService, ILogger<AuthController> log
             });
         }
 
-        var result = await _authService.AuthenticateUser(request.Username);
+        var result = await _authService.AuthenticateUser(request.UsernameOrEmail);
 
         if (!result.Success)
         {

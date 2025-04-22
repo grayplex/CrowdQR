@@ -46,7 +46,7 @@ public class AuthenticationService(HttpClient httpClient, ILogger<Authentication
             // Prepare login request
             var loginRequest = new LoginDto
             {
-                Username = username
+                UsernameOrEmail = username
             };
 
             // Send login request to API

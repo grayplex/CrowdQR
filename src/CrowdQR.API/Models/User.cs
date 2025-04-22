@@ -8,7 +8,6 @@ namespace CrowdQR.Api.Models;
 /// <summary>
 /// Represents a user in the system, either an audience member or DJ.
 /// </summary>
-
 public class User
 {
     /// <summary>
@@ -24,6 +23,40 @@ public class User
     [Required]
     [MaxLength(100)]
     public required string Username { get; set; }
+
+    /// <summary>
+    /// The email address of the user. Required for DJ accounts.
+    /// </summary>
+    [MaxLength(255)]
+    public string? Email { get; set; }
+
+    /// <summary>
+    /// The hashed password. Required for DJ accounts.
+    /// </summary>
+    [MaxLength(512)]
+    public string? PasswordHash { get; set; }
+
+    /// <summary>
+    /// Security salt used for password hashing. Required for DJ accounts.
+    /// </summary>
+    [MaxLength(256)]
+    public string? PasswordSalt { get; set; }
+
+    /// <summary>
+    /// Indicates whether the user's email has been verified.
+    /// </summary>
+    public bool IsEmailVerified { get; set; } = false;
+
+    /// <summary>
+    /// The email verification token.
+    /// </summary>
+    [MaxLength(100)]
+    public string? EmailVerificationToken { get; set; }
+
+    /// <summary>
+    /// Expiration time for the email verification token.
+    /// </summary>
+    public DateTime? EmailTokenExpiry { get; set; }
 
     /// <summary>
     /// The role of the user. Default is Audience.

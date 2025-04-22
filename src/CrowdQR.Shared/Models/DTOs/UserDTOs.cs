@@ -19,6 +19,16 @@ public class UserDto
     public string Username { get; set; } = string.Empty;
 
     /// <summary>
+    /// The email address of the user. Required for DJ accounts.
+    /// </summary>
+    public string? Email { get; set; }
+
+    /// <summary>
+    /// Indicates whether the user's email has been verified.
+    /// </summary>
+    public bool IsEmailVerified { get; set; }
+
+    /// <summary>
     /// The role of the user. Default is Audience.
     /// </summary>
     public UserRole Role { get; set; } = UserRole.Audience;
@@ -42,6 +52,19 @@ public class UserCreateDto
     public required string Username { get; set; }
 
     /// <summary>
+    /// The email address of the user. Required for DJ accounts.
+    /// </summary>
+    [EmailAddress]
+    [StringLength(255)]
+    public string? Email { get; set; }
+
+    /// <summary>
+    /// The password for the user. Required for DJ accounts.
+    /// </summary>
+    [StringLength(100, MinimumLength = 6)]
+    public string? Password { get; set; }
+
+    /// <summary>
     /// The role of the user. Default is Audience.
     /// </summary>
     [Required]
@@ -60,7 +83,42 @@ public class UserUpdateDto
     public string? Username { get; set; }
 
     /// <summary>
+    /// The email address of the user.
+    /// </summary>
+    [EmailAddress]
+    [StringLength(255)]
+    public string? Email { get; set; }
+
+    /// <summary>
     /// The role of the user.
     /// </summary>
     public UserRole? Role { get; set; }
+}
+
+/// <summary>
+/// Data transfer object for changing a user's password.
+/// </summary>
+public class ChangePasswordDto
+{
+    /// <summary>
+    /// The current password.
+    /// </summary>
+    [Required]
+    [StringLength(100, MinimumLength = 6)]
+    public required string CurrentPassword { get; set; }
+
+    /// <summary>
+    /// The new password.
+    /// </summary>
+    [Required]
+    [StringLength(100, MinimumLength = 6)]
+    public required string NewPassword { get; set; }
+
+    /// <summary>
+    /// Confirmation of the new password.
+    /// </summary>
+    [Required]
+    [StringLength(100, MinimumLength = 6)]
+    [Compare("NewPassword", ErrorMessage = "The new password and confirmation password do not match.")]
+    public required string ConfirmPassword { get; set; }
 }
