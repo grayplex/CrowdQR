@@ -47,4 +47,16 @@ public class SessionService(ApiService apiService, ILogger<SessionService> logge
         string endpoint = $"{BaseEndpoint}/{sessionId}/increment-request-count";
         return await _apiService.PutAsync(endpoint);
     }
+
+    /// <summary>
+    /// Refreshes the user's session to keep it active.
+    /// </summary>
+    /// <param name="sessionId">The session ID to refresh.</param>
+    /// <returns>True if successful, false otherwise.</returns>
+    public async Task<bool> RefreshSessionAsync(int sessionId)
+    {
+        // This just calls the increment API to update the last seen time
+        // without actually incrementing the request count
+        return await _apiService.PutAsync($"{BaseEndpoint}/{sessionId}/refresh");
+    }
 }

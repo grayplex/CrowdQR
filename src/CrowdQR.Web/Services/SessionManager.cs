@@ -315,4 +315,116 @@ public class SessionManager(
         session.Remove(EventSlugKey);
         session.Remove(SessionIdKey);
     }
+
+    /// <summary>
+    /// Converts a temporary guest user to a permanent user.
+    /// </summary>
+    /// <param name="username">The new username.</param>
+    /// <returns>True if successful, false otherwise.</returns>
+    public async Task<bool> ConvertGuestToUserAsync(string username)
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return false;
+            }
+
+            // Get current user
+            var currentUser = await _userService.GetUserByIdAsync(currentUserId.Value);
+            if (currentUser == null)
+            {
+                return false;
+            }
+
+            // Check if username is already taken
+            var existingUser = await _userService.GetUserByUsernameAsync(username);
+            if (existingUser != null && existingUser.UserId != currentUserId)
+            {
+                return false;
+            }
+
+            // Update the username
+            var updateDto = new UserUpdateDto
+            {
+                Username = username
+            };
+
+            bool updated = await _userService.UpdateUserAsync(currentUserId.Value, updateDto);
+            if (!updated)
+            {
+                return false;
+            }
+
+            // Update session
+            var session = _httpContextAccessor.HttpContext?.Session;
+            if (session == null)
+            {
+                return false;
+            }
+
+            session.SetString(UsernameKey, username);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error converting guest user {UserId} to permanent user", GetCurrentUserId());
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Checks if the current user is a guest user.
+    /// </summary>
+    /// <returns>True if the user is a guest, false otherwise.</returns>
+    public bool IsGuestUser()
+    {
+        var username = GetCurrentUsername();
+        return username != null && username.StartsWith("guest_");
+    }
+
+    /// <summary>
+    /// Refreshes the current API session to keep it active.
+    /// </summary>
+    /// <returns>True if successful, false otherwise.</returns>
+    public async Task<bool> RefreshCurrentSessionAsync()
+    {
+        var sessionId = GetApiSessionId();
+        if (!sessionId.HasValue)
+        {
+            return false;
+        }
+
+        try
+        {
+            return await _sessionService.RefreshSessionAsync(sessionId.Value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh session {SessionId}", sessionId.Value);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Sets up an automatic session refresh for the current session.
+    /// </summary>
+    /// <param name="intervalMinutes">The interval in minutes between refreshes.</param>
+    public void SetupSessionRefresh(int intervalMinutes = 5)
+    {
+        var sessionRefreshKey = "SessionRefreshActive";
+        var session = _httpContextAccessor.HttpContext?.Session;
+
+        if (session == null || session.GetString(sessionRefreshKey) == "true")
+        {
+            return;
+        }
+
+        session.SetString(sessionRefreshKey, "true");
+
+        // This would ideally be implemented with JavaScript to periodically call
+        // an API endpoint that refreshes the session
+    }
 }

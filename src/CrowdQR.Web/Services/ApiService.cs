@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using CrowdQR.Shared.Models.DTOs;
 using CrowdQR.Shared.Models.Enums;
+using CrowdQR.Web.Utilities;
 
 namespace CrowdQR.Web.Services;
 
@@ -33,6 +34,12 @@ public class ApiService
         // Set the base address from configuration
         string apiBaseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5000";
         _httpClient.BaseAddress = new Uri(apiBaseUrl);
+
+        // Set timeout from configuration
+        if (int.TryParse(configuration["ApiSettings:Timeout"], out int timeoutSeconds))
+        {
+            _httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        }
     }
 
     /// <summary>
@@ -181,5 +188,22 @@ public class ApiService
             _logger.LogError(ex, "Error making DELETE request to {Endpoint}", endpoint);
             return false;
         }
+    }
+
+    private void LogApiError(string endpoint, Exception ex)
+    {
+        _logger.LogError(ex, "API request failed: {Endpoint} - {Message}", endpoint, ex.Message);
+    }
+
+    /// <summary>
+    /// Handles API errors consistently.
+    /// </summary>
+    /// <param name="endpoint">The API endpoint.</param>
+    /// <param name="ex">The exception that occurred.</param>
+    /// <returns>A user-friendly error message.</returns>
+    public string HandleApiError(string endpoint, Exception ex)
+    {
+        LogApiError(endpoint, ex);
+        return ApiErrorHelper.GetUserFriendlyErrorMessage(ex);
     }
 }
