@@ -1,13 +1,36 @@
+using CrowdQR.Shared.Models.DTOs;
+using CrowdQR.Shared.Models.Enums;
+using CrowdQR.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Threading.Tasks;
 
 namespace CrowdQR.Web.Pages.Admin;
 
 /// <summary>
 /// Page model for the DJ admin dashboard interface.
 /// </summary>
-public class DashboardModel : PageModel
+/// <remarks>
+/// Initializes a new instance of the DashboardModel class.
+/// </remarks>
+/// <param name="eventService">The event service.</param>
+/// <param name="requestService">The request service.</param>
+/// <param name="dashboardService">The dashboard service.</param>
+/// <param name="sessionManager">The session manager.</param>
+/// <param name="logger">The logger.</param>
+public class DashboardModel(
+    EventService eventService,
+    RequestService requestService,
+    DashboardService dashboardService,
+    SessionManager sessionManager,
+    ILogger<DashboardModel> logger) : PageModel
 {
+    private readonly EventService _eventService = eventService;
+    private readonly RequestService _requestService = requestService;
+    private readonly DashboardService _dashboardService = dashboardService;
+    private readonly SessionManager _sessionManager = sessionManager;
+    private readonly ILogger<DashboardModel> _logger = logger;
+
     /// <summary>
     /// The name of the current event.
     /// </summary>
@@ -21,21 +44,22 @@ public class DashboardModel : PageModel
     /// <summary>
     /// List of song requests with pending status.
     /// </summary>
-    public List<SongRequestModel> PendingRequests { get; set; } = [];
+    public List<RequestDto> PendingRequests { get; set; } = [];
 
     /// <summary>
     /// List of song requests with approved status.
     /// </summary>
-    public List<SongRequestModel> ApprovedRequests { get; set; } = [];
+    public List<RequestDto> ApprovedRequests { get; set; } = [];
 
     /// <summary>
     /// List of song requests with rejected status.
     /// </summary>
-    public List<SongRequestModel> RejectedRequests { get; set; } = [];
+    public List<RequestDto> RejectedRequests { get; set; } = [];
 
     /// <summary>
     /// Current search term used to filter requests.
     /// </summary>
+    [BindProperty(SupportsGet = true)]
     public string SearchTerm { get; set; } = string.Empty;
 
     /// <summary>
@@ -56,15 +80,233 @@ public class DashboardModel : PageModel
     public string Tab { get; set; } = "pending";
 
     /// <summary>
+    /// The ID of the current user
+    /// </summary>
+    public int? UserId { get; set; }
+
+    /// <summary>
+    /// Indicates whether the user is authenticated.
+    /// </summary>
+    public bool IsAuthenticated { get; set; }
+
+    /// <summary>
+    /// Indicates whether the user is a DJ.
+    /// </summary>
+    public bool IsDj { get; set; }
+
+    /// <summary>
+    /// Error message to display.
+    /// </summary>
+    [TempData]
+    public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Success message to display.
+    /// </summary>
+    [TempData]
+    public string? SuccessMessage { get; set; }
+
+    /// <summary>
     /// Handles GET requests to the dashboard page.
     /// </summary>
-    /// <param name="searchTerm">Optional search term to filter requests.</param>
-    public void OnGet(string searchTerm = "")
+    public async Task<IActionResult> OnGetAsync()
     {
-        // In a real implementation, we would fetch data from the API
-        // For now, just load demo data
-        SearchTerm = searchTerm;
-        LoadDemoData();
+        // Check if user is authenticated
+        UserId = _sessionManager.GetCurrentUserId();
+        IsAuthenticated = _sessionManager.IsLoggedIn();
+        IsDj = _sessionManager.IsDj();
+
+        // Redirect non-authenticated or non-DJ users
+        if (!IsAuthenticated)
+        {
+            // Instead of redirecting, we could show a login page in a real implementation
+            ErrorMessage = "You must be logged in to access the DJ dashboard.";
+            return RedirectToPage("/Index");
+        }
+
+        if (!IsDj)
+        {
+            ErrorMessage = "You do not have permission to access the DJ dashboard.";
+            return RedirectToPage("/Index");
+        }
+
+        try
+        {
+            // If no event ID is provided, get the DJ's events and use the first one
+            if (!EventId.HasValue)
+            {
+                var events = await _eventService.GetEventsByDjAsync(UserId.Value);
+                if (events.Count == 0)
+                {
+                    // For demo purposes, use a default event
+                    LoadDemoData();
+                    return Page();
+                }
+
+                EventId = events[0].EventId;
+                EventName = events[0].Name;
+                EventSlug = events[0].Slug;
+            }
+            else
+            {
+                // Get event details
+                var eventData = await _eventService.GetEventByIdAsync(EventId.Value);
+                if (eventData == null)
+                {
+                    ErrorMessage = "Event not found.";
+                    return RedirectToPage("/Index");
+                }
+
+                EventName = eventData.Name;
+                EventSlug = eventData.Slug;
+            }
+
+            // Get dashboard data
+            var summary = await _dashboardService.GetEventSummaryAsync(EventId.Value);
+            if (summary != null)
+            {
+                ActiveUsers = summary.ActiveUsers;
+
+                // Map requests based on status
+                MapRequestsFromSummary(summary);
+            }
+            else
+            {
+                // Fallback to direct request API if summary fails
+                var requests = await _requestService.GetRequestsByEventAsync(EventId.Value);
+                MapRequestsFromList(requests);
+            }
+
+            // Apply search filter if provided
+            ApplySearch();
+
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading dashboard for event {EventId}", EventId);
+
+            // For demo purposes, load demo data on error
+            LoadDemoData();
+            return Page();
+        }
+    }
+
+    /// <summary>
+    /// Handles POST requests for approving a request.
+    /// </summary>
+    /// <param name="requestId">The ID of the request to approve.</param>
+    /// <returns>Redirect to the dashboard page.</returns>
+    public async Task<IActionResult> OnPostApproveAsync(int requestId)
+    {
+        if (!_sessionManager.IsDj())
+        {
+            ErrorMessage = "You do not have permission to approve requests.";
+            return RedirectToPage();
+        }
+
+        try
+        {
+            var statusDto = new RequestStatusUpdateDto
+            {
+                Status = RequestStatus.Approved
+            };
+
+            bool success = await _requestService.UpdateRequestStatusAsync(requestId, statusDto);
+
+            if (!success)
+            {
+                ErrorMessage = "Failed to approve the request. Please try again.";
+                return RedirectToPage(new { eventId = EventId, tab = Tab, searchTerm = SearchTerm });
+            }
+
+            SuccessMessage = "Request approved successfully!";
+            return RedirectToPage(new { eventId = EventId, tab = "approved", searchTerm = SearchTerm });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error approving request {RequestId}", requestId);
+            ErrorMessage = "An error occurred while approving the request. Please try again.";
+            return RedirectToPage(new { eventId = EventId, tab = Tab, searchTerm = SearchTerm });
+        }
+    }
+
+    /// <summary>
+    /// Handles POST requests for rejecting a request.
+    /// </summary>
+    /// <param name="requestId">The ID of the request to reject.</param>
+    /// <returns>Redirect to the dashboard page.</returns>
+    public async Task<IActionResult> OnPostRejectAsync(int requestId)
+    {
+        if (!_sessionManager.IsDj())
+        {
+            ErrorMessage = "You do not have permission to reject requests.";
+            return RedirectToPage();
+        }
+
+        try
+        {
+            var statusDto = new RequestStatusUpdateDto
+            {
+                Status = RequestStatus.Rejected
+            };
+
+            bool success = await _requestService.UpdateRequestStatusAsync(requestId, statusDto);
+
+            if (!success)
+            {
+                ErrorMessage = "Failed to reject the request. Please try again.";
+                return RedirectToPage(new { eventId = EventId, tab = Tab, searchTerm = SearchTerm });
+            }
+
+            SuccessMessage = "Request rejected successfully!";
+            return RedirectToPage(new { eventId = EventId, tab = "rejected", searchTerm = SearchTerm });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error rejecting request {RequestId}", requestId);
+            ErrorMessage = "An error occurred while rejecting the request. Please try again.";
+            return RedirectToPage(new { eventId = EventId, tab = Tab, searchTerm = SearchTerm });
+        }
+    }
+
+    /// <summary>
+    /// Handles POST requests for moving a request back to pending.
+    /// </summary>
+    /// <param name="requestId">The ID of the request to move to pending.</param>
+    /// <returns>Redirect to the dashboard page.</returns>
+    public async Task<IActionResult> OnPostMoveToPendingAsync(int requestId)
+    {
+        if (!_sessionManager.IsDj())
+        {
+            ErrorMessage = "You do not have permission to modify requests.";
+            return RedirectToPage();
+        }
+
+        try
+        {
+            var statusDto = new RequestStatusUpdateDto
+            {
+                Status = RequestStatus.Pending
+            };
+
+            bool success = await _requestService.UpdateRequestStatusAsync(requestId, statusDto);
+
+            if (!success)
+            {
+                ErrorMessage = "Failed to move the request to pending. Please try again.";
+                return RedirectToPage(new { eventId = EventId, tab = Tab, searchTerm = SearchTerm });
+            }
+
+            SuccessMessage = "Request moved to pending successfully!";
+            return RedirectToPage(new { eventId = EventId, tab = "pending", searchTerm = SearchTerm });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error moving request {RequestId} to pending", requestId);
+            ErrorMessage = "An error occurred while updating the request. Please try again.";
+            return RedirectToPage(new { eventId = EventId, tab = Tab, searchTerm = SearchTerm });
+        }
     }
 
     private void LoadDemoData()
@@ -75,143 +317,183 @@ public class DashboardModel : PageModel
 
         PendingRequests = [
             new() {
-                Id = 1,
+                RequestId = 1,
                 SongName = "Stayin' Alive",
                 ArtistName = "Bee Gees",
                 Requester = "partygoer1",
                 VoteCount = 5,
-                Status = "Pending",
-                RequestTime = DateTime.Now.AddMinutes(-15)
+                Status = RequestStatus.Pending,
+                CreatedAt = DateTime.Now.AddMinutes(-15)
             },
             new() {
-                Id = 3,
+                RequestId = 3,
                 SongName = "Good Times",
                 ArtistName = "Chic",
                 Requester = "music_lover",
                 VoteCount = 2,
-                Status = "Pending",
-                RequestTime = DateTime.Now.AddMinutes(-12)
+                Status = RequestStatus.Pending,
+                CreatedAt = DateTime.Now.AddMinutes(-12)
             },
             new() {
-                Id = 4,
+                RequestId = 4,
                 SongName = "Le Freak",
                 ArtistName = "Chic",
                 Requester = "rhythm_fanatic",
                 VoteCount = 1,
-                Status = "Pending",
-                RequestTime = DateTime.Now.AddMinutes(-8)
+                Status = RequestStatus.Pending,
+                CreatedAt = DateTime.Now.AddMinutes(-8)
             }
         ];
 
         ApprovedRequests = [
             new() {
-                Id = 2,
+                RequestId = 2,
                 SongName = "Don't Stop 'Til You Get Enough",
                 ArtistName = "Michael Jackson",
                 Requester = "dancefloor_queen",
                 VoteCount = 3,
-                Status = "Approved",
-                RequestTime = DateTime.Now.AddMinutes(-20),
+                Status = RequestStatus.Approved,
+                CreatedAt = DateTime.Now.AddMinutes(-20),
                 ActionTime = DateTime.Now.AddMinutes(-5)
             },
             new() {
-                Id = 6,
+                RequestId = 6,
                 SongName = "Night Fever",
                 ArtistName = "Bee Gees",
                 Requester = "beat_enthusiast",
                 VoteCount = 4,
-                Status = "Approved",
-                RequestTime = DateTime.Now.AddMinutes(-25),
+                Status = RequestStatus.Approved,
+                CreatedAt = DateTime.Now.AddMinutes(-25),
                 ActionTime = DateTime.Now.AddMinutes(-10)
             }
         ];
 
         RejectedRequests = [
             new() {
-                Id = 5,
+                RequestId = 5,
                 SongName = "Boogie Wonderland",
                 ArtistName = "Earth, Wind & Fire",
                 Requester = "beat_enthusiast",
                 VoteCount = 0,
-                Status = "Rejected",
-                RequestTime = DateTime.Now.AddMinutes(-30),
+                Status = RequestStatus.Rejected,
+                CreatedAt = DateTime.Now.AddMinutes(-30),
                 ActionTime = DateTime.Now.AddMinutes(-15)
             }
         ];
 
         // Apply search filter if provided
+        ApplySearch();
+    }
+
+    private void MapRequestsFromSummary(EventSummaryDto summary)
+    {
+        // Map pending requests
+        PendingRequests = summary.TopRequests.Select(r => new SongRequestModel
+        {
+            Id = r.RequestId,
+            SongName = r.SongName,
+            ArtistName = r.ArtistName,
+            Requester = r.Requester,
+            VoteCount = r.VoteCount,
+            Status = "Pending",
+            RequestTime = r.CreatedAt
+        }).ToList();
+
+        // Map approved requests
+        ApprovedRequests = summary.RecentlyApproved.Select(r => new SongRequestModel
+        {
+            Id = r.RequestId,
+            SongName = r.SongName,
+            ArtistName = r.ArtistName,
+            Requester = r.Requester,
+            VoteCount = r.VoteCount,
+            Status = "Approved",
+            RequestTime = r.CreatedAt,
+            // In the real API, we would have the approval time
+            ActionTime = DateTime.Now.AddMinutes(-5)
+        }).ToList();
+
+        // Map rejected requests
+        RejectedRequests = summary.RecentlyRejected.Select(r => new SongRequestModel
+        {
+            Id = r.RequestId,
+            SongName = r.SongName,
+            ArtistName = r.ArtistName,
+            Requester = r.Requester,
+            VoteCount = r.VoteCount,
+            Status = "Rejected",
+            RequestTime = r.CreatedAt,
+            // In the real API, we would have the rejection time
+            ActionTime = DateTime.Now.AddMinutes(-10)
+        }).ToList();
+    }
+
+    private void MapRequestsFromList(List<RequestDto> requests)
+    {
+        // Group requests by status
+        foreach (var request in requests)
+        {
+            var model = new SongRequestModel
+            {
+                Id = request.RequestId,
+                SongName = request.SongName,
+                ArtistName = request.ArtistName,
+                Requester = request.UserId.ToString(), // We would fetch username in a real implementation
+                VoteCount = request.VoteCount,
+                Status = request.Status.ToString(),
+                RequestTime = request.CreatedAt
+            };
+
+            if (request.Status == RequestStatus.Pending)
+            {
+                PendingRequests.Add(model);
+            }
+            else if (request.Status == RequestStatus.Approved)
+            {
+                model.ActionTime = DateTime.Now.AddMinutes(-5); // Mock data
+                ApprovedRequests.Add(model);
+            }
+            else if (request.Status == RequestStatus.Rejected)
+            {
+                model.ActionTime = DateTime.Now.AddMinutes(-10); // Mock data
+                RejectedRequests.Add(model);
+            }
+        }
+
+        // Order pending requests by vote count
+        PendingRequests = PendingRequests.OrderByDescending(r => r.VoteCount).ToList();
+
+        // Order approved and rejected requests by time
+        ApprovedRequests = ApprovedRequests.OrderByDescending(r => r.ActionTime).ToList();
+        RejectedRequests = RejectedRequests.OrderByDescending(r => r.ActionTime).ToList();
+
+        // Set active users (mock data)
+        ActiveUsers = 10;
+    }
+
+    private void ApplySearch()
+    {
         if (!string.IsNullOrWhiteSpace(SearchTerm))
         {
             string search = SearchTerm.ToLower();
-#pragma warning disable IDE0305 // Simplify collection initialization
+
             PendingRequests = PendingRequests
-                .Where(r => r.SongName.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
-                            (r.ArtistName?.ToLower().Contains(search, StringComparison.CurrentCultureIgnoreCase) ?? false) ||
-                            r.Requester.Contains(search, StringComparison.CurrentCultureIgnoreCase))
+                .Where(r => r.SongName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                            (r.ArtistName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                            r.Requester.Contains(search, StringComparison.OrdinalIgnoreCase))
                 .ToList();
-#pragma warning restore IDE0305 // Simplify collection initialization
 
-#pragma warning disable IDE0305 // Simplify collection initialization
             ApprovedRequests = ApprovedRequests
-                .Where(r => r.SongName.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
-                            (r.ArtistName?.ToLower().Contains(search, StringComparison.CurrentCultureIgnoreCase) ?? false) ||
-                            r.Requester.Contains(search, StringComparison.CurrentCultureIgnoreCase))
+                .Where(r => r.SongName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                            (r.ArtistName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                            r.Requester.Contains(search, StringComparison.OrdinalIgnoreCase))
                 .ToList();
-#pragma warning restore IDE0305 // Simplify collection initialization
 
-#pragma warning disable IDE0305 // Simplify collection initialization
             RejectedRequests = RejectedRequests
-                .Where(r => r.SongName.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
-                            (r.ArtistName?.ToLower().Contains(search, StringComparison.CurrentCultureIgnoreCase) ?? false) ||
-                            r.Requester.Contains(search, StringComparison.CurrentCultureIgnoreCase))
+                .Where(r => r.SongName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                            (r.ArtistName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                            r.Requester.Contains(search, StringComparison.OrdinalIgnoreCase))
                 .ToList();
-#pragma warning restore IDE0305 // Simplify collection initialization
         }
-    }
-
-    /// <summary>
-    /// Represents a song request in the admin dashboard.
-    /// </summary>
-    public class SongRequestModel
-    {
-        /// <summary>
-        /// The unique identifier for the request.
-        /// </summary>
-        public int Id { get; set; }
-
-        /// <summary>
-        /// The name of the requested song.
-        /// </summary>
-        public string SongName { get; set; } = string.Empty;
-
-        /// <summary>
-        /// The name of the artist (optional).
-        /// </summary>
-        public string? ArtistName { get; set; }
-
-        /// <summary>
-        /// The username of the person who requested the song.
-        /// </summary>
-        public string Requester { get; set; } = string.Empty;
-
-        /// <summary>
-        /// The number of votes this request has received.
-        /// </summary>
-        public int VoteCount { get; set; }
-
-        /// <summary>
-        /// The current status of the request (Pending, Approved, Rejected).
-        /// </summary>
-        public string Status { get; set; } = string.Empty;
-
-        /// <summary>
-        /// When the song was initially requested.
-        /// </summary>
-        public DateTime RequestTime { get; set; }
-
-        /// <summary>
-        /// When the request was approved or rejected (null if still pending).
-        /// </summary>
-        public DateTime? ActionTime { get; set; }
     }
 }

@@ -22,7 +22,7 @@ public class RequestDto
     /// <summary>
     /// The name of the artist for the requested song (optional).
     /// </summary>
-    public string? AristName { get; set; }
+    public string? ArtistName { get; set; }
 
     /// <summary>
     /// The ID of the event this request is for.
