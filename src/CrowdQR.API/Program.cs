@@ -3,6 +3,9 @@ using CrowdQR.Api.Middleware;
 using CrowdQR.Api.Hubs;
 using CrowdQR.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +32,34 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IHubNotificationService, HubNotificationService>();
+
+// Add JWT authentication services
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Secret"] ?? "temporaryCrowdQRSecretKey12345!@#$%")),
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "CrowdQR.Api",
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "CrowdQR.Web",
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+// Add authorization services
+builder.Services.AddAuthorization();
+
+// Register auth service
+builder.Services.AddScoped<AuthService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -108,6 +139,7 @@ app.UseExceptionHandling();
 app.UseCors("AllowWebApp");
 app.UseRouting();
 app.UseAuthorization();
+app.UseAuthentication();
 app.MapHub<CrowdQRHub>("/hubs/crowdqr");
 
 app.UseHttpsRedirection();

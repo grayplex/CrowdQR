@@ -29,6 +29,7 @@ builder.Services.AddScoped<VoteService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<AuthenticationService>();
 
 // Add session state for user identification
 builder.Services.AddHttpContextAccessor();
