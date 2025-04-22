@@ -1,5 +1,6 @@
 ﻿using CrowdQR.Api.Data;
 using CrowdQR.Api.Models;
+using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,12 +12,17 @@ namespace CrowdQR.Api.Controllers;
 /// </summary>
 /// <param name="context">The database context.</param>
 /// <param name="logger">The logger.</param>
+/// /// <param name="hubNotificationService">The hub notification service.</param>
 [ApiController]
 [Route("api/[controller]")]
-public class SessionController(CrowdQRContext context, ILogger<SessionController> logger) : ControllerBase
+public class SessionController(
+    CrowdQRContext context, 
+    ILogger<SessionController> logger,
+    IHubNotificationService hubNotificationService) : ControllerBase
 {
     private readonly CrowdQRContext _context = context;
     private readonly ILogger<SessionController> _logger = logger;
+    private readonly IHubNotificationService _hubNotificationService = hubNotificationService;
 
     // GET: api/session
     /// <summary>
@@ -183,8 +189,8 @@ public class SessionController(CrowdQRContext context, ILogger<SessionController
         }
 
         // Check if user exists
-        var userExists = await _context.Users.AnyAsync(u => u.UserId == sessionDto.UserId);
-        if (!userExists)
+        var user = await _context.Users.FindAsync(sessionDto.UserId);
+        if (user == null)
         {
             return BadRequest("User does not exist");
         }
@@ -199,6 +205,8 @@ public class SessionController(CrowdQRContext context, ILogger<SessionController
         // Check if session already exists for this user and event
         var existingSession = await _context.Sessions
             .FirstOrDefaultAsync(s => s.UserId == sessionDto.UserId && s.EventId == sessionDto.EventId);
+
+        bool isNewSession = existingSession == null;
 
         if (existingSession != null)
         {
@@ -224,6 +232,23 @@ public class SessionController(CrowdQRContext context, ILogger<SessionController
 
         _context.Sessions.Add(session);
         await _context.SaveChangesAsync();
+
+        // Send SignalR notification that a user joined the event (only for new sessions)
+        if (isNewSession)
+        {
+            try
+            {
+                await _hubNotificationService.NotifyUserJoinedEvent(sessionDto.EventId, user.Username);
+                _logger.LogInformation("SignalR notification sent for user {Username} joining event {EventId}",
+                    user.Username, sessionDto.EventId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send SignalR notification for user {UserId} joining event {EventId}",
+                    sessionDto.UserId, sessionDto.EventId);
+                // Don't fail the session creation if notification fails
+            }
+        }
 
         return CreatedAtAction(nameof(GetSession), new { id = session.SessionId }, session);
     }

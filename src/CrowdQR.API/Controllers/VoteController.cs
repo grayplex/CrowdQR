@@ -1,5 +1,6 @@
 ﻿using CrowdQR.Api.Data;
 using CrowdQR.Api.Models;
+using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,12 +12,17 @@ namespace CrowdQR.Api.Controllers;
 /// </summary>
 /// <param name="context">The database context.</param>
 /// <param name="logger">The logger.</param>
+/// /// <param name="hubNotificationService">The hub notification service.</param>
 [ApiController]
 [Route("api/[controller]")]
-public class VoteController(CrowdQRContext context, ILogger<VoteController> logger) : ControllerBase
+public class VoteController(
+    CrowdQRContext context, 
+    ILogger<VoteController> logger,
+    IHubNotificationService hubNotificationService) : ControllerBase
 {
     private readonly CrowdQRContext _context = context;
     private readonly ILogger<VoteController> _logger = logger;
+    private readonly IHubNotificationService _hubNotificationService = hubNotificationService;
 
     // GET: api/vote
     /// <summary>
@@ -107,9 +113,12 @@ public class VoteController(CrowdQRContext context, ILogger<VoteController> logg
             return BadRequest(ModelState);
         }
 
-        // Check if request exists
-        var requestExists = await _context.Requests.AnyAsync(r => r.RequestId == voteDto.RequestId);
-        if (!requestExists)
+        // Check if request exists and load its votes and event ID
+        var request = await _context.Requests
+            .Include(r => r.Votes)
+            .FirstOrDefaultAsync(r => r.RequestId == voteDto.RequestId);
+
+        if (request == null)
         {
             return BadRequest("Request does not exist");
         }
@@ -141,6 +150,22 @@ public class VoteController(CrowdQRContext context, ILogger<VoteController> logg
         try
         {
             await _context.SaveChangesAsync();
+
+            // Calculate new vote count
+            int voteCount = request.Votes.Count + 1;
+
+            // Send SignalR notification about the new vote
+            try
+            {
+                await _hubNotificationService.NotifyVoteAdded(request.EventId, request.RequestId, voteCount);
+                _logger.LogInformation("SignalR notification sent for vote added to request {RequestId}, new count: {VoteCount}",
+                    request.RequestId, voteCount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send SignalR notification for vote added to request {RequestId}", request.RequestId);
+                // Don't fail the vote creation if notification fails
+            }
         }
         catch (DbUpdateException)
         {

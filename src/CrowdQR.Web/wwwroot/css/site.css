@@ -83,3 +83,45 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* Highlight change animation */
+@keyframes highlight-pulse {
+    0% {
+        background-color: transparent;
+    }
+
+    50% {
+        background-color: rgba(40, 167, 69, 0.25);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+.highlight-change {
+    animation: highlight-pulse 1.5s ease-in-out;
+}
+
+/* SignalR connection indicator */
+#connection-status {
+    transition: background-color 0.3s ease;
+}
+
+    #connection-status.bg-success {
+        animation: pulse 2s infinite;
+    }
+
+@keyframes pulse {
+    0% {
+        opacity: 0.7;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.7;
+    }
+}
