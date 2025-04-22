@@ -43,6 +43,13 @@ public class ApiService
     }
 
     /// <summary>
+    /// Custom exception for API errors.
+    /// </summary>
+    public class ApiException(string message, Exception? innerException = null) : Exception(message, innerException)
+    {
+    }
+
+    /// <summary>
     /// Makes a GET request to the specified endpoint.
     /// </summary>
     /// <typeparam name="T">The type to deserialize the response to.</typeparam>
@@ -68,6 +75,50 @@ public class ApiService
         {
             _logger.LogError(ex, "Error making GET request to {Endpoint}", endpoint);
             return default;
+        }
+    }
+
+    /// <summary>
+    /// Makes a GET request to the specified endpoint, with error handling
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="endpoint"></param>
+    /// <param name="defaultErrorMessage"></param>
+    /// <returns></returns>
+    /// <exception cref="ApiException"></exception>
+    public async Task<T?> GetWithErrorHandlingAsync<T>(string endpoint, string defaultErrorMessage = "Failed to retrieve data")
+    {
+        try
+        {
+            return await GetAsync<T>(endpoint);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "API GET request failed: {Endpoint}", endpoint);
+            throw new ApiException(defaultErrorMessage, ex);
+        }
+    }
+
+    /// <summary>
+    /// Makes a POST request to the specified endpoint with error handling.
+    /// </summary>
+    /// <typeparam name="TRequest"></typeparam>
+    /// <param name="endpoint"></param>
+    /// <param name="data"></param>
+    /// <param name="defaultErrorMessage"></param>
+    /// <returns></returns>
+    /// <exception cref="ApiException"></exception>
+    public async Task<bool> PostWithErrorHandlingAsync<TRequest>(string endpoint, TRequest data, string defaultErrorMessage = "Failed to save data")
+    {
+        try
+        {
+            var (success, _) = await PostAsync<TRequest, object>(endpoint, data);
+            return success;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "API POST request failed: {Endpoint}", endpoint);
+            throw new ApiException(defaultErrorMessage, ex);
         }
     }
 

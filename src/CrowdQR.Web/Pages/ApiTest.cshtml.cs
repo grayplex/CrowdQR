@@ -19,6 +19,7 @@ public class ApiTestModel(
     VoteService voteService,
     SessionService sessionService,
     DashboardService dashboardService,
+    ApiService apiService,
     ILogger<ApiTestModel> logger) : PageModel
 {
     private readonly EventService _eventService = eventService;
@@ -27,6 +28,7 @@ public class ApiTestModel(
     private readonly VoteService _voteService = voteService;
     private readonly SessionService _sessionService = sessionService;
     private readonly DashboardService _dashboardService = dashboardService;
+    private readonly ApiService _apiService = apiService;
     private readonly ILogger<ApiTestModel> _logger = logger;
 
     /// <summary>
@@ -39,6 +41,21 @@ public class ApiTestModel(
     /// </summary>
     public async Task OnGetAsync()
     {
+        // Initialize test results
+        TestResults = [];
+
+        // Test basic ping endpoint
+        try
+        {
+            var pingResult = await _apiService.GetAsync<object>("api/ping");
+            TestResults["API Connection (Ping)"] = pingResult != null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error testing Ping API");
+            TestResults["API Connection (Ping)"] = false;
+        }
+
         // Test user endpoints
         try
         {
@@ -57,7 +74,6 @@ public class ApiTestModel(
             var events = await _eventService.GetEventsAsync();
             TestResults["GetEvents"] = true;
 
-            // If we have events, test related endpoints
             if (events.Count > 0)
             {
                 var eventId = events[0].EventId;
@@ -76,6 +92,13 @@ public class ApiTestModel(
         {
             var requests = await _requestService.GetRequestsAsync();
             TestResults["GetRequests"] = true;
+
+            if (requests.Count > 0)
+            {
+                var requestId = requests[0].RequestId;
+                var requestDetails = await _requestService.GetRequestByIdAsync(requestId);
+                TestResults["GetRequestById"] = requestDetails != null;
+            }
         }
         catch (Exception ex)
         {
@@ -83,6 +106,40 @@ public class ApiTestModel(
             TestResults["GetRequests"] = false;
         }
 
-        // Add more tests for other endpoints
+        // Test vote endpoints
+        try
+        {
+            var votes = await _voteService.GetVotesByRequestAsync(1);
+            TestResults["GetVotesByRequest"] = votes != null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error testing GetVotesByRequest API");
+            TestResults["GetVotesByRequest"] = false;
+        }
+
+        // Test session endpoints
+        try
+        {
+            var sessions = await _sessionService.GetSessionByEventAndUserAsync(_eventService.GetEventsAsync().Result[0].EventId, _userService.GetUsersAsync().Result[0].UserId);
+            TestResults["GetSessionByEventAndUserAsync"] = sessions != null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error testing GetSessionByEventAndUserAsync API");
+            TestResults["GetSessionByEventAndUserAsync"] = false;
+        }
+
+        // Test dashboard endpoints
+        try
+        {
+            var eventSummary = await _dashboardService.GetEventSummaryAsync(_eventService.GetEventsAsync().Result[0].EventId);
+            TestResults["GetEventSummary"] = eventSummary != null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error testing GetEventSummary API");
+            TestResults["GetEventSummary"] = false;
+        }
     }
 }

@@ -127,6 +127,7 @@ public class EventModel(
         // Get event data
         try
         {
+            // Get event data
             var eventData = await _eventService.GetEventBySlugAsync(Slug);
             if (eventData == null)
             {
@@ -159,6 +160,7 @@ public class EventModel(
             var requests = await _requestService.GetRequestsByEventAsync(EventId);
 
             // Map API requests to view model
+            /*
             Requests = [.. requests.Select(r => new RequestDto
             {
                 RequestId = r.RequestId,
@@ -170,6 +172,8 @@ public class EventModel(
                 // Store user's vote status to disable vote button if already voted
                 UserHasVoted = r.Votes?.Any(v => v.UserId == UserId) ?? false
             })];
+            */
+            Requests = requests;
 
             return Page();
         }
@@ -177,6 +181,12 @@ public class EventModel(
         {
             _logger.LogError(ex, "Error loading event {Slug}", Slug);
             ErrorMessage = "An error occurred while loading the event. Please try again.";
+
+            // Fall back to demo data for testing
+            if (Slug?.Equals("demo", StringComparison.CurrentCultureIgnoreCase) == true)
+            {
+                LoadDemoData();
+            }
             return Page();
         }
     }
@@ -272,7 +282,7 @@ public class EventModel(
                 RequestId = requestId
             };
 
-            var (success, vote) = await _voteService.CreateVoteAsync(voteDto);
+            var (success, _) = await _voteService.CreateVoteAsync(voteDto);
 
             if (!success)
             {
