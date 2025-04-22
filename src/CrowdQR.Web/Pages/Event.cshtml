@@ -56,6 +56,25 @@
             </div>
         </div>
 
+        @if (!string.IsNullOrEmpty(Model.Slug))
+        {
+            <div class="row">
+                <div class="col-md-12 mb-4">
+                    <h1 class="h3 mb-0">@Model.EventName</h1>
+                    <p class="text-muted">
+                        Event Code: @Model.Slug
+                        <span id="connection-status" class="badge bg-secondary ms-2">
+                            <i class="bi bi-broadcast-pin"></i> Connecting
+                        </span>
+                    </p>
+                    @if (Model.IsAuthenticated)
+                    {
+                        <p class="text-muted">Logged in as: @Model.UserName</p>
+                    }
+                </div>
+            </div>
+        }
+
         <div class="row">
             <!-- Request Form -->
             <div class="col-md-4 mb-4">
@@ -101,7 +120,8 @@
                             {
                                 @foreach (var request in Model.Requests.OrderByDescending(r => r.VoteCount).ThenBy(r => r.Status == CrowdQR.Shared.Models.Enums.RequestStatus.Approved ? 0 : 1))
                                 {
-                                    <div class="list-group-item @(request.Status == CrowdQR.Shared.Models.Enums.RequestStatus.Approved ? "bg-light" : request.Status == CrowdQR.Shared.Models.Enums.RequestStatus.Rejected ? "bg-light text-muted" : "")">
+                                    <div class="list-group-item @(request.Status == CrowdQR.Shared.Models.Enums.RequestStatus.Approved ? "bg-light" : request.Status == CrowdQR.Shared.Models.Enums.RequestStatus.Rejected ? "bg-light text-muted" : "")"
+                                         data-request-id="@request.RequestId">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div>
                                                 <h5 class="mb-1">@request.SongName</h5>
@@ -109,11 +129,11 @@
                                                 <small class="text-muted">Requested by @request.Requester</small>
                                                 @if (request.Status == CrowdQR.Shared.Models.Enums.RequestStatus.Approved)
                                                 {
-                                                    <span class="badge bg-success ms-2">Approved</span>
+                                                    <span class="badge bg-success ms-2" data-status="approved">Approved</span>
                                                 }
                                                 else if (request.Status == CrowdQR.Shared.Models.Enums.RequestStatus.Rejected)
                                                 {
-                                                    <span class="badge bg-secondary ms-2">Rejected</span>
+                                                    <span class="badge bg-secondary ms-2" data-status="rejected">Rejected</span>
                                                 }
                                             </div>
                                             <div class="d-flex flex-column align-items-center">
@@ -124,7 +144,7 @@
                                                         <form method="post" asp-page-handler="RemoveVote">
                                                             <input type="hidden" name="requestId" value="@request.RequestId" />
                                                             <input type="hidden" name="slug" value="@Model.Slug" />
-                                                            <button type="submit" class="btn btn-sm btn-success mb-1">
+                                                            <button type="submit" class="btn btn-sm btn-success mb-1" data-vote-action="remove">
                                                                 <i class="bi bi-hand-thumbs-up-fill"></i>
                                                             </button>
                                                         </form>
@@ -134,13 +154,13 @@
                                                         <form method="post" asp-page-handler="Vote">
                                                             <input type="hidden" name="requestId" value="@request.RequestId" />
                                                             <input type="hidden" name="slug" value="@Model.Slug" />
-                                                            <button type="submit" class="btn btn-sm btn-outline-primary mb-1">
+                                                            <button type="submit" class="btn btn-sm btn-outline-primary mb-1" data-vote-action="add">
                                                                 <i class="bi bi-hand-thumbs-up"></i>
                                                             </button>
                                                         </form>
                                                     }
                                                 }
-                                                <span class="badge bg-secondary">@request.VoteCount @(request.VoteCount == 1 ? "vote" : "votes")</span>
+                                                <span class="badge bg-secondary" data-vote-count>@request.VoteCount @(request.VoteCount == 1 ? "vote" : "votes")</span>
                                             </div>
                                         </div>
                                     </div>
@@ -176,12 +196,118 @@
     }
 
     <script>
-        // Auto-refresh the page every 30 seconds to simulate real-time updates
-        // In a production implementation, you would use SignalR
-        setTimeout(() => {
-            if (window.location.href.includes('slug=') || window.location.pathname.split('/')[1] !== '') {
-                window.location.reload();
+        // Initialize SignalR for real-time updates
+        (function() {
+            // Only initialize on event pages with a slug
+            const slug = '@Model.Slug';
+            const eventId = '@Model.EventId';
+
+            if (!slug || !eventId) {
+                return;
             }
-        }, 30000);
+
+            console.log('Initializing SignalR for event:', slug, 'ID:', eventId);
+
+            // Initialize connection when document is ready
+            $(document).ready(function() {
+                // Initialize the SignalR connection
+                if (CrowdQR.SignalR.init(CrowdQR.Config.apiBaseUrl)) {
+                    // Start the connection
+                    CrowdQR.SignalR.start().then(connected => {
+                        if (connected) {
+                            // Join the event group
+                            CrowdQR.SignalR.joinEvent(eventId);
+                        }
+                    });
+
+                    // Register event handlers
+                    registerEventHandlers();
+                }
+            });
+
+            function registerEventHandlers() {
+                // Update UI when a new request is added
+                CrowdQR.SignalR.on('requestAdded', data => {
+                    if (data.eventId == eventId) {
+                        // Reload the page to show the new request
+                        // In a production implementation, we'd dynamically add the request
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                });
+
+                // Update UI when a request status is updated
+                CrowdQR.SignalR.on('requestStatusUpdated', data => {
+                    if (data.eventId == eventId) {
+                        // Find the request element
+                        const requestElement = $(`.list-group-item[data-request-id="${data.requestId}"]`);
+                        if (requestElement.length) {
+                            // Update the status badge
+                            const badge = requestElement.find('.badge[data-status]');
+
+                            // Remove existing status classes
+                            badge.removeClass('bg-success bg-secondary');
+
+                            // Update badge based on new status
+                            if (data.status === 'Approved') {
+                                badge.addClass('bg-success').text('Approved');
+                                requestElement.addClass('bg-light');
+                            } else if (data.status === 'Rejected') {
+                                badge.addClass('bg-secondary').text('Rejected');
+                                requestElement.addClass('bg-light text-muted');
+                            }
+                        }
+                    }
+                });
+
+                // Update UI when a vote is added
+                CrowdQR.SignalR.on('voteAdded', data => {
+                    if (data.eventId == eventId) {
+                        // Find the request element and update vote count
+                        const voteElement = $(`.list-group-item[data-request-id="${data.requestId}"] .badge[data-vote-count]`);
+                        if (voteElement.length) {
+                            voteElement.text(`${data.voteCount} ${data.voteCount === 1 ? 'vote' : 'votes'}`);
+
+                            // Subtle highlight animation to show the change
+                            voteElement.addClass('highlight-change');
+                            setTimeout(() => voteElement.removeClass('highlight-change'), 1500);
+                        }
+                    }
+                });
+
+                // Update UI when a vote is removed
+                CrowdQR.SignalR.on('voteRemoved', data => {
+                    if (data.eventId == eventId) {
+                        // Same handling as voteAdded, just updating the count
+                        const voteElement = $(`.list-group-item[data-request-id="${data.requestId}"] .badge[data-vote-count]`);
+                        if (voteElement.length) {
+                            voteElement.text(`${data.voteCount} ${data.voteCount === 1 ? 'vote' : 'votes'}`);
+                        }
+                    }
+                });
+
+                // Track connection status
+                CrowdQR.SignalR.on('connectionStatus', data => {
+                    const statusIndicator = $('#connection-status');
+                    if (statusIndicator.length) {
+                        statusIndicator.removeClass('bg-success bg-warning bg-danger');
+
+                        if (data.status === 'connected') {
+                            statusIndicator.addClass('bg-success').html('<i class="bi bi-broadcast"></i> Live');
+                        } else if (data.status === 'reconnecting') {
+                            statusIndicator.addClass('bg-warning').html('<i class="bi bi-broadcast"></i> Reconnecting...');
+                        } else {
+                            statusIndicator.addClass('bg-danger').html('<i class="bi bi-broadcast-pin"></i> Offline');
+                        }
+                    }
+                });
+            }
+
+            // Listen for beforeunload to properly leave the event
+            window.addEventListener('beforeunload', function() {
+                if (CrowdQR.SignalR.isConnected() && CrowdQR.SignalR.getCurrentEventId()) {
+                    CrowdQR.SignalR.leaveEvent();
+                }
+            });
+        })();
     </script>
 }
