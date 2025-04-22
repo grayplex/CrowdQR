@@ -1,5 +1,6 @@
 using CrowdQR.Api.Data;
 using CrowdQR.Api.Middleware;
+using CrowdQR.Api.Hubs;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -103,6 +105,7 @@ app.UseExceptionHandling();
 app.UseCors("AllowWebApp");
 app.UseRouting();
 app.UseAuthorization();
+app.MapHub<CrowdQRHub>("/hubs/crowdqr");
 
 app.UseHttpsRedirection();
 app.MapControllers();
