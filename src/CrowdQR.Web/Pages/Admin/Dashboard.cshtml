@@ -205,7 +205,7 @@
                         {
                             @foreach (var request in Model.ApprovedRequests.OrderByDescending(r => r.UpdatedAt))
                             {
-                                <tr class="table-success table-opacity-25">
+                                <tr class="table-success table-opacity-25" data-request-id="@request.RequestId">
                                     <td class="fw-bold">@request.SongName</td>
                                     <td>@request.ArtistName</td>
                                     <td>@request.Requester</td>
@@ -263,7 +263,7 @@
                         {
                             @foreach (var request in Model.RejectedRequests.OrderByDescending(r => r.UpdatedAt))
                             {
-                                <tr class="table-secondary">
+                                <tr class="table-secondary" data-request-id="@request.RequestId">
                                     <td class="fw-bold">@request.SongName</td>
                                     <td>@request.ArtistName</td>
                                     <td>@request.Requester</td>
@@ -538,5 +538,169 @@
                 }
             });
         })();
+    </script>
+
+    <script>
+        // Handle form submissions via AJAX to prevent page reloads when approving/rejecting requests
+        $(document).ready(function() {
+            // Find all approve and reject forms
+            $('form[asp-page-handler="Approve"], form[asp-page-handler="Reject"], form[asp-page-handler="MoveToPending"]').on('submit', function(e) {
+                e.preventDefault();
+
+                const form = $(this);
+                const requestId = form.find('input[name="requestId"]').val();
+                const actionType = form.attr('asp-page-handler');
+
+                // Determine if we're approving, rejecting, or moving to pending
+                let newStatus;
+                if (actionType === 'Approve') {
+                    newStatus = 'Approved';
+                } else if (actionType === 'Reject') {
+                    newStatus = 'Rejected';
+                } else if (actionType === 'MoveToPending') {
+                    newStatus = 'Pending';
+                }
+
+                // Show loading state
+                const button = form.find('button[type="submit"]');
+                const originalHtml = button.html();
+                button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+
+                $.ajax({
+                    url: form.attr('action') || window.location.pathname,
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        console.log(`Request ${requestId} status updated to ${newStatus}`);
+
+                        // No need to update UI here, SignalR notifications will handle that
+                        // In case SignalR fails, we'll show a success message
+                        if (newStatus === 'Approved') {
+                            showSuccessToast('Request approved successfully!');
+                        } else if (newStatus === 'Rejected') {
+                            showSuccessToast('Request rejected successfully!');
+                        } else {
+                            showSuccessToast('Request moved to pending successfully!');
+                        }
+
+                        // Remove the row with animation if we're on a non-matching tab
+                        const currentTab = $('.nav-link.active').attr('href').split('=')[1];
+                        if ((newStatus === 'Approved' && currentTab !== 'approved') ||
+                            (newStatus === 'Rejected' && currentTab !== 'rejected') ||
+                            (newStatus === 'Pending' && currentTab !== 'pending')) {
+
+                            const row = $(`tr[data-request-id="${requestId}"]`);
+                            row.fadeOut(400, function() {
+                                row.remove();
+
+                                // Update counter badges
+                                updateCounterBadges(newStatus);
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error(`Error updating request ${requestId} status:`, error);
+
+                        // Restore button
+                        button.prop('disabled', false).html(originalHtml);
+
+                        // Show error message
+                        showErrorToast('Failed to update request status. Please try again.');
+                    }
+                });
+            });
+        });
+
+        // Show success toast notification
+        function showSuccessToast(message) {
+            // Create toast element if it doesn't exist
+            if ($('#toast-container').length === 0) {
+                $('body').append('<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 11"></div>');
+            }
+
+            const toastId = 'toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header bg-success text-white">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong class="me-auto">Success</strong>
+                        <small>just now</small>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+
+            $('#toast-container').append(toastHtml);
+            const toast = new bootstrap.Toast(document.getElementById(toastId));
+            toast.show();
+
+            // Remove toast element after it's hidden
+            $(`#${toastId}`).on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        }
+
+        // Show error toast notification
+        function showErrorToast(message) {
+            // Create toast element if it doesn't exist
+            if ($('#toast-container').length === 0) {
+                $('body').append('<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 11"></div>');
+            }
+
+            const toastId = 'toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header bg-danger text-white">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        <strong class="me-auto">Error</strong>
+                        <small>just now</small>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+
+            $('#toast-container').append(toastHtml);
+            const toast = new bootstrap.Toast(document.getElementById(toastId));
+            toast.show();
+
+            // Remove toast element after it's hidden
+            $(`#${toastId}`).on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        }
+
+        // Update counter badges when request status changes
+        function updateCounterBadges(newStatus) {
+            // Get current counts
+            const pendingBadge = $('.nav-link:contains("Pending") .badge');
+            const approvedBadge = $('.nav-link:contains("Approved") .badge');
+            const rejectedBadge = $('.nav-link:contains("Rejected") .badge');
+
+            const pendingCount = parseInt(pendingBadge.text()) || 0;
+            const approvedCount = parseInt(approvedBadge.text()) || 0;
+            const rejectedCount = parseInt(rejectedBadge.text()) || 0;
+
+            // Update based on the action
+            if (newStatus === 'Approved') {
+                pendingBadge.text(Math.max(0, pendingCount - 1));
+                approvedBadge.text(approvedCount + 1);
+            } else if (newStatus === 'Rejected') {
+                pendingBadge.text(Math.max(0, pendingCount - 1));
+                rejectedBadge.text(rejectedCount + 1);
+            } else if (newStatus === 'Pending') {
+                // Could be coming from either approved or rejected
+                // For simplicity, we'll let SignalR handle this more complex scenario
+                // by refreshing the page after a delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+        }
     </script>
 }

@@ -1,5 +1,6 @@
 ﻿using CrowdQR.Api.Data;
 using CrowdQR.Api.Models;
+using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
 using CrowdQR.Shared.Models.Enums;
 using Microsoft.AspNetCore.Mvc;
@@ -12,12 +13,17 @@ namespace CrowdQR.Api.Controllers;
 /// </summary>
 /// <param name="context">The database context.</param>
 /// <param name="logger">The logger.</param>
+/// /// <param name="hubNotificationService">The hub notification service.</param>
 [ApiController]
 [Route("api/[controller]")]
-public class RequestController(CrowdQRContext context, ILogger<RequestController> logger) : ControllerBase
+public class RequestController(
+    CrowdQRContext context, 
+    ILogger<RequestController> logger,
+    IHubNotificationService hubNotificationService) : ControllerBase
 {
     private readonly CrowdQRContext _context = context;
     private readonly ILogger<RequestController> _logger = logger;
+    private readonly IHubNotificationService _hubNotificationService = hubNotificationService;
 
     // GET: api/request
     /// <summary>
@@ -150,6 +156,19 @@ public class RequestController(CrowdQRContext context, ILogger<RequestController
         _context.Requests.Add(request);
         await _context.SaveChangesAsync();
 
+        // Send SignalR notification
+        try
+        {
+            await _hubNotificationService.NotifyRequestAdded(request.EventId, request.RequestId);
+            _logger.LogInformation("SignalR notification sent for new request {RequestId} in event {EventId}",
+                request.RequestId, request.EventId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send SignalR notification for new request {RequestId}", request.RequestId);
+            // Don't fail the request if SignalR notification fails
+        }
+
         return CreatedAtAction(nameof(GetRequest), new { id = request.RequestId }, request );
     }
 
@@ -169,8 +188,31 @@ public class RequestController(CrowdQRContext context, ILogger<RequestController
             return NotFound();
         }
 
+        // Store old status for logging
+        var oldStatus = request.Status;
+
         request.Status = statusDto.Status;
         await _context.SaveChangesAsync();
+
+        // Send SignalR notification
+        try
+        {
+            await _hubNotificationService.NotifyRequestStatusUpdated(
+                request.EventId,
+                request.RequestId,
+                request.Status.ToString());
+
+            _logger.LogInformation(
+                "SignalR notification sent for request {RequestId} status change from {OldStatus} to {NewStatus}",
+                request.RequestId, oldStatus, request.Status);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to send SignalR notification for request {RequestId} status update",
+                request.RequestId);
+            // Don't fail the request if SignalR notification fails
+        }
 
         return NoContent();
     }
@@ -189,6 +231,10 @@ public class RequestController(CrowdQRContext context, ILogger<RequestController
         {
             return NotFound();
         }
+
+        // Store event ID for notification after deletion
+        // var eventId = request.EventId;
+        // var requestId = request.RequestId;
 
         _context.Requests.Remove(request);
         await _context.SaveChangesAsync();

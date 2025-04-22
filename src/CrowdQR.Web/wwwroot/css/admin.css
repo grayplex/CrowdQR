@@ -1,8 +1,90 @@
-﻿/* src/CrowdQR.Web/wwwroot/css/admin.css */
-
-/* Table row hover effect */
+﻿/* Table row hover effect */
 .table-hover tbody tr:hover {
     background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Row animations */
+@keyframes highlight-row {
+    0% {
+        background-color: rgba(255, 193, 7, 0.3);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+.highlight-row {
+    animation: highlight-row 1.5s ease-out;
+}
+
+/* Badge animations */
+@keyframes badge-pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.badge-pulse {
+    animation: badge-pulse 0.6s ease-in-out;
+}
+
+/* Toast container */
+#toast-container {
+    z-index: 1050;
+}
+
+/* Form submit animation */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Status indicator */
+.status-indicator {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    margin-right: 0.3rem;
+}
+
+.status-indicator.status-connected {
+    background-color: #28a745;
+    box-shadow: 0 0 5px #28a745;
+}
+
+.status-indicator.status-connecting {
+    background-color: #ffc107;
+    box-shadow: 0 0 5px #ffc107;
+}
+
+.status-indicator.status-disconnected {
+    background-color: #dc3545;
+    box-shadow: 0 0 5px #dc3545;
 }
 
 /* Improved card styles */
@@ -16,25 +98,42 @@
     border-radius: calc(0.5rem - 1px) calc(0.5rem - 1px) 0 0;
 }
 
-/* Status indicators */
-.status-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 5px;
+/* Status badge animation */
+@keyframes pulse {
+    0% {
+        opacity: 0.7;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.7;
+    }
 }
 
-.status-pending {
-    background-color: #ffc107;
+[data-connection-status].bg-success {
+    animation: pulse 2s infinite;
 }
 
-.status-approved {
-    background-color: #28a745;
+/* Vote count highlight */
+.highlight-change {
+    animation: highlight-pulse 1.5s ease-in-out;
 }
 
-.status-rejected {
-    background-color: #6c757d;
+@keyframes highlight-pulse {
+    0% {
+        background-color: transparent;
+    }
+
+    50% {
+        background-color: rgba(40, 167, 69, 0.25);
+    }
+
+    100% {
+        background-color: transparent;
+    }
 }
 
 /* Better tab styling */
