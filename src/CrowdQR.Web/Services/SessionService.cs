@@ -44,6 +44,7 @@ public class SessionService(ApiService apiService, ILogger<SessionService> logge
     /// <returns>True if successful, false otherwise.</returns>
     public async Task<bool> IncrementRequestCountAsync(int sessionId)
     {
-        return await _apiService.PutAsync($"{BaseEndpoint}/{sessionId}/increment-request-count", null);
+        string endpoint = $"{BaseEndpoint}/{sessionId}/increment-request-count";
+        return await _apiService.PutAsync(endpoint);
     }
 }

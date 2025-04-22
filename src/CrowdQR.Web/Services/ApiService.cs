@@ -128,6 +128,34 @@ public class ApiService
     }
 
     /// <summary>
+    /// Makes a PUT request to the specified endpoint without a body.
+    /// </summary>
+    /// <param name="endpoint">The API endpoint.</param>
+    /// <returns>True if the request was successful, false otherwise</returns>
+    public async Task<bool> PutAsync(string endpoint)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsync(endpoint, null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            _logger.LogWarning("API PUT request failed: {Endpoint} - {StatusCode}",
+                endpoint, response.StatusCode);
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error making PUT request to {Endpoint}", endpoint);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Makes a DELETE request to the specified endpoint.
     /// </summary>
     /// <param name="endpoint">The API endpoint.</param>

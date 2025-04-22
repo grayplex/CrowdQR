@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using CrowdQR.Shared.Models.DTOs;
+using CrowdQR.Shared.Models.Enums;
 
 namespace CrowdQR.Web.Services;
 
@@ -137,8 +138,12 @@ public class SessionManager(
     /// <returns>True if the user is a DJ, false otherwise.</returns>
     public bool IsDj()
     {
-        var role = GetCurrentUserRole();
-        return role == "DJ";
+        var roleStr = GetCurrentUserRole();
+        if (string.IsNullOrEmpty(roleStr) || !Enum.TryParse<UserRole>(roleStr, out var role))
+        {
+            return false;
+        }
+        return role == UserRole.DJ;
     }
 
     /// <summary>
@@ -176,7 +181,7 @@ public class SessionManager(
 
             session.SetString(UserIdKey, user.UserId.ToString());
             session.SetString(UsernameKey, user.Username);
-            session.SetString(UserRoleKey, user.Role);
+            session.SetString(UserRoleKey, user.Role.ToString());
 
             return true;
         }
@@ -193,7 +198,7 @@ public class SessionManager(
     /// <param name="username">The username.</param>
     /// <param name="role">The user role (0 = Audience, 1 = DJ).</param>
     /// <returns>True if registration was successful, false otherwise.</returns>
-    public async Task<bool> RegisterAndLoginAsync(string username, int role = 0)
+    public async Task<bool> RegisterAndLoginAsync(string username, UserRole role = UserRole.Audience)
     {
         try
         {
@@ -226,7 +231,7 @@ public class SessionManager(
 
             session.SetString(UserIdKey, user.UserId.ToString());
             session.SetString(UsernameKey, user.Username);
-            session.SetString(UserRoleKey, user.Role);
+            session.SetString(UserRoleKey, user.Role.ToString());
 
             return true;
         }
