@@ -18,6 +18,7 @@ namespace CrowdQR.Web.Pages;
 /// <param name="voteService"> The vote service.</param>
 /// <param name="userService"> The user service.</param>
 /// <param name="sessionManager"> The session manager.</param>
+/// <param name="sessionService"> The session service.</param>
 /// <param name="logger"> The logger.</param>
 public class EventModel(
     EventService eventService,
@@ -25,6 +26,7 @@ public class EventModel(
     VoteService voteService,
     UserService userService,
     SessionManager sessionManager,
+    SessionService sessionService,
     ILogger<EventModel> logger) : PageModel
 {
     private readonly EventService _eventService = eventService;
@@ -32,6 +34,7 @@ public class EventModel(
     private readonly VoteService _voteService = voteService;
     private readonly UserService _userService = userService;
     private readonly SessionManager _sessionManager = sessionManager;
+    private readonly SessionService _sessionService = sessionService;
     private readonly ILogger<EventModel> _logger = logger;
 
     /// <summary>
@@ -156,7 +159,7 @@ public class EventModel(
             var requests = await _requestService.GetRequestsByEventAsync(EventId);
 
             // Map API requests to view model
-            Requests = requests.Select(r => new RequestDto
+            Requests = [.. requests.Select(r => new RequestDto
             {
                 RequestId = r.RequestId,
                 SongName = r.SongName,
@@ -166,7 +169,7 @@ public class EventModel(
                 Status = r.Status,
                 // Store user's vote status to disable vote button if already voted
                 UserHasVoted = r.Votes?.Any(v => v.UserId == UserId) ?? false
-            }).ToList();
+            })];
 
             return Page();
         }
@@ -233,7 +236,7 @@ public class EventModel(
             var sessionId = _sessionManager.GetApiSessionId();
             if (sessionId.HasValue)
             {
-                await _sessionManager.IncrementRequestCountAsync(sessionId.Value);
+                await _sessionService.IncrementRequestCountAsync(sessionId.Value);
             }
 
             SuccessMessage = "Your request has been submitted successfully!";
@@ -336,7 +339,7 @@ public class EventModel(
                 ArtistName = "Bee Gees",
                 Requester = "partygoer1",
                 VoteCount = 5,
-                Status = RequestStatus.Pending.ToString(),
+                Status = RequestStatus.Pending,
                 UserHasVoted = true
             },
             new() {
@@ -345,7 +348,7 @@ public class EventModel(
                 ArtistName = "Michael Jackson",
                 Requester = "dancefloor_queen",
                 VoteCount = 3,
-                Status = RequestStatus.Approved.ToString(),
+                Status = RequestStatus.Approved,
                 UserHasVoted = false
             },
             new() {
@@ -354,7 +357,7 @@ public class EventModel(
                 ArtistName = "Chic",
                 Requester = "music_lover",
                 VoteCount = 2,
-                Status = RequestStatus.Pending.ToString(),
+                Status = RequestStatus.Pending,
                 UserHasVoted = false
             },
             new() {
@@ -363,7 +366,7 @@ public class EventModel(
                 ArtistName = "Chic",
                 Requester = "rhythm_fanatic",
                 VoteCount = 1,
-                Status = RequestStatus.Pending.ToString(),
+                Status = RequestStatus.Pending,
                 UserHasVoted = false
             },
             new() {
@@ -372,10 +375,10 @@ public class EventModel(
                 ArtistName = "Earth, Wind & Fire",
                 Requester = "beat_enthusiast",
                 VoteCount = 0,
-                Status = RequestStatus.Rejected.ToString(),
+                Status = RequestStatus.Rejected,
                 UserHasVoted = false
             }
-        ]
+        ];
     }
 
     /// <summary>

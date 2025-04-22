@@ -71,7 +71,7 @@ public class DashboardModel(
     /// The ID of the event to display on the dashboard.
     /// </summary>
     [BindProperty(SupportsGet = true)]
-    public string? EventId { get; set; }
+    public int? EventId { get; set; }
 
     /// <summary>
     /// The currently active tab (pending, approved, or rejected).
@@ -133,8 +133,14 @@ public class DashboardModel(
         try
         {
             // If no event ID is provided, get the DJ's events and use the first one
-            if (!EventId.HasValue)
+            if (EventId == null)
             {
+                if (UserId == null)
+                {
+                    ErrorMessage = "You must be logged in to access the DJ dashboard.";
+                    return RedirectToPage("/Index");
+                }
+
                 var events = await _eventService.GetEventsByDjAsync(UserId.Value);
                 if (events.Count == 0)
                 {
@@ -354,7 +360,7 @@ public class DashboardModel(
                 VoteCount = 3,
                 Status = RequestStatus.Approved,
                 CreatedAt = DateTime.Now.AddMinutes(-20),
-                ActionTime = DateTime.Now.AddMinutes(-5)
+                UpdatedAt = DateTime.Now.AddMinutes(-5)
             },
             new() {
                 RequestId = 6,
@@ -364,7 +370,7 @@ public class DashboardModel(
                 VoteCount = 4,
                 Status = RequestStatus.Approved,
                 CreatedAt = DateTime.Now.AddMinutes(-25),
-                ActionTime = DateTime.Now.AddMinutes(-10)
+                UpdatedAt = DateTime.Now.AddMinutes(-10)
             }
         ];
 
@@ -377,7 +383,7 @@ public class DashboardModel(
                 VoteCount = 0,
                 Status = RequestStatus.Rejected,
                 CreatedAt = DateTime.Now.AddMinutes(-30),
-                ActionTime = DateTime.Now.AddMinutes(-15)
+                UpdatedAt = DateTime.Now.AddMinutes(-15)
             }
         ];
 
@@ -388,44 +394,46 @@ public class DashboardModel(
     private void MapRequestsFromSummary(EventSummaryDto summary)
     {
         // Map pending requests
-        PendingRequests = summary.TopRequests.Select(r => new SongRequestModel
+#pragma warning disable IDE0305 // Simplify collection initialization
+        PendingRequests = summary.TopRequests.Select(r => new RequestDto
         {
-            Id = r.RequestId,
+            RequestId = r.RequestId,
             SongName = r.SongName,
             ArtistName = r.ArtistName,
             Requester = r.Requester,
             VoteCount = r.VoteCount,
-            Status = "Pending",
-            RequestTime = r.CreatedAt
+            Status = RequestStatus.Pending,
+            CreatedAt = r.CreatedAt
         }).ToList();
 
         // Map approved requests
-        ApprovedRequests = summary.RecentlyApproved.Select(r => new SongRequestModel
+        ApprovedRequests = summary.RecentlyApproved.Select(r => new RequestDto
         {
-            Id = r.RequestId,
+            RequestId = r.RequestId,
             SongName = r.SongName,
             ArtistName = r.ArtistName,
             Requester = r.Requester,
             VoteCount = r.VoteCount,
-            Status = "Approved",
-            RequestTime = r.CreatedAt,
+            Status = RequestStatus.Approved,
+            CreatedAt = r.CreatedAt,
             // In the real API, we would have the approval time
-            ActionTime = DateTime.Now.AddMinutes(-5)
+            UpdatedAt = DateTime.Now.AddMinutes(-5)
         }).ToList();
 
         // Map rejected requests
-        RejectedRequests = summary.RecentlyRejected.Select(r => new SongRequestModel
+        RejectedRequests = summary.RecentlyRejected.Select(r => new RequestDto
         {
-            Id = r.RequestId,
+            RequestId = r.RequestId,
             SongName = r.SongName,
             ArtistName = r.ArtistName,
             Requester = r.Requester,
             VoteCount = r.VoteCount,
-            Status = "Rejected",
-            RequestTime = r.CreatedAt,
+            Status = RequestStatus.Rejected,
+            CreatedAt = r.CreatedAt,
             // In the real API, we would have the rejection time
-            ActionTime = DateTime.Now.AddMinutes(-10)
+            UpdatedAt = DateTime.Now.AddMinutes(-10)
         }).ToList();
+#pragma warning restore IDE0305 // Simplify collection initialization
     }
 
     private void MapRequestsFromList(List<RequestDto> requests)
@@ -433,15 +441,15 @@ public class DashboardModel(
         // Group requests by status
         foreach (var request in requests)
         {
-            var model = new SongRequestModel
+            var model = new RequestDto
             {
-                Id = request.RequestId,
+                RequestId = request.RequestId,
                 SongName = request.SongName,
                 ArtistName = request.ArtistName,
-                Requester = request.UserId.ToString(), // We would fetch username in a real implementation
+                Requester = request.Requester, // We would fetch username in a real implementation
                 VoteCount = request.VoteCount,
-                Status = request.Status.ToString(),
-                RequestTime = request.CreatedAt
+                Status = request.Status,
+                CreatedAt = request.CreatedAt
             };
 
             if (request.Status == RequestStatus.Pending)
@@ -450,22 +458,22 @@ public class DashboardModel(
             }
             else if (request.Status == RequestStatus.Approved)
             {
-                model.ActionTime = DateTime.Now.AddMinutes(-5); // Mock data
+                model.UpdatedAt = DateTime.Now.AddMinutes(-5); // Mock data
                 ApprovedRequests.Add(model);
             }
             else if (request.Status == RequestStatus.Rejected)
             {
-                model.ActionTime = DateTime.Now.AddMinutes(-10); // Mock data
+                model.UpdatedAt = DateTime.Now.AddMinutes(-10); // Mock data
                 RejectedRequests.Add(model);
             }
         }
 
         // Order pending requests by vote count
-        PendingRequests = PendingRequests.OrderByDescending(r => r.VoteCount).ToList();
+        PendingRequests = [.. PendingRequests.OrderByDescending(r => r.VoteCount)];
 
         // Order approved and rejected requests by time
-        ApprovedRequests = ApprovedRequests.OrderByDescending(r => r.ActionTime).ToList();
-        RejectedRequests = RejectedRequests.OrderByDescending(r => r.ActionTime).ToList();
+        ApprovedRequests = [.. ApprovedRequests.OrderByDescending(r => r.UpdatedAt)];
+        RejectedRequests = [.. RejectedRequests.OrderByDescending(r => r.UpdatedAt)];
 
         // Set active users (mock data)
         ActiveUsers = 10;
@@ -477,6 +485,7 @@ public class DashboardModel(
         {
             string search = SearchTerm.ToLower();
 
+#pragma warning disable IDE0305 // Simplify collection initialization
             PendingRequests = PendingRequests
                 .Where(r => r.SongName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                             (r.ArtistName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
@@ -494,6 +503,7 @@ public class DashboardModel(
                             (r.ArtistName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
                             r.Requester.Contains(search, StringComparison.OrdinalIgnoreCase))
                 .ToList();
+#pragma warning restore IDE0305 // Simplify collection initialization
         }
     }
 }

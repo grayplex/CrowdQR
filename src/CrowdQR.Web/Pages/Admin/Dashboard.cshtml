@@ -1,4 +1,5 @@
 ﻿@page "{eventId?}"
+@using CrowdQR.Shared.Models.Enums
 @model CrowdQR.Web.Pages.Admin.DashboardModel
 @{
     ViewData["Title"] = "DJ Dashboard";
@@ -147,18 +148,18 @@
                                             <i class="bi bi-hand-thumbs-up"></i> @request.VoteCount
                                         </span>
                                     </td>
-                                    <td>@request.RequestTime.ToString("HH:mm")</td>
+                                    <td>@request.CreatedAt.ToString("HH:mm")</td>
                                     <td>
                                         <div class="btn-group" role="group">
                                             <form method="post" asp-page-handler="Approve" class="d-inline">
-                                                <input type="hidden" name="requestId" value="@request.Id" />
+                                                <input type="hidden" name="requestId" value="@request.RequestId" />
                                                 <input type="hidden" name="eventId" value="@Model.EventId" />
                                                 <button type="submit" class="btn btn-sm btn-success">
                                                     <i class="bi bi-check"></i> Approve
                                                 </button>
                                             </form>
                                             <form method="post" asp-page-handler="Reject" class="d-inline ms-1">
-                                                <input type="hidden" name="requestId" value="@request.Id" />
+                                                <input type="hidden" name="requestId" value="@request.RequestId" />
                                                 <input type="hidden" name="eventId" value="@Model.EventId" />
                                                 <button type="submit" class="btn btn-sm btn-secondary">
                                                     <i class="bi bi-x"></i> Reject
@@ -202,7 +203,7 @@
                     <tbody>
                         @if (Model.ApprovedRequests.Any())
                         {
-                            @foreach (var request in Model.ApprovedRequests.OrderByDescending(r => r.ActionTime))
+                            @foreach (var request in Model.ApprovedRequests.OrderByDescending(r => r.UpdatedAt))
                             {
                                 <tr class="table-success table-opacity-25">
                                     <td class="fw-bold">@request.SongName</td>
@@ -213,11 +214,11 @@
                                             <i class="bi bi-hand-thumbs-up"></i> @request.VoteCount
                                         </span>
                                     </td>
-                                    <td>@request.RequestTime.ToString("HH:mm")</td>
-                                    <td>@(request.ActionTime?.ToString("HH:mm") ?? "-")</td>
+                                    <td>@request.CreatedAt.ToString("HH:mm")</td>
+                                    <td>@(request.UpdatedAt?.ToString("HH:mm") ?? "-")</td>
                                     <td>
                                         <form method="post" asp-page-handler="MoveToPending">
-                                            <input type="hidden" name="requestId" value="@request.Id" />
+                                            <input type="hidden" name="requestId" value="@request.RequestId" />
                                             <input type="hidden" name="eventId" value="@Model.EventId" />
                                             <button type="submit" class="btn btn-sm btn-outline-secondary">
                                                 <i class="bi bi-arrow-counterclockwise"></i> Move to Pending
@@ -260,7 +261,7 @@
                     <tbody>
                         @if (Model.RejectedRequests.Any())
                         {
-                            @foreach (var request in Model.RejectedRequests.OrderByDescending(r => r.ActionTime))
+                            @foreach (var request in Model.RejectedRequests.OrderByDescending(r => r.UpdatedAt))
                             {
                                 <tr class="table-secondary">
                                     <td class="fw-bold">@request.SongName</td>
@@ -271,11 +272,11 @@
                                             <i class="bi bi-hand-thumbs-up"></i> @request.VoteCount
                                         </span>
                                     </td>
-                                    <td>@request.RequestTime.ToString("HH:mm")</td>
-                                    <td>@(request.ActionTime?.ToString("HH:mm") ?? "-")</td>
+                                    <td>@request.CreatedAt.ToString("HH:mm")</td>
+                                    <td>@(request.UpdatedAt?.ToString("HH:mm") ?? "-")</td>
                                     <td>
                                         <form method="post" asp-page-handler="MoveToPending">
-                                            <input type="hidden" name="requestId" value="@request.Id" />
+                                            <input type="hidden" name="requestId" value="@request.RequestId" />
                                             <input type="hidden" name="eventId" value="@Model.EventId" />
                                             <button type="submit" class="btn btn-sm btn-outline-secondary">
                                                 <i class="bi bi-arrow-counterclockwise"></i> Move to Pending

@@ -35,6 +35,26 @@ public class RequestDto
     public int UserId { get; set; }
 
     /// <summary>
+    /// The username of the requester.
+    /// </summary>
+    public string Requester { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The number of votes this request has received.
+    /// </summary>
+    public int VoteCount { get; set; }
+
+    /// <summary>
+    /// Indicates whether the current user has voted for this request.
+    /// </summary>
+    public bool UserHasVoted { get; set; }
+
+    /// <summary>
+    /// List of votes for this request.
+    /// </summary>
+    public List<VoteDto>? Votes { get; set; }
+
+    /// <summary>
     /// The current status of the request.
     /// </summary>
     public RequestStatus Status { get; set; } = RequestStatus.Pending;
@@ -43,6 +63,11 @@ public class RequestDto
     /// When the request was created.
     /// </summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// When the request was last acted upon (approval/rejection).
+    /// </summary>
+    public DateTime? UpdatedAt { get; set; }
 }
 
 /// <summary>

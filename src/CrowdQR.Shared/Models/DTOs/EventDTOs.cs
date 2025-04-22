@@ -108,6 +108,31 @@ public class EventSummaryDto
     /// The total number of unique users who participated in the event.
     /// </summary>
     public int UniqueUsers { get; set; }
+
+    /// <summary>
+    /// List of top requested songs, ordered by votes.
+    /// </summary>
+    public List<RequestDto> TopRequests { get; set; } = [];
+
+    /// <summary>
+    /// List of recently approved requests.
+    /// </summary>
+    public List<RequestDto> RecentlyApproved { get; set; } = [];
+
+    /// <summary>
+    /// List of recently rejected requests.
+    /// </summary>
+    public List<RequestDto> RecentlyRejected { get; set; } = [];
+
+    /// <summary>
+    /// The number of active users.
+    /// </summary>
+    public int ActiveUsers { get; set; }
+
+    /// <summary>
+    /// List of active users in the event.
+    /// </summary>
+    public List<UserDto> ActiveUsersList { get; set; } = [];
 }
 
 /// <summary>
