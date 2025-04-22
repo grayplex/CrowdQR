@@ -300,10 +300,21 @@
 
     <!-- Real-time Update Indicator -->
     <div class="mt-4 text-end">
-        <span class="badge bg-secondary" data-connection-status>
-            <i class="bi bi-broadcast-pin"></i> Connecting...
-        </span>
-        <small class="text-muted ms-2">Last updated: @DateTime.Now.ToString("HH:mm:ss")</small>
+        <div class="d-flex align-items-center justify-content-end">
+            <span class="badge bg-secondary me-2" data-connection-status>
+                <i class="bi bi-broadcast-pin"></i> Connecting...
+            </span>
+            <span class="connection-stats small text-muted">
+                Latency: <span class="connection-latency">--</span> |
+                Updated: <span id="last-update-time">@DateTime.Now.ToString("HH:mm:ss")</span>
+            </span>
+        </div>
+        <div class="connection-error-message mt-2 text-danger d-none">
+            <small><i class="bi bi-exclamation-triangle-fill"></i> <span id="error-message"></span></small>
+            <button id="refresh-page-btn" class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="window.location.reload()">
+                Refresh page
+            </button>
+        </div>
     </div>
 </div>
 
@@ -702,5 +713,168 @@
                 }, 2000);
             }
         }
+    </script>
+
+    <script>
+        // Connection monitor for the dashboard
+        (function() {
+            let connectionMonitorInterval = null;
+            const MONITOR_INTERVAL = 60000; // Check every minute
+
+            // Start monitoring when document is ready
+            $(document).ready(function() {
+                startConnectionMonitor();
+            });
+
+            // Set up connection monitoring
+            function startConnectionMonitor() {
+                // Clear any existing interval
+                if (connectionMonitorInterval) {
+                    clearInterval(connectionMonitorInterval);
+                }
+
+                // Run an initial health check
+                checkConnectionHealth();
+
+                // Set up periodic health checks
+                connectionMonitorInterval = setInterval(checkConnectionHealth, MONITOR_INTERVAL);
+            }
+
+            // Check the health of the SignalR connection
+            async function checkConnectionHealth() {
+                if (!CrowdQR.SignalR.isConnected()) {
+                    updateConnectionStatus('disconnected');
+                    await attemptReconnect();
+                    return;
+                }
+
+                // Measure latency
+                const latency = await CrowdQR.SignalR.measureLatency();
+                if (latency) {
+                    console.log('Connection latency:', latency);
+                    updateConnectionLatency(latency.roundTripTime);
+                } else {
+                    console.warn('Could not measure connection latency');
+                }
+
+                // Check overall connection health
+                const isHealthy = await CrowdQR.SignalR.checkHealth();
+                if (!isHealthy) {
+                    console.warn('Connection health check failed');
+                    updateConnectionStatus('unhealthy');
+                    await attemptReconnect();
+                } else {
+                    updateConnectionStatus('healthy');
+                }
+            }
+
+            // Attempt to reconnect
+            async function attemptReconnect() {
+                console.log('Attempting to reconnect...');
+                updateConnectionStatus('reconnecting');
+
+                const reconnected = await CrowdQR.SignalR.reconnect();
+                if (reconnected) {
+                    console.log('Successfully reconnected');
+                    updateConnectionStatus('connected');
+
+                    // Rejoin the event
+                    const eventId = '@Model.EventId';
+                    if (eventId) {
+                        await CrowdQR.SignalR.joinEvent(eventId);
+                    }
+                } else {
+                    console.error('Failed to reconnect');
+                    updateConnectionStatus('failed');
+
+                    // Show reconnect button
+                    showReconnectButton();
+                }
+            }
+
+            // Update connection status UI
+            function updateConnectionStatus(status) {
+                const statusBadge = $('[data-connection-status]');
+                if (!statusBadge.length) return;
+
+                statusBadge.removeClass('bg-success bg-danger bg-warning bg-secondary');
+
+                switch (status) {
+                    case 'connected':
+                    case 'healthy':
+                        statusBadge.addClass('bg-success')
+                            .html('<i class="bi bi-broadcast"></i> Live Updates Active');
+                        break;
+                    case 'reconnecting':
+                        statusBadge.addClass('bg-warning')
+                            .html('<i class="bi bi-broadcast"></i> Reconnecting...');
+                        break;
+                    case 'unhealthy':
+                        statusBadge.addClass('bg-warning')
+                            .html('<i class="bi bi-broadcast"></i> Connection Unstable');
+                        break;
+                    case 'disconnected':
+                    case 'failed':
+                    default:
+                        statusBadge.addClass('bg-danger')
+                            .html('<i class="bi bi-broadcast-pin"></i> Updates Offline');
+                        break;
+                }
+            }
+
+            // Update latency display
+            function updateConnectionLatency(latencyMs) {
+                const latencyElement = $('.connection-latency');
+                if (latencyElement.length) {
+                    latencyElement.text(`${latencyMs}ms`);
+
+                    // Add visual indicators based on latency
+                    latencyElement.removeClass('text-success text-warning text-danger');
+                    if (latencyMs < 100) {
+                        latencyElement.addClass('text-success');
+                    } else if (latencyMs < 300) {
+                        latencyElement.addClass('text-warning');
+                    } else {
+                        latencyElement.addClass('text-danger');
+                    }
+                }
+            }
+
+            // Show a reconnect button when connection fails
+            function showReconnectButton() {
+                const statusBadge = $('[data-connection-status]');
+                if (!statusBadge.length) return;
+
+                // Add reconnect button if it doesn't exist
+                if (!$('#reconnect-button').length) {
+                    statusBadge.after(`
+                        <button id="reconnect-button" class="btn btn-sm btn-warning ms-2">
+                            <i class="bi bi-arrow-clockwise"></i> Reconnect
+                        </button>
+                    `);
+
+                    // Add event handler
+                    $('#reconnect-button').on('click', async function() {
+                        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Reconnecting...');
+
+                        await attemptReconnect();
+
+                        // Remove the button if reconnection was successful
+                        if (CrowdQR.SignalR.isConnected()) {
+                            $(this).remove();
+                        } else {
+                            $(this).prop('disabled', false).html('<i class="bi bi-arrow-clockwise"></i> Reconnect');
+                        }
+                    });
+                }
+            }
+
+            // Cleanup when leaving the page
+            window.addEventListener('beforeunload', function() {
+                if (connectionMonitorInterval) {
+                    clearInterval(connectionMonitorInterval);
+                }
+            });
+        })();
     </script>
 }

@@ -140,18 +140,69 @@ window.CrowdQR.SignalR = (function () {
         }
     }
 
-    // Set up a reconnect timer
+    // Set up a reconnect timer with exponential backoff
     function startReconnectTimer() {
         clearReconnectTimer();
 
+        // Start with a base delay of 2 seconds, then increase exponentially
+        let retryCount = 0;
+        const maxRetryCount = 10; // Maximum number of retries
+        const baseDelay = 2000; // 2 seconds
+        const maxDelay = 60000; // Maximum delay of 1 minute
+
         reconnectInterval = setInterval(() => {
             if (!isConnected) {
-                console.log("Attempting to reconnect to SignalR hub...");
-                startConnection().catch(console.error);
+                if (retryCount < maxRetryCount) {
+                    // Calculate exponential backoff delay (2s, 4s, 8s, 16s, etc.)
+                    const delay = Math.min(maxDelay, baseDelay * Math.pow(2, retryCount));
+
+                    console.log(`Attempting to reconnect to SignalR hub (attempt ${retryCount + 1}/${maxRetryCount})...`);
+                    console.log(`Next retry in ${delay / 1000} seconds if unsuccessful`);
+
+                    startConnection()
+                        .then(success => {
+                            if (success) {
+                                retryCount = 0; // Reset retry count on successful connection
+                                clearReconnectTimer();
+                            } else {
+                                retryCount++; // Increment retry count on failed attempt
+                            }
+                        })
+                        .catch(() => {
+                            retryCount++; // Increment retry count on error
+                        });
+                } else {
+                    console.error("Maximum reconnection attempts reached. Please refresh the page.");
+                    clearReconnectTimer();
+                    triggerEvent('connectionStatus', {
+                        status: 'failed',
+                        error: 'Maximum reconnection attempts reached'
+                    });
+
+                    // Show a UI notification to the user
+                    showReconnectFailedUI();
+                }
             } else {
                 clearReconnectTimer();
             }
-        }, 5000); // Try every 5 seconds
+        }, 5000); // Check connection status every 5 seconds
+    }
+
+    // Show a UI notification that reconnection failed
+    function showReconnectFailedUI() {
+        // Create an element to show the reconnection failure
+        const reconnectElement = document.createElement('div');
+        reconnectElement.className = 'position-fixed top-0 start-0 w-100 p-3 bg-danger text-white text-center';
+        reconnectElement.style.zIndex = 9999;
+        reconnectElement.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-exclamation-triangle-fill me-2"></i> Connection lost. Real-time updates are unavailable.</span>
+                <button class="btn btn-sm btn-outline-light" onclick="window.location.reload()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                </button>
+            </div>
+        `;
+        document.body.appendChild(reconnectElement);
     }
 
     // Clear the reconnect timer
@@ -215,6 +266,113 @@ window.CrowdQR.SignalR = (function () {
                 console.error(`Error in ${event} event handler:`, error);
             }
         }
+    }
+
+    // Attempt connection with fallback to alternate transport methods
+    async function attemptConnectionWithFallback() {
+        // Try WebSockets first (default)
+        try {
+            console.log("Attempting to connect with WebSockets...");
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl(`${apiBaseUrl}/hubs/crowdqr`, {
+                    skipNegotiation: true,
+                    transport: signalR.HttpTransportType.WebSockets
+                })
+                .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+                .configureLogging(signalR.LogLevel.Information)
+                .build();
+
+            await setupConnectionHandlers();
+            await connection.start();
+            console.log("Connected successfully using WebSockets");
+            return true;
+        } catch (wsError) {
+            console.warn("WebSocket connection failed:", wsError);
+
+            // Try SSE (Server-Sent Events) as fallback
+            try {
+                console.log("Attempting to connect with Server-Sent Events...");
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl(`${apiBaseUrl}/hubs/crowdqr`, {
+                        transport: signalR.HttpTransportType.ServerSentEvents
+                    })
+                    .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+                    .configureLogging(signalR.LogLevel.Information)
+                    .build();
+
+                await setupConnectionHandlers();
+                await connection.start();
+                console.log("Connected successfully using Server-Sent Events");
+                return true;
+            } catch (sseError) {
+                console.warn("Server-Sent Events connection failed:", sseError);
+
+                // Finally, try Long Polling as last resort
+                try {
+                    console.log("Attempting to connect with Long Polling...");
+                    connection = new signalR.HubConnectionBuilder()
+                        .withUrl(`${apiBaseUrl}/hubs/crowdqr`, {
+                            transport: signalR.HttpTransportType.LongPolling
+                        })
+                        .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+                        .configureLogging(signalR.LogLevel.Information)
+                        .build();
+
+                    await setupConnectionHandlers();
+                    await connection.start();
+                    console.log("Connected successfully using Long Polling");
+                    return true;
+                } catch (lpError) {
+                    console.error("All connection methods failed:", lpError);
+                    return false;
+                }
+            }
+        }
+    }
+
+    // Set up the connection event handlers
+    async function setupConnectionHandlers() {
+        // Set up connection event handlers
+        connection.onreconnecting(error => {
+            console.warn("SignalR reconnecting:", error);
+            isConnected = false;
+            triggerEvent('connectionStatus', { status: 'reconnecting' });
+            updateConnectionUI(false);
+
+            // Pause heartbeat during reconnection
+            stopHeartbeat();
+        });
+
+        connection.onreconnected(connectionId => {
+            console.log("SignalR reconnected:", connectionId);
+            isConnected = true;
+            triggerEvent('connectionStatus', { status: 'connected' });
+            updateConnectionUI(true);
+
+            // Restart heartbeat
+            startHeartbeat();
+
+            // Rejoin event group if was previously in one
+            if (eventId) {
+                joinEvent(eventId).catch(console.error);
+            }
+        });
+
+        connection.onclose(error => {
+            console.warn("SignalR connection closed:", error);
+            isConnected = false;
+            triggerEvent('connectionStatus', { status: 'disconnected' });
+            updateConnectionUI(false);
+
+            // Stop heartbeat
+            stopHeartbeat();
+
+            // Set up a manual reconnect if automatic reconnection fails
+            startReconnectTimer();
+        });
+
+        // Register standard event handlers
+        registerStandardEventHandlers();
     }
 
     // Public API

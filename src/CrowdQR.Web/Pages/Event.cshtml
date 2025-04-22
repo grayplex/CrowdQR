@@ -468,4 +468,119 @@
             });
         })();
     </script>
+
+    <script>
+        // Connection monitor for event page
+        (function() {
+            // Initialize variables
+            let connectionFailures = 0;
+            let maxConnectionAttempts = 5;
+
+            // Set up connection monitoring
+            $(document).ready(function() {
+                // Listen for connection status changes
+                CrowdQR.SignalR.on('connectionStatus', handleConnectionStatusChange);
+
+                // Set up periodic health checks
+                setInterval(checkConnectionHealth, 30000); // Every 30 seconds
+            });
+
+            // Handle connection status changes
+            function handleConnectionStatusChange(data) {
+                const statusIndicator = $('#connection-status');
+                if (!statusIndicator.length) return;
+
+                statusIndicator.removeClass('bg-success bg-warning bg-secondary bg-danger');
+
+                switch (data.status) {
+                    case 'connected':
+                        statusIndicator.addClass('bg-success').html('<i class="bi bi-broadcast"></i> Live');
+                        // Reset failure counter on successful connection
+                        connectionFailures = 0;
+                        // Hide any error messages
+                        hideConnectionError();
+                        break;
+
+                    case 'reconnecting':
+                        statusIndicator.addClass('bg-warning').html('<i class="bi bi-broadcast"></i> Reconnecting...');
+                        break;
+
+                    case 'error':
+                    case 'disconnected':
+                        statusIndicator.addClass('bg-danger').html('<i class="bi bi-broadcast-pin"></i> Offline');
+                        connectionFailures++;
+
+                        // After several failures, show persistent error message
+                        if (connectionFailures >= maxConnectionAttempts) {
+                            showConnectionError('Unable to establish a connection to the server. Real-time updates are not available.');
+                        }
+                        break;
+
+                    case 'timeout':
+                        statusIndicator.addClass('bg-danger').html('<i class="bi bi-broadcast-pin"></i> Timeout');
+                        connectionFailures++;
+
+                        if (connectionFailures >= maxConnectionAttempts) {
+                            showConnectionError('Connection timed out. Real-time updates are not available.');
+                        }
+                        break;
+
+                    default:
+                        statusIndicator.addClass('bg-secondary').html('<i class="bi bi-broadcast-pin"></i> Connecting');
+                        break;
+                }
+            }
+
+            // Periodically check connection health
+            async function checkConnectionHealth() {
+                if (!CrowdQR.SignalR.isConnected()) return;
+
+                try {
+                    const isHealthy = await CrowdQR.SignalR.checkHealth();
+                    if (!isHealthy) {
+                        console.warn('Connection health check failed');
+                        // Try to reconnect
+                        await CrowdQR.SignalR.reconnect();
+                    }
+                } catch (error) {
+                    console.error('Error checking connection health:', error);
+                }
+            }
+
+            // Show a connection error message below the status indicator
+            function showConnectionError(message) {
+                // Create error message if it doesn't exist
+                if (!$('#connection-error').length) {
+                    const errorHtml = `
+                        <div id="connection-error" class="alert alert-danger mt-2 mb-0 py-2 small">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    <span id="error-message-text">${message}</span>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger" onclick="window.location.reload()">
+                                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                    `;
+
+                    // Insert after the status indicator
+                    $('#connection-status').after(errorHtml);
+                } else {
+                    // Update existing message
+                    $('#error-message-text').text(message);
+                    $('#connection-error').removeClass('d-none');
+                }
+            }
+
+            // Hide the connection error message
+            function hideConnectionError() {
+                const errorElement = $('#connection-error');
+                if (errorElement.length) {
+                    errorElement.addClass('d-none');
+                }
+            }
+        })();
+    </script>
 }
