@@ -1,5 +1,5 @@
 ﻿using CrowdQR.Api.Models;
-using CrowdQR.Api.Models.Enums;
+using CrowdQR.Shared.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace CrowdQR.Api.Data;
