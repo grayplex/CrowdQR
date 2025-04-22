@@ -45,22 +45,22 @@ public class EventSummaryDto
     /// <summary>
     /// The top requests.
     /// </summary>
-    public List<RequestDto> TopRequests { get; set; } = [];
+    public List<RequestDto> TopRequests { get; set; } = new List<RequestDto>();
 
     /// <summary>
     /// The recently approved requests.
     /// </summary>
-    public List<RequestDto> RecentlyApproved { get; set; } = [];
+    public List<RequestDto> RecentlyApproved { get; set; } = new List<RequestDto>();
 
     /// <summary>
     /// The recently rejected requests.
     /// </summary>
-    public List<RequestDto> RecentlyRejected { get; set; } = [];
+    public List<RequestDto> RecentlyRejected { get; set; } = new List<RequestDto>();
 
     /// <summary>
     /// The active users list.
     /// </summary>
-    public List<UserDto> ActiveUsersList { get; set; } = [];
+    public List<UserDto> ActiveUsersList { get; set; } = new List<UserDto>();
 }
 
 /// <summary>
