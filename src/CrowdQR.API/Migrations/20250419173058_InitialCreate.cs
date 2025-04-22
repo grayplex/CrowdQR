@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace CrowdQR.API.Migrations
+namespace CrowdQR.Api.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
