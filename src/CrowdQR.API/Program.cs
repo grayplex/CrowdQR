@@ -36,9 +36,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowWebApp",
         builder =>
         {
-            builder.WithOrigins(
+            builder.SetIsOriginAllowed(_ => true)
+                    /*.WithOrigins(
                     "https://localhost:7159",
-                    "http://localhost:5139")
+                    "http://localhost:5139")*/
                     .AllowAnyMethod()
                     .AllowAnyHeader()
                     .AllowCredentials();

@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>SignalR Test Client</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+</head>
+<body>
+    <h1>SignalR Test Client</h1>
+
+    <div>
+        <label for="eventId">Event ID:</label>
+        <input type="number" id="eventId" value="1" />
+        <button onclick="joinEvent()">Join Event</button>
+        <button onclick="leaveEvent()">Leave Event</button>
+    </div>
+
+    <div>
+        <button onclick="triggerBroadcast()">Trigger Broadcast</button>
+    </div>
+
+    <h2>Logs:</h2>
+    <pre id="logs" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></pre>
+
+    <script>
+        const logs = document.getElementById('logs');
+        let connection = null;
+        const API_URL = "http://localhost:5071"; // Base API URL
+
+        // Log message to the UI
+        function log(message) {
+            const now = new Date().toISOString();
+            logs.innerHTML += `${now}: ${message}\n`;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        // Start the connection
+        async function startConnection() {
+            try {
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl(`${API_URL}/hubs/crowdqr`, {
+                        skipNegotiation: true,
+                        transport: signalR.HttpTransportType.WebSockets
+                    })
+                    .configureLogging(signalR.LogLevel.Information)
+                    .build();
+
+                // Set up event handlers
+                connection.on('requestAdded', (data) => {
+                    log(`Request added: Event ID: ${data.eventId}, Request ID: ${data.requestId}`);
+                });
+
+                connection.on('requestStatusUpdated', (data) => {
+                    log(`Request status updated: Event ID: ${data.eventId}, Request ID: ${data.requestId}, Status: ${data.status}`);
+                });
+
+                connection.on('voteAdded', (data) => {
+                    log(`Vote added: Event ID: ${data.eventId}, Request ID: ${data.requestId}, Count: ${data.voteCount}`);
+                });
+
+                connection.on('voteRemoved', (data) => {
+                    log(`Vote removed: Event ID: ${data.eventId}, Request ID: ${data.requestId}, Count: ${data.voteCount}`);
+                });
+
+                connection.on('userJoinedEvent', (data) => {
+                    log(`User joined: Event ID: ${data.eventId}, Username: ${data.username}`);
+                });
+
+                // Connection lifecycle events
+                connection.onclose(() => log('Connection closed'));
+
+                // Start the connection
+                await connection.start();
+                log('Connected to SignalR hub!');
+            } catch (error) {
+                log(`Connection error: ${error}`);
+            }
+        }
+
+        // Join an event group
+        async function joinEvent() {
+            if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+                log('Not connected. Connecting first...');
+                await startConnection();
+            }
+
+            const eventId = document.getElementById('eventId').value;
+            try {
+                await connection.invoke('JoinEvent', parseInt(eventId));
+                log(`Joined event ${eventId}`);
+            } catch (error) {
+                log(`Error joining event: ${error}`);
+            }
+        }
+
+        // Leave an event group
+        async function leaveEvent() {
+            if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+                log('Not connected');
+                return;
+            }
+
+            const eventId = document.getElementById('eventId').value;
+            try {
+                await connection.invoke('LeaveEvent', parseInt(eventId));
+                log(`Left event ${eventId}`);
+            } catch (error) {
+                log(`Error leaving event: ${error}`);
+            }
+        }
+
+        // Trigger a broadcast via the API
+        async function triggerBroadcast() {
+            const eventId = document.getElementById('eventId').value;
+            try {
+                const response = await fetch(`${API_URL}/api/test/broadcast/${eventId}`);
+                const data = await response.json();
+                log(`Broadcast API response: ${JSON.stringify(data)}`);
+            } catch (error) {
+                log(`Error triggering broadcast: ${error}`);
+            }
+        }
+
+        // Start the connection when the page loads
+        startConnection();
+    </script>
+</body>
+</html>
