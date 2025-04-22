@@ -2,8 +2,10 @@
 using CrowdQR.Api.Models;
 using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CrowdQR.Api.Controllers;
 
@@ -30,6 +32,7 @@ public class VoteController(
     /// </summary>
     /// <returns>A list of all votes.</returns>
     [HttpGet]
+    [Authorize(Roles = "DJ")]
     public async Task<ActionResult<IEnumerable<object>>> GetVotes()
     {
         var votes = await _context.Votes.ToListAsync();
@@ -81,6 +84,7 @@ public class VoteController(
     /// <param name="requestId">The ID of the request.</param>
     /// <returns>A list of votes for the specified request.</returns>
     [HttpGet("request/{requestId}")]
+    [Authorize]
     public async Task<ActionResult<IEnumerable<object>>> GetVotesByRequest(int requestId)
     {
         var votes = await _context.Votes
@@ -106,8 +110,15 @@ public class VoteController(
     /// <param name="voteDto">The vote data.</param>
     /// <returns>The created vote and a 201 Created response, or an error.</returns>
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<Vote>> CreateVote(VoteCreateDto voteDto)
     {
+        // Check to ensure users can only vote as themselves
+        if (voteDto.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0") && !User.IsInRole("DJ"))
+        {
+            return Forbid();
+        }
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -183,12 +194,19 @@ public class VoteController(
     /// <param name="id">The ID of the vote to delete.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpDelete("{id}")]
+    [Authorize]
     public async Task<IActionResult> DeleteVote(int id)
     {
         var vote = await _context.Votes.FindAsync(id);
         if (vote == null)
         {
             return NotFound();
+        }
+
+        // Only allow DJs or the vote owner to delete the vote
+        if (!User.IsInRole("DJ") && vote.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
         }
 
         _context.Votes.Remove(vote);

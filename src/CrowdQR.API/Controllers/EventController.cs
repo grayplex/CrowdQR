@@ -1,6 +1,7 @@
 ﻿using CrowdQR.Api.Data;
 using CrowdQR.Api.Models;
 using CrowdQR.Shared.Models.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -181,6 +182,7 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
     /// <param name="eventDto">The event data.</param>
     /// <returns>The created event and a 201 Created response, or an error.</returns>
     [HttpPost]
+    [Authorize(Roles = "DJ")]
     public async Task<ActionResult<Event>> CreateEvent(EventCreateDto eventDto)
     {
         if (!ModelState.IsValid)
@@ -224,6 +226,7 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
     /// <param name="eventDto">The updated event data.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpPut("{id}")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> UpdateEvent(int id, EventUpdateDto eventDto)
     {
         var @event = await _context.Events.FindAsync(id);
@@ -282,6 +285,7 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
     /// <param name="id">The ID of the event to delete.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> DeleteEvent(int id)
     {
         var @event = await _context.Events.FindAsync(id);

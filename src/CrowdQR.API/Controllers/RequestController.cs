@@ -3,6 +3,7 @@ using CrowdQR.Api.Models;
 using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
 using CrowdQR.Shared.Models.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -123,6 +124,7 @@ public class RequestController(
     /// <param name="requestDto">The request data.</param>
     /// <returns>The created request and a 201 Created response, or an error.</returns>
     [HttpPost]
+    [Authorize(Roles = "DJ")]
     public async Task<ActionResult<Request>> CreateRequest (RequestCreateDto requestDto)
     {
         if (!ModelState.IsValid)
@@ -180,6 +182,7 @@ public class RequestController(
     /// <param name="statusDto">The new status data.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpPut("{id}/status")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> UpdateRequestStatus(int id, RequestStatusUpdateDto statusDto)
     {
         var request = await _context.Requests.FindAsync(id);
@@ -224,6 +227,7 @@ public class RequestController(
     /// <param name="id">The ID of the request to delete.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> DeleteRequest(int id)
     {
         var request = await _context.Requests.FindAsync(id);

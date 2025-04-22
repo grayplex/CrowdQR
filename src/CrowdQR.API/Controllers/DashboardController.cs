@@ -1,5 +1,6 @@
 ﻿using CrowdQR.Api.Data;
 using CrowdQR.Shared.Models.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,7 @@ namespace CrowdQR.Api.Controllers;
 /// <param name="logger">The logger.</param>
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "DJ")]
 public class DashboardController(CrowdQRContext context, ILogger<DashboardController> logger) : ControllerBase
 {
     private readonly CrowdQRContext _context = context;

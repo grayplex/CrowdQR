@@ -2,6 +2,7 @@
 using CrowdQR.Api.Models;
 using CrowdQR.Shared.Models.DTOs;
 using CrowdQR.Shared.Models.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +26,7 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// </summary>
     /// <returns>A list of all users.</returns>
     [HttpGet]
+    [Authorize(Roles = "DJ")] // Only DJs should see all users
     public async Task<ActionResult<IEnumerable<object>>> GetUsers()
     {
         var users = await _context.Users.ToListAsync();
@@ -130,6 +132,7 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// <param name="userDto">The user data.</param>
     /// <returns>The created user and a 201 Created response, or an error.</returns>
     [HttpPost]
+    [Authorize(Roles = "DJ")]
     public async Task<ActionResult<User>> CreateUser(UserCreateDto userDto)
     {
         if (!ModelState.IsValid)
@@ -164,6 +167,7 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// <param name="userDto">The updated user data.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpPut("{id}")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> UpdateUser(int id, UserUpdateDto userDto)
     {
         var user = await _context.Users.FindAsync(id);
@@ -217,6 +221,7 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// <param name="id">The ID of the user to delete.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> DeleteUser(int id)
     {
         var user = await _context.Users.FindAsync(id);

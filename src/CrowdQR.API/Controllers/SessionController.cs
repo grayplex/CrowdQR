@@ -2,8 +2,10 @@
 using CrowdQR.Api.Models;
 using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CrowdQR.Api.Controllers;
 
@@ -30,6 +32,7 @@ public class SessionController(
     /// </summary>
     /// <returns>A list of all sessions.</returns>
     [HttpGet]
+    [Authorize(Roles = "DJ")]
     public async Task<ActionResult<IEnumerable<object>>> GetSessions()
     {
         var sessions = await _context.Sessions
@@ -58,6 +61,7 @@ public class SessionController(
     /// <param name="id">The ID of the session to retrieve.</param>
     /// <returns>The requested session or a 404 Not Found response.</returns>
     [HttpGet("{id}")]
+    [Authorize]
     public async Task<ActionResult<object>> GetSession(int id)
     {
         var session = await _context.Sessions
@@ -91,6 +95,7 @@ public class SessionController(
     /// <param name="eventId">The ID of the event.</param>
     /// <returns>A list of sessions for the specified event.</returns>
     [HttpGet("event/{eventId}")]
+    [Authorize]
     public async Task<ActionResult<IEnumerable<object>>> GetSessionsByEvent(int eventId)
     {
         var sessions = await _context.Sessions
@@ -119,8 +124,15 @@ public class SessionController(
     /// <param name="userId">The ID of the user.</param>
     /// <returns>A list of sessions for the specified user.</returns>
     [HttpGet("user/{userId}")]
+    [Authorize]
     public async Task<ActionResult<IEnumerable<object>>> GetSessionsByUser(int userId)
     {
+        // Check to ensure users can only access their own sessions
+        if (!User.IsInRole("DJ") && userId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         var sessions = await _context.Sessions
             .Where(s => s.UserId == userId)
             .Include(s => s.Event)
@@ -148,6 +160,7 @@ public class SessionController(
     /// <param name="userId">The ID of the user.</param>
     /// <returns>The matching session or a 404 Not Found response.</returns>
     [HttpGet("event/{eventId}/user/{userId}")]
+    [Authorize]
     public async Task<ActionResult<object>> GetSessionByEventAndUser(int eventId, int userId)
     {
         var session = await _context.Sessions
@@ -181,6 +194,7 @@ public class SessionController(
     /// <param name="sessionDto">The session data.</param>
     /// <returns>The created session and a 201 Created response, or an error.</returns>
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<Session>> CreateOrUpdateSession(SessionCreateDto sessionDto)
     {
         if (!ModelState.IsValid)
@@ -260,6 +274,7 @@ public class SessionController(
     /// <param name="id">The ID of the session.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpPut("{id}/increment-request-count")]
+    [Authorize]
     public async Task<IActionResult> IncrementRequestCount(int id)
     {
         var session = await _context.Sessions.FindAsync(id);
@@ -284,6 +299,7 @@ public class SessionController(
     /// <param name="id">The ID of the session to refresh.</param>
     /// <returns>A 204 No Content response, or an error</returns>
     [HttpPut("{id}/refresh")]
+    [Authorize]
     public async Task<IActionResult> RefreshSession(int id)
     {
         var session = await _context.Sessions.FindAsync(id);
@@ -307,6 +323,7 @@ public class SessionController(
     /// <param name="id">The ID of the session to delete.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> DeleteSession(int id)
     {
         var session = await _context.Sessions.FindAsync(id);
