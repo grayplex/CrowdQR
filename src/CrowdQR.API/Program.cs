@@ -29,12 +29,15 @@ builder.Services.AddSwaggerGen();
 // Add CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
+    options.AddPolicy("AllowWebApp",
         builder =>
         {
-            builder.AllowAnyOrigin()
+            builder.WithOrigins(
+                    "https://localhost:7159",
+                    "http://localhost:5139")
                     .AllowAnyMethod()
-                    .AllowAnyHeader();
+                    .AllowAnyHeader()
+                    .AllowCredentials();
         });
 });
 
@@ -97,7 +100,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandling();
-app.UseCors("AllowAll");
+app.UseCors("AllowWebApp");
 app.UseRouting();
 app.UseAuthorization();
 

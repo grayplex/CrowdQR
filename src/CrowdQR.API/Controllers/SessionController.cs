@@ -1,6 +1,6 @@
 ﻿using CrowdQR.Api.Data;
 using CrowdQR.Api.Models;
-using CrowdQR.Api.Models.DTOs;
+using CrowdQR.Shared.Models.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -244,6 +244,29 @@ public class SessionController(CrowdQRContext context, ILogger<SessionController
         }
 
         session.RequestCount++;
+        session.LastSeen = DateTime.UtcNow;
+
+        _context.Entry(session).State = EntityState.Modified;
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    // PUT: api/session/5/refresh
+    /// <summary>
+    /// Refreshes a session without incrementing request count
+    /// </summary>
+    /// <param name="id">The ID of the session to fresh.</param>
+    /// <returns>A 204 No Content response, or an error</returns>
+    [HttpPut("{id}/refresh")]
+    public async Task<IActionResult> RefreshSession(int id)
+    {
+        var session = await _context.Sessions.FindAsync(id);
+        if (session == null)
+        {
+            return NotFound();
+        }
+
         session.LastSeen = DateTime.UtcNow;
 
         _context.Entry(session).State = EntityState.Modified;
