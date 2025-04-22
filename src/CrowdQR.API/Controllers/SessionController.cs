@@ -256,7 +256,7 @@ public class SessionController(CrowdQRContext context, ILogger<SessionController
     /// <summary>
     /// Refreshes a session without incrementing request count
     /// </summary>
-    /// <param name="id">The ID of the session to fresh.</param>
+    /// <param name="id">The ID of the session to refresh.</param>
     /// <returns>A 204 No Content response, or an error</returns>
     [HttpPut("{id}/refresh")]
     public async Task<IActionResult> RefreshSession(int id)
