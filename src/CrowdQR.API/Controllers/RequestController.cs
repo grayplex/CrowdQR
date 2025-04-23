@@ -15,7 +15,7 @@ namespace CrowdQR.Api.Controllers;
 /// </summary>
 /// <param name="context">The database context.</param>
 /// <param name="logger">The logger.</param>
-/// /// <param name="hubNotificationService">The hub notification service.</param>
+/// <param name="hubNotificationService">The hub notification service.</param>
 [ApiController]
 [Route("api/[controller]")]
 public class RequestController(
@@ -125,7 +125,6 @@ public class RequestController(
     /// <param name="requestDto">The request data.</param>
     /// <returns>The created request and a 201 Created response, or an error.</returns>
     [HttpPost]
-    [Authorize]
     public async Task<ActionResult<Request>> CreateRequest (RequestCreateDto requestDto)
     {
         // Check if the user is creating a request as themselves

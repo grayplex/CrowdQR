@@ -1,6 +1,4 @@
-﻿// src/CrowdQR.Web/Services/ApiTokenRefresher.cs
-
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication;
 
 namespace CrowdQR.Web.Services;

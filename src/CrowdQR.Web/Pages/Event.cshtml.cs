@@ -176,7 +176,6 @@ public class EventModel(
         }
     }
 
-    // Update the OnPostAsync method to use our debug API call and handle errors better
     /// <summary>
     /// Handles POST requests for submitting a new song request.
     /// </summary>
@@ -190,7 +189,8 @@ public class EventModel(
                 return await OnGetAsync();
             }
 
-            UserId = _sessionManager.GetCurrentUserId();
+            // Get user ID
+            UserId = _authService.GetUserId();
             if (!UserId.HasValue)
             {
                 ErrorMessage = "You must be logged in to submit a request.";
@@ -220,24 +220,9 @@ public class EventModel(
                 ArtistName = NewSongRequest.ArtistName
             };
 
-            // Use ApiService directly for debugging
-            var apiService = _requestService.GetApiService();
-            if (apiService != null)
-            {
-                var (debugSuccess, debugResponse) = await apiService.DebugPostAsync<RequestCreateDto, RequestDto>("api/request", requestDto);
-                if (debugSuccess && debugResponse != null)
-                {
-                    SuccessMessage = "Your request has been submitted successfully!";
-                    return RedirectToPage(new { slug = Slug });
-                }
-                else
-                {
-                    ErrorMessage = "Failed to submit your request (debug mode). Please try again.";
-                    return RedirectToPage(new { slug = Slug });
-                }
-            }
+            _logger.LogInformation("Creating song request: {SongName} by {ArtistName} for event {EventId} by user {UserId}",
+                requestDto.SongName, requestDto.ArtistName, requestDto.EventId, requestDto.UserId);
 
-            // Fall back to normal request service if needed
             var (success, request) = await _requestService.CreateRequestAsync(requestDto);
 
             if (!success || request == null)
@@ -271,7 +256,7 @@ public class EventModel(
     /// <returns>Redirect to the event page.</returns>
     public async Task<IActionResult> OnPostVoteAsync(int requestId)
     {
-        UserId = _sessionManager.GetCurrentUserId();
+        UserId = _authService.GetUserId();
         if (!UserId.HasValue)
         {
             ErrorMessage = "You must be logged in to vote.";
@@ -280,13 +265,15 @@ public class EventModel(
 
         try
         {
+            _logger.LogInformation("User {UserId} is voting for request {RequestId}", UserId.Value, requestId);
+
             var voteDto = new VoteCreateDto
             {
                 UserId = UserId.Value,
                 RequestId = requestId
             };
 
-            var (success, _) = await _voteService.CreateVoteAsync(voteDto);
+            var (success, vote) = await _voteService.CreateVoteAsync(voteDto);
 
             if (!success)
             {
@@ -312,7 +299,7 @@ public class EventModel(
     /// <returns>Redirect to the event page.</returns>
     public async Task<IActionResult> OnPostRemoveVoteAsync(int requestId)
     {
-        UserId = _sessionManager.GetCurrentUserId();
+        UserId = _authService.GetUserId();
         if (!UserId.HasValue)
         {
             ErrorMessage = "You must be logged in to remove your vote.";
@@ -321,6 +308,8 @@ public class EventModel(
 
         try
         {
+            _logger.LogInformation("User {UserId} is removing vote for request {RequestId}", UserId.Value, requestId);
+
             bool success = await _voteService.DeleteVoteByUserAndRequestAsync(UserId.Value, requestId);
 
             if (!success)

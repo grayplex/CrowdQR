@@ -1,4 +1,5 @@
 using CrowdQR.Web.Services;
+using CrowdQR.Web.Extensions;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using System;
@@ -10,11 +11,16 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add API client configuration with detailed logging
+builder.Services.AddHttpClientLogging();
+
 // Add API client configuration
 builder.Services.AddHttpClient("CrowdQRApi", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:5000");
     client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.DefaultRequestHeaders.Add("User-Agent", "CrowdQR.Web");
 });
 
 // Add Authentication with dual schemes
@@ -102,6 +108,11 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/Admin", "DjOnly");
 });
 
+// Setup detailed logging
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.SetMinimumLevel(LogLevel.Debug);
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -110,6 +121,10 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error");
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+}
+else
+{
+    app.UseDeveloperExceptionPage();
 }
 
 app.UseHttpsRedirection();
