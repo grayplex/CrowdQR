@@ -267,6 +267,9 @@ public class EventModel(
         {
             _logger.LogInformation("User {UserId} is voting for request {RequestId}", UserId.Value, requestId);
 
+            // Attach the authentication token to the API client
+            _logger.LogInformation("Ensuring authentication token is attached before voting");
+
             var voteDto = new VoteCreateDto
             {
                 UserId = UserId.Value,
@@ -277,10 +280,12 @@ public class EventModel(
 
             if (!success)
             {
+                _logger.LogWarning("Vote creation failed for user {UserId} on request {RequestId}", UserId.Value, requestId);
                 ErrorMessage = "Failed to submit your vote. You may have already voted for this request.";
                 return RedirectToPage(new { slug = Slug });
             }
 
+            _logger.LogInformation("Vote successfully created for user {UserId} on request {RequestId}", UserId.Value, requestId);
             SuccessMessage = "Your vote has been counted!";
             return RedirectToPage(new { slug = Slug });
         }

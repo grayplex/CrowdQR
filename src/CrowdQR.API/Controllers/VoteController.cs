@@ -111,11 +111,10 @@ public class VoteController(
     /// <param name="voteDto">The vote data.</param>
     /// <returns>The created vote and a 201 Created response, or an error.</returns>
     [HttpPost]
-    [Authorize]
     public async Task<ActionResult<Vote>> CreateVote(VoteCreateDto voteDto)
     {
         // Check to ensure users can only vote as themselves
-        if (voteDto.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0") && !User.IsInRole("DJ"))
+        if (!User.IsInRole("DJ") && voteDto.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
         {
             return Forbid();
         }

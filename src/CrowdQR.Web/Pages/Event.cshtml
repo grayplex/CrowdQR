@@ -75,6 +75,7 @@
                         <h2 class="h5 mb-0">Request a Song</h2>
                     </div>
                     <div class="card-body">
+                        @Html.AntiForgeryToken()
                         <form id="request-form" method="post" asp-page-handler="">
                             <div class="form-group mb-3">
                                 <label asp-for="NewSongRequest.SongName" class="form-label"></label>
@@ -228,30 +229,38 @@
 
                     const form = $(this);
                     const formAction = form.attr('action');
-                    const requestId = form.find('input[name="requestId"]').val();
-                    const isRemove = form.find('button').attr('data-vote-action') === 'remove';
-
-                    // Show loading state
+                    const url = formAction || window.location.pathname;
+                    const formData = form.serialize();
                     const button = form.find('button');
                     const originalHtml = button.html();
+
+                    // Show loading state
                     button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
 
-                    // Send the AJAX request
-                    $.ajax({
-                        url: formAction || window.location.pathname,
-                        type: 'POST',
-                        data: form.serialize(),
-                        success: function() {
+                    // Send the authenticated AJAX request
+                    CrowdQR.Ajax.post(url, formData,
+                        function(response) {
+                            // Success callback
                             console.log('Vote action successful');
-                            // The button state will be updated by SignalR events
+                            // Button state will be updated by SignalR events
                         },
-                        error: function(xhr, status, error) {
+                        function(xhr, status, error) {
+                            // Error callback
                             console.error('Error with vote action:', error);
                             // Restore the button state
                             button.prop('disabled', false).html(originalHtml);
-                            alert('Failed to register your vote. Please try again.');
+
+                            // Show a more detailed error message
+                            let errorMessage = 'Failed to register your vote. Please try again.';
+                            if (xhr.status === 401) {
+                                errorMessage = 'Your session has expired. Please refresh the page and try again.';
+                            } else if (xhr.status === 403) {
+                                errorMessage = 'You don\'t have permission to vote for this request.';
+                            }
+
+                            alert(errorMessage);
                         }
-                    });
+                    );
                 });
 
                 // Set up the request form to use AJAX
