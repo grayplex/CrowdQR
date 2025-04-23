@@ -206,10 +206,41 @@ public class SessionManager(
             var existingUser = await _userService.GetUserByUsernameAsync(username);
             if (existingUser != null)
             {
-                return false;
+                // User exists, just log them in
+                var session = _httpContextAccessor.HttpContext?.Session;
+                if (session == null)
+                {
+                    return false;
+                }
+
+                session.SetString(UserIdKey, existingUser.UserId.ToString());
+                session.SetString(UsernameKey, existingUser.Username);
+                session.SetString(UserRoleKey, existingUser.Role.ToString());
+                
+                return true;
             }
 
-            // Create new user
+            // For guest users in demo mode, we'll create a local session without API calls
+            if (username.StartsWith("guest_"))
+            {
+                var session = _httpContextAccessor.HttpContext?.Session;
+                if (session == null)
+                {
+                    return false;
+                }
+
+                // Generate a random user ID for the guest
+                var random = new Random();
+                var guestUserId = random.Next(10000, 99999);
+                
+                session.SetString(UserIdKey, guestUserId.ToString());
+                session.SetString(UsernameKey, username);
+                session.SetString(UserRoleKey, UserRole.Audience.ToString());
+                
+                return true;
+            }
+
+            // Create new user via API
             var userDto = new UserCreateDto
             {
                 Username = username,
@@ -223,15 +254,15 @@ public class SessionManager(
             }
 
             // Store user info in session
-            var session = _httpContextAccessor.HttpContext?.Session;
-            if (session == null)
+            var apiSession = _httpContextAccessor.HttpContext?.Session;
+            if (apiSession == null)
             {
                 return false;
             }
 
-            session.SetString(UserIdKey, user.UserId.ToString());
-            session.SetString(UsernameKey, user.Username);
-            session.SetString(UserRoleKey, user.Role.ToString());
+            apiSession.SetString(UserIdKey, user.UserId.ToString());
+            apiSession.SetString(UsernameKey, user.Username);
+            apiSession.SetString(UserRoleKey, user.Role.ToString());
 
             return true;
         }
@@ -258,6 +289,29 @@ public class SessionManager(
                 return false;
             }
 
+            var username = GetCurrentUsername();
+            if (string.IsNullOrEmpty(username))
+            {
+                return false;
+            }
+
+            // For guest users, we'll skip the API session creation
+            if (username.StartsWith("guest_"))
+            {
+                // Store event info in session
+                var session = _httpContextAccessor.HttpContext?.Session;
+                if (session == null)
+                {
+                    return false;
+                }
+
+                session.SetString(EventIdKey, eventId.ToString());
+                session.SetString(EventSlugKey, slug);
+                session.SetString(SessionIdKey, "0"); // Use 0 for guest sessions
+                
+                return true;
+            }
+
             // Create/update API session
             var sessionDto = new SessionCreateDto
             {
@@ -273,15 +327,15 @@ public class SessionManager(
             }
 
             // Store event info in session
-            var session = _httpContextAccessor.HttpContext?.Session;
-            if (session == null)
+            var apiUserSession = _httpContextAccessor.HttpContext?.Session;
+            if (apiUserSession == null)
             {
                 return false;
             }
 
-            session.SetString(EventIdKey, eventId.ToString());
-            session.SetString(EventSlugKey, slug);
-            session.SetString(SessionIdKey, apiSession.SessionId.ToString());
+            apiUserSession.SetString(EventIdKey, eventId.ToString());
+            apiUserSession.SetString(EventSlugKey, slug);
+            apiUserSession.SetString(SessionIdKey, apiSession.SessionId.ToString());
 
             return true;
         }

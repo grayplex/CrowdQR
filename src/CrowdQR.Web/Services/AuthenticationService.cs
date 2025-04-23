@@ -54,8 +54,9 @@ public class AuthenticationService(HttpClient httpClient, ILogger<Authentication
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Authentication failed for username {Username}. Status: {StatusCode}",
-                    username, response.StatusCode);
+                var errorResult = await response.Content.ReadFromJsonAsync<AuthResultDto>(_jsonOptions);
+                _logger.LogWarning("Authentication failed for username {Username}. Status: {StatusCode}, Error: {Error}",
+                    username, response.StatusCode, errorResult?.ErrorMessage);
                 return false;
             }
 
