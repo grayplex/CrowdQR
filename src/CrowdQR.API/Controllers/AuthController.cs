@@ -1,5 +1,7 @@
-﻿using CrowdQR.Api.Services;
+﻿using System.Security.Claims;
+using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CrowdQR.Api.Controllers;
@@ -32,15 +34,19 @@ public class AuthController(AuthService authService, ILogger<AuthController> log
             return BadRequest(new AuthResultDto
             {
                 Success = false,
-                ErrorMessage = "Username is required"
+                ErrorMessage = "Username or email is required"
             });
         }
 
-        var result = await _authService.AuthenticateUser(request.UsernameOrEmail);
+        var result = await _authService.AuthenticateUser(request.UsernameOrEmail, request.Password);
 
         if (!result.Success)
         {
-            return Unauthorized(result);
+            if (result.EmailVerificationRequired)
+            {
+                return BadRequest(result); // 400 Bad Request for unverified email
+            }
+            return Unauthorized(result); // 401 Unauthorized for invalid credentials
         }
 
         return Ok(result);
@@ -75,8 +81,110 @@ public class AuthController(AuthService authService, ILogger<AuthController> log
         {
             UserId = user.UserId,
             Username = user.Username,
+            Email = user.Email,
+            IsEmailVerified = user.IsEmailVerified,
             Role = user.Role,
             CreatedAt = user.CreatedAt
         });
+    }
+
+    /// <summary>
+    /// Registers a new DJ user.
+    /// </summary>
+    /// <param name="request">The registration request.</param>
+    /// <returns>Registration result.</returns>
+    [HttpPost("register")]
+    public async Task<ActionResult<AuthResultDto>> Register([FromBody] DjRegisterDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var result = await _authService.RegisterDj(request);
+
+        if (!result.Success)
+        {
+            return BadRequest(result);
+        }
+
+        // Return 201 Created for successful registration
+        return CreatedAtAction(nameof(Login), new { username = request.Username }, result);
+    }
+
+    /// <summary>
+    /// Verifies a user's email address.
+    /// </summary>
+    /// <param name="request">The email verification request.</param>
+    /// <returns>Success or failure response.</returns>
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var success = await _authService.VerifyEmail(request);
+
+        if (!success)
+        {
+            return BadRequest(new { success = false, message = "Invalid or expired verification token" });
+        }
+
+        return Ok(new { success = true, message = "Email verified successfully" });
+    }
+
+    /// <summary>
+    /// Resends an email verification token.
+    /// </summary>
+    /// <param name="email">The email address.</param>
+    /// <returns>Success or failure response.</returns>
+    [HttpPost("resend-verification")]
+    public async Task<IActionResult> ResendVerification([FromBody] string email)
+    {
+        if (string.IsNullOrEmpty(email))
+        {
+            return BadRequest(new { success = false, message = "Email is required" });
+        }
+
+        var success = await _authService.ResendVerificationEmail(email);
+
+        if (!success)
+        {
+            return BadRequest(new { success = false, message = "Could not resend verification email" });
+        }
+
+        return Ok(new { success = true, message = "Verification email sent" });
+    }
+
+    /// <summary>
+    /// Changes a user's password.
+    /// </summary>
+    /// <param name="request">The password change request.</param>
+    /// <returns>Success or failure response.</returns>
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        // Get user ID from claims
+        if (!int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var success = await _authService.ChangePassword(userId, request.CurrentPassword, request.NewPassword);
+
+        if (!success)
+        {
+            return BadRequest(new { success = false, message = "Current password is incorrect" });
+        }
+
+        return Ok(new { success = true, message = "Password changed successfully" });
     }
 }

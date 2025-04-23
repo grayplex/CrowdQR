@@ -34,6 +34,7 @@ builder.Services.AddSignalR();
 builder.Services.AddScoped<IHubNotificationService, HubNotificationService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Add JWT authentication services
 builder.Services.AddAuthentication(options =>

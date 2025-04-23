@@ -21,18 +21,21 @@ namespace CrowdQR.Api.Services;
 /// <param name="logger">The logger.</param>
 /// <param name="passwordService">The password service.</param>
 /// <param name="tokenService">The token service.</param>
+/// <param name="emailService"> The email service.</param>
 public class AuthService(
     CrowdQRContext context,
     IConfiguration configuration,
     ILogger<AuthService> logger,
     IPasswordService passwordService,
-    ITokenService tokenService)
+    ITokenService tokenService,
+    IEmailService emailService)
 {
     private readonly CrowdQRContext _context = context;
     private readonly IConfiguration _configuration = configuration;
     private readonly ILogger<AuthService> _logger = logger;
     private readonly IPasswordService _passwordService = passwordService;
     private readonly ITokenService _tokenService = tokenService;
+    private readonly IEmailService _emailService = emailService;
 
     /// <summary>
     /// Authenticates a user by username or email and password.
@@ -194,7 +197,11 @@ public class AuthService(
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            // TODO: Send verification email
+            await _emailService.SendVerificationEmailAsync(
+                user.Email!,
+                user.Username,
+                token
+            );
 
             return new AuthResultDto
             {
@@ -282,7 +289,11 @@ public class AuthService(
 
             await _context.SaveChangesAsync();
 
-            // TODO: Send verification email
+            await _emailService.SendVerificationEmailAsync(
+                user.Email!,
+                user.Username,
+                user.EmailVerificationToken!
+            );
 
             return true;
         }
