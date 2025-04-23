@@ -19,22 +19,28 @@
                         </div>
                     }
 
-                    <p class="mb-4">Enter your username to login or create a new account.</p>
+                    <p class="mb-4">Enter your credentials to login to your account.</p>
 
                     <form method="post">
                         <div class="mb-3">
-                            <label asp-for="Username" class="form-label">Username</label>
-                            <input asp-for="Username" class="form-control" autofocus placeholder="Enter username">
-                            <span asp-validation-for="Username" class="text-danger"></span>
+                            <label asp-for="UsernameOrEmail" class="form-label">Username or Email</label>
+                            <input asp-for="UsernameOrEmail" class="form-control" autofocus placeholder="Enter username or email">
+                            <span asp-validation-for="UsernameOrEmail" class="text-danger"></span>
                         </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Password" class="form-label">Password</label>
+                            <input asp-for="Password" class="form-control" type="password" placeholder="Enter your password">
+                            <span asp-validation-for="Password" class="text-danger"></span>
+                        </div>
+
                         <input type="hidden" asp-for="ReturnUrl" />
-                        <button type="submit" class="btn btn-primary w-100">Login / Register</button>
+                        <button type="submit" class="btn btn-primary w-100">Login</button>
                     </form>
 
                     <div class="mt-4 text-center">
                         <p class="text-muted small mb-0">
-                            <i class="bi bi-info-circle"></i>
-                            If you don't have an account, one will be created automatically.
+                            Don't have an account? <a asp-page="/Register" class="text-decoration-none">Register here</a>
                         </p>
                     </div>
                 </div>

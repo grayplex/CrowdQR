@@ -35,19 +35,31 @@ public class AuthenticationService(HttpClient httpClient, ILogger<Authentication
     private const string AuthExpiryKey = "Auth:Expiry";
 
     /// <summary>
-    /// Attempts to authenticate with the given username.
+    /// Attempts to authenticate with the given username or email and password.
     /// </summary>
-    /// <param name="username">The username to authenticate with.</param>
+    /// <param name="usernameOrEmail">The username or email to authenticate with.</param>
+    /// <param name="password">The password to authenticate with.</param>
     /// <returns>True if authentication was successful, otherwise false.</returns>
-    public async Task<bool> LoginAsync(string username)
+    public async Task<bool> LoginAsync(string usernameOrEmail, string password)
     {
         try
         {
+            // Ensure the base address is set
+            if (_httpClient.BaseAddress == null)
+            {
+                _logger.LogError("HTTP client base address is not set");
+                return false;
+            }
+
             // Prepare login request
             var loginRequest = new LoginDto
             {
-                UsernameOrEmail = username
+                UsernameOrEmail = usernameOrEmail,
+                Password = password
             };
+
+            // Log the request URL for debugging
+            _logger.LogInformation("Sending login request to {BaseAddress}api/auth/login", _httpClient.BaseAddress);
 
             // Send login request to API
             var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginRequest, _jsonOptions);
@@ -55,8 +67,8 @@ public class AuthenticationService(HttpClient httpClient, ILogger<Authentication
             if (!response.IsSuccessStatusCode)
             {
                 var errorResult = await response.Content.ReadFromJsonAsync<AuthResultDto>(_jsonOptions);
-                _logger.LogWarning("Authentication failed for username {Username}. Status: {StatusCode}, Error: {Error}",
-                    username, response.StatusCode, errorResult?.ErrorMessage);
+                _logger.LogWarning("Authentication failed for username/email {UsernameOrEmail}. Status: {StatusCode}, Error: {Error}",
+                    usernameOrEmail, response.StatusCode, errorResult?.ErrorMessage);
                 return false;
             }
 
@@ -65,7 +77,7 @@ public class AuthenticationService(HttpClient httpClient, ILogger<Authentication
 
             if (result == null || !result.Success || result.User == null || string.IsNullOrEmpty(result.Token))
             {
-                _logger.LogWarning("Authentication failed for username {Username}. Invalid response format.", username);
+                _logger.LogWarning("Authentication failed for username/email {UsernameOrEmail}. Invalid response format.", usernameOrEmail);
                 return false;
             }
 
@@ -76,7 +88,7 @@ public class AuthenticationService(HttpClient httpClient, ILogger<Authentication
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during login for username {Username}", username);
+            _logger.LogError(ex, "Error during login for username/email {UsernameOrEmail}", usernameOrEmail);
             return false;
         }
     }

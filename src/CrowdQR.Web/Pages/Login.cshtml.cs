@@ -1,6 +1,7 @@
 using CrowdQR.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.ComponentModel.DataAnnotations;
 
 namespace CrowdQR.Web.Pages;
 
@@ -18,10 +19,18 @@ public class LoginModel(AuthenticationService authService, ILogger<LoginModel> l
     private readonly ILogger<LoginModel> _logger = logger;
 
     /// <summary>
-    /// Bound property for the login username.
+    /// Bound property for the login username or email.
     /// </summary>
     [BindProperty]
-    public string Username { get; set; } = string.Empty;
+    [Required(ErrorMessage = "Username or email is required")]
+    public string UsernameOrEmail { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Bound property for the login password.
+    /// </summary>
+    [BindProperty]
+    [Required(ErrorMessage = "Password is required")]
+    public string Password { get; set; } = string.Empty;
 
     /// <summary>
     /// Error message to display.
@@ -54,17 +63,16 @@ public class LoginModel(AuthenticationService authService, ILogger<LoginModel> l
     /// </summary>
     public async Task<IActionResult> OnPostAsync()
     {
-        if (string.IsNullOrWhiteSpace(Username))
+        if (!ModelState.IsValid)
         {
-            ErrorMessage = "Username is required";
             return Page();
         }
 
-        var success = await _authService.LoginAsync(Username);
+        var success = await _authService.LoginAsync(UsernameOrEmail, Password);
 
         if (!success)
         {
-            ErrorMessage = "Login failed. Please try again.";
+            ErrorMessage = "Invalid username/email or password. Please try again.";
             return Page();
         }
 
