@@ -45,21 +45,25 @@ public class EventSummaryDto
     /// <summary>
     /// The top requests.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0028:Simplify collection initialization", Justification = "<Pending>")]
     public List<RequestDto> TopRequests { get; set; } = new List<RequestDto>();
 
     /// <summary>
     /// The recently approved requests.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0028:Simplify collection initialization", Justification = "<Pending>")]
     public List<RequestDto> RecentlyApproved { get; set; } = new List<RequestDto>();
 
     /// <summary>
     /// The recently rejected requests.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0028:Simplify collection initialization", Justification = "<Pending>")]
     public List<RequestDto> RecentlyRejected { get; set; } = new List<RequestDto>();
 
     /// <summary>
     /// The active users list.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0028:Simplify collection initialization", Justification = "<Pending>")]
     public List<UserDto> ActiveUsersList { get; set; } = new List<UserDto>();
 }
 

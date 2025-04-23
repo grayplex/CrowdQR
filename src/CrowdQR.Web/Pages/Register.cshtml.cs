@@ -9,18 +9,13 @@ namespace CrowdQR.Web.Pages
     /// <summary>
     /// Page model for the user registration page
     /// </summary>
-    public class RegisterModel : PageModel
+    /// <remarks>
+    /// Initializes a new instance of the RegisterModel class
+    /// </remarks>
+    /// <param name="apiService">The API service for making HTTP requests</param>
+    public class RegisterModel(ApiService apiService) : PageModel
     {
-        private readonly ApiService _apiService;
-
-        /// <summary>
-        /// Initializes a new instance of the RegisterModel class
-        /// </summary>
-        /// <param name="apiService">The API service for making HTTP requests</param>
-        public RegisterModel(ApiService apiService)
-        {
-            _apiService = apiService;
-        }
+        private readonly ApiService _apiService = apiService;
 
         /// <summary>
         /// Gets or sets the username for registration
@@ -90,10 +85,10 @@ namespace CrowdQR.Web.Pages
                     // DJ registration
                     var djRegisterRequest = new
                     {
-                        Username = Username,
-                        Email = Email,
-                        Password = Password,
-                        ConfirmPassword = ConfirmPassword
+                        Username,
+                        Email,
+                        Password,
+                        ConfirmPassword
                     };
 
                     var (success, response) = await _apiService.PostAsync<object, object>("/api/auth/register", djRegisterRequest);
@@ -114,7 +109,7 @@ namespace CrowdQR.Web.Pages
                     // Audience registration - use the user service directly
                     var userCreateRequest = new
                     {
-                        Username = Username,
+                        Username,
                         Role = UserRole.Audience
                     };
 
