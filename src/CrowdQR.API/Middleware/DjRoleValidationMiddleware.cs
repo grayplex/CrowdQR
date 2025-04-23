@@ -60,7 +60,9 @@ public class DjRoleValidationMiddleware(RequestDelegate next, ILogger<DjRoleVali
             return;
         }
 
+        // TEMPORARILY DISABLED: Email Verification Check
         // Check if email is verified for DJ
+        /*
         var emailVerifiedClaim = context.User.FindFirst("email_verified");
         if (emailVerifiedClaim == null || emailVerifiedClaim.Value != "true")
         {
@@ -76,6 +78,7 @@ public class DjRoleValidationMiddleware(RequestDelegate next, ILogger<DjRoleVali
             });
             return;
         }
+        */
 
         await _next(context);
     }

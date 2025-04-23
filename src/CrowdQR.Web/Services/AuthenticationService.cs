@@ -16,11 +16,17 @@ namespace CrowdQR.Web.Services;
 /// <param name="httpClient">The HTTP client.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="httpContextAccessor">The HTTP context accessor.</param>
-public class AuthenticationService(HttpClient httpClient, ILogger<AuthenticationService> logger, IHttpContextAccessor httpContextAccessor)
+/// <param name="configuration">The configuration.</param>
+public class AuthenticationService
+    (HttpClient httpClient, 
+    ILogger<AuthenticationService> logger, 
+    IHttpContextAccessor httpContextAccessor,
+    IConfiguration configuration)
 {
     private readonly HttpClient _httpClient = httpClient;
     private readonly ILogger<AuthenticationService> _logger = logger;
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+    private readonly IConfiguration _configuration = configuration;
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -44,6 +50,9 @@ public class AuthenticationService(HttpClient httpClient, ILogger<Authentication
     {
         try
         {
+            // Get the base URL from configuration
+            var apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5071";
+
             // Ensure the base address is set
             if (_httpClient.BaseAddress == null)
             {

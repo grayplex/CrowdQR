@@ -102,7 +102,9 @@ public class AuthService(
                         };
                     }
 
+                    // TEMPORARILY DISABLED: Email Verification check
                     // Check if email is verified
+                    /*
                     if (!user.IsEmailVerified)
                     {
                         return new AuthResultDto
@@ -112,6 +114,7 @@ public class AuthService(
                             EmailVerificationRequired = true
                         };
                     }
+                    */
                 }
             }
 

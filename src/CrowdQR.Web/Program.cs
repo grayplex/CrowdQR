@@ -29,7 +29,15 @@ builder.Services.AddScoped<VoteService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<DashboardService>();
-builder.Services.AddScoped<AuthenticationService>();
+builder.Services.AddScoped<AuthenticationService>(sp =>
+{
+    var clientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var client = clientFactory.CreateClient("CrowdQRApi");
+    var logger = sp.GetRequiredService<ILogger<AuthenticationService>>();
+    var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new AuthenticationService(client, logger, httpContextAccessor, config);
+});
 
 // Add session state for user identification
 builder.Services.AddHttpContextAccessor();
