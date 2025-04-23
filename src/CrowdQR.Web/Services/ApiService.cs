@@ -276,4 +276,49 @@ public class ApiService(
         LogApiError(endpoint, ex);
         return ApiErrorHelper.GetUserFriendlyErrorMessage(ex);
     }
+
+    /// <summary>
+    /// Makes a debug POST request with detailed logging.
+    /// </summary>
+    /// <typeparam name="TRequest">The type of the request.</typeparam>
+    /// <typeparam name="TResponse">The expected response type.</typeparam>
+    /// <param name="endpoint">The API endpoint.</param>
+    /// <param name="data">The request data.</param>
+    /// <returns>The response and success flag.</returns>
+    public async Task<(bool Success, TResponse? Response)> DebugPostAsync<TRequest, TResponse>(
+        string endpoint, TRequest data)
+    {
+        try
+        {
+            AttachToken();
+
+            // Log the request
+            var jsonContent = JsonSerializer.Serialize(data, _jsonOptions);
+            _logger.LogInformation("DEBUG POST Request to {Endpoint}: {Content}", endpoint, jsonContent);
+
+            // Log token status
+            var hasAuth = _httpClient.DefaultRequestHeaders.Authorization != null;
+            _logger.LogInformation("Authorization header present: {HasAuth}", hasAuth);
+
+            var response = await _httpClient.PostAsJsonAsync(endpoint, data, _jsonOptions);
+
+            // Log the response
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("DEBUG Response {StatusCode}: {Content}",
+                response.StatusCode, responseContent);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<TResponse>(_jsonOptions);
+                return (true, result);
+            }
+
+            return (false, default);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "DEBUG Error in POST request to {Endpoint}", endpoint);
+            return (false, default);
+        }
+    }
 }

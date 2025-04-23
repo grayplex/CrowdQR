@@ -323,7 +323,7 @@ public class SessionManager(
                 session.SetString(EventIdKey, eventId.ToString());
                 session.SetString(EventSlugKey, slug);
                 session.SetString(SessionIdKey, "0"); // Use 0 for guest sessions
-                
+
                 return true;
             }
 
@@ -335,24 +335,50 @@ public class SessionManager(
                 ClientIP = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString()
             };
 
-            var (success, apiSession) = await _sessionService.CreateOrUpdateSessionAsync(sessionDto);
-            if (!success || apiSession == null)
+            try
             {
-                return false;
-            }
+                var (success, apiSession) = await _sessionService.CreateOrUpdateSessionAsync(sessionDto);
+                if (!success || apiSession == null)
+                {
+                    _logger.LogWarning("Failed to create API session for user {UserId} in event {EventId}", userId, eventId);
+                    // Even if API session creation fails, we'll still create a local session
+                    // to allow basic functionality
+                    var httpContext = _httpContextAccessor.HttpContext;
+                    if (httpContext != null)
+                    {
+                        httpContext.Session.SetString(EventIdKey, eventId.ToString());
+                        httpContext.Session.SetString(EventSlugKey, slug);
+                        httpContext.Session.SetString(SessionIdKey, "0"); // Fallback session ID
+                    }
+                    return true; // Return true so user can still use the application
+                }
 
-            // Store event info in session
-            var apiUserSession = _httpContextAccessor.HttpContext?.Session;
-            if (apiUserSession == null)
+                // Store event info in session
+                var apiUserSession = _httpContextAccessor.HttpContext?.Session;
+                if (apiUserSession == null)
+                {
+                    return false;
+                }
+
+                apiUserSession.SetString(EventIdKey, eventId.ToString());
+                apiUserSession.SetString(EventSlugKey, slug);
+                apiUserSession.SetString(SessionIdKey, apiSession.SessionId.ToString());
+
+                return true;
+            }
+            catch (Exception ex)
             {
-                return false;
+                _logger.LogError(ex, "Error creating API session for user {UserId} in event {EventId}", userId, eventId);
+                // Fall back to local session on error
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext != null)
+                {
+                    httpContext.Session.SetString(EventIdKey, eventId.ToString());
+                    httpContext.Session.SetString(EventSlugKey, slug);
+                    httpContext.Session.SetString(SessionIdKey, "0"); // Fallback session ID
+                }
+                return true; // Return true so user can still use the application
             }
-
-            apiUserSession.SetString(EventIdKey, eventId.ToString());
-            apiUserSession.SetString(EventSlugKey, slug);
-            apiUserSession.SetString(SessionIdKey, apiSession.SessionId.ToString());
-
-            return true;
         }
         catch (Exception ex)
         {

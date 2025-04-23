@@ -246,7 +246,7 @@
                     });
                 });
 
-                // Also set up the request form to use AJAX
+                // Set up the request form to use AJAX
                 $('#request-form').on('submit', function(e) {
                     // Only if form is valid
                     if (this.checkValidity()) {
@@ -271,12 +271,23 @@
                                 // Show success message
                                 alert('Your request has been submitted!');
 
-                                // No need to refresh - SignalR will update the UI
+                                // Hide global loading indicator that might be stuck
+                                if (typeof hideLoading === 'function') {
+                                    hideLoading();
+                                }
+
+                                // Refresh the page to show the new request
+                                setTimeout(() => location.reload(), 1000);
                             },
                             error: function(xhr, status, error) {
                                 console.error('Error submitting request:', error);
                                 // Restore button
                                 submitButton.prop('disabled', false).text(originalText);
+
+                                // Hide global loading indicator that might be stuck
+                                if (typeof hideLoading === 'function') {
+                                    hideLoading();
+                                }
 
                                 // Show error message
                                 alert('Failed to submit your request. Please try again.');

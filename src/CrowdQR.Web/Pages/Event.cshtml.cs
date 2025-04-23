@@ -176,49 +176,68 @@ public class EventModel(
         }
     }
 
+    // Update the OnPostAsync method to use our debug API call and handle errors better
     /// <summary>
     /// Handles POST requests for submitting a new song request.
     /// </summary>
     /// <returns>Redirect to the event page.</returns>
     public async Task<IActionResult> OnPostAsync()
     {
-        if (!ModelState.IsValid)
-        {
-            return await OnGetAsync();
-        }
-
-        UserId = _sessionManager.GetCurrentUserId();
-        if (!UserId.HasValue)
-        {
-            ErrorMessage = "You must be logged in to submit a request.";
-            return RedirectToPage(new { slug = Slug });
-        }
-
-        // Get event ID from slug
-        if (string.IsNullOrEmpty(Slug))
-        {
-            ErrorMessage = "Invalid event code.";
-            return RedirectToPage();
-        }
-
-        var eventData = await _eventService.GetEventBySlugAsync(Slug);
-        if (eventData == null)
-        {
-            ErrorMessage = "Event not found.";
-            return RedirectToPage();
-        }
-
-        // Create the request
-        var requestDto = new RequestCreateDto
-        {
-            UserId = UserId.Value,
-            EventId = eventData.EventId,
-            SongName = NewSongRequest.SongName,
-            ArtistName = NewSongRequest.ArtistName
-        };
-
         try
         {
+            if (!ModelState.IsValid)
+            {
+                return await OnGetAsync();
+            }
+
+            UserId = _sessionManager.GetCurrentUserId();
+            if (!UserId.HasValue)
+            {
+                ErrorMessage = "You must be logged in to submit a request.";
+                return RedirectToPage(new { slug = Slug });
+            }
+
+            // Get event ID from slug
+            if (string.IsNullOrEmpty(Slug))
+            {
+                ErrorMessage = "Invalid event code.";
+                return RedirectToPage();
+            }
+
+            var eventData = await _eventService.GetEventBySlugAsync(Slug);
+            if (eventData == null)
+            {
+                ErrorMessage = "Event not found.";
+                return RedirectToPage();
+            }
+
+            // Create the request
+            var requestDto = new RequestCreateDto
+            {
+                UserId = UserId.Value,
+                EventId = eventData.EventId,
+                SongName = NewSongRequest.SongName,
+                ArtistName = NewSongRequest.ArtistName
+            };
+
+            // Use ApiService directly for debugging
+            var apiService = _requestService.GetApiService();
+            if (apiService != null)
+            {
+                var (debugSuccess, debugResponse) = await apiService.DebugPostAsync<RequestCreateDto, RequestDto>("api/request", requestDto);
+                if (debugSuccess && debugResponse != null)
+                {
+                    SuccessMessage = "Your request has been submitted successfully!";
+                    return RedirectToPage(new { slug = Slug });
+                }
+                else
+                {
+                    ErrorMessage = "Failed to submit your request (debug mode). Please try again.";
+                    return RedirectToPage(new { slug = Slug });
+                }
+            }
+
+            // Fall back to normal request service if needed
             var (success, request) = await _requestService.CreateRequestAsync(requestDto);
 
             if (!success || request == null)
@@ -239,7 +258,7 @@ public class EventModel(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating request for user {UserId} in event {EventId}", UserId, eventData.EventId);
+            _logger.LogError(ex, "Error creating request for user {UserId} in event {Slug}", UserId, Slug);
             ErrorMessage = "An error occurred while submitting your request. Please try again.";
             return RedirectToPage(new { slug = Slug });
         }
