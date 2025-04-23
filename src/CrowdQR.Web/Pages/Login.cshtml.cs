@@ -50,7 +50,7 @@ public class LoginModel(AuthenticationService authService, ILogger<LoginModel> l
     public IActionResult OnGet()
     {
         // Redirect to home if already logged in
-        if (_authService.IsLoggedIn())
+        if (_authService.IsDj())
         {
             return RedirectToPage("/Index");
         }
@@ -68,7 +68,7 @@ public class LoginModel(AuthenticationService authService, ILogger<LoginModel> l
             return Page();
         }
 
-        var success = await _authService.LoginAsync(UsernameOrEmail, Password);
+        var success = await _authService.LoginDjAsync(UsernameOrEmail, Password);
 
         if (!success)
         {
@@ -77,6 +77,7 @@ public class LoginModel(AuthenticationService authService, ILogger<LoginModel> l
         }
 
         // Redirect to return URL or home page
-        return Redirect(!string.IsNullOrEmpty(ReturnUrl) ? ReturnUrl : "/");
+        return LocalRedirect(!string.IsNullOrEmpty(ReturnUrl) && Url.IsLocalUrl(ReturnUrl)
+            ? ReturnUrl : "/");
     }
 }

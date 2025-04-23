@@ -139,11 +139,26 @@ public class SessionManager(
     public bool IsDj()
     {
         var roleStr = GetCurrentUserRole();
-        if (string.IsNullOrEmpty(roleStr) || !Enum.TryParse<UserRole>(roleStr, out var role))
+        if (string.IsNullOrEmpty(roleStr))
         {
             return false;
         }
-        return role == UserRole.DJ;
+
+        // Log the role for debugging
+        _logger.LogInformation("Current user role: {Role}", roleStr);
+
+        // Try both direct comparison and enum parsing
+        if (roleStr == "DJ" || roleStr == "1")
+        {
+            return true;
+        }
+
+        if (Enum.TryParse<UserRole>(roleStr, out var role))
+        {
+            return role == UserRole.DJ;
+        }
+
+        return false;
     }
 
     /// <summary>

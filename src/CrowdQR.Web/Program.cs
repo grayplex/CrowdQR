@@ -1,8 +1,12 @@
 using CrowdQR.Web.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,13 +17,47 @@ builder.Services.AddHttpClient("CrowdQRApi", client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+// Add Authentication with dual schemes
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = "WebAppCookie";
+    options.DefaultSignInScheme = "WebAppCookie";
+})
+.AddCookie("WebAppCookie", options =>
+{
+    options.LoginPath = "/Login";
+    options.LogoutPath = "/Logout";
+    options.AccessDeniedPath = "/AccessDenied";
+    options.ExpireTimeSpan = TimeSpan.FromHours(1);
+    options.SlidingExpiration = true;
+})
+.AddCookie("AudienceCookie", options =>
+{
+    options.ExpireTimeSpan = TimeSpan.FromDays(1);
+    options.SlidingExpiration = true;
+});
+
+// Add Authorization
+builder.Services.AddAuthorizationBuilder()
+                        // Add Authorization
+                        .AddPolicy("DjOnly", policy =>
+        policy.RequireRole("DJ"))
+                        // Add Authorization
+                        .AddPolicy("AudienceAccess", policy =>
+        policy.RequireAssertion(context =>
+            context.User.Identity?.IsAuthenticated == true ||
+            context.Resource is HttpContext httpContext &&
+            httpContext.Session.GetString("AudienceId") != null));
+
+// Add API services
 builder.Services.AddScoped<ApiService>(sp =>
 {
     var clientFactory = sp.GetRequiredService<IHttpClientFactory>();
     var client = clientFactory.CreateClient("CrowdQRApi");
     var logger = sp.GetRequiredService<ILogger<ApiService>>();
     var config = sp.GetRequiredService<IConfiguration>();
-    return new ApiService(client, logger, config);
+    var tokenRefresher = sp.GetRequiredService<ApiTokenRefresher>();
+    return new ApiService(client, logger, config, tokenRefresher);
 });
 
 // Add all API service clients
@@ -39,7 +77,10 @@ builder.Services.AddScoped<AuthenticationService>(sp =>
     return new AuthenticationService(client, logger, httpContextAccessor, config);
 });
 
-// Add session state for user identification
+// Add token refresher
+builder.Services.AddScoped<ApiTokenRefresher>();
+
+// Add session state
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -50,11 +91,16 @@ builder.Services.AddSession(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
-// Add session manager
+// Add session manager for audience members
 builder.Services.AddScoped<SessionManager>();
 
-// Add services to the container.
-builder.Services.AddRazorPages();
+
+// Add services to the container
+builder.Services.AddRazorPages(options =>
+{
+    // Require DJ role for admin pages
+    options.Conventions.AuthorizeFolder("/Admin", "DjOnly");
+});
 
 var app = builder.Build();
 
@@ -71,8 +117,9 @@ app.UseStaticFiles();
 
 app.UseRouting();
 app.UseSession();
+app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseStatusCodePagesWithRedirects("/AccessDenied?code={0}");
 app.MapRazorPages();
 
 app.Run();

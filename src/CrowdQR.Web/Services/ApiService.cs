@@ -10,36 +10,33 @@ namespace CrowdQR.Web.Services;
 /// <summary>
 /// Service for making API calls to the backend.
 /// </summary>
-public class ApiService
+/// <remarks>
+/// Initializes a new instance of the ApiService class.
+/// </remarks>
+/// <param name="httpClient">The HTTP client.</param>
+/// <param name="logger">The logger.</param>
+/// <param name="configuration">The configuration.</param>
+/// <param name="tokenRefresher"> The API token refresher.</param>
+public class ApiService(
+    HttpClient httpClient,
+    ILogger<ApiService> logger, 
+    IConfiguration configuration, 
+    ApiTokenRefresher tokenRefresher)
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<ApiService> _logger;
+    private readonly HttpClient _httpClient = httpClient;
+    private readonly ILogger<ApiService> _logger = logger;
+    private readonly IConfiguration _configuration = configuration;
+    private readonly ApiTokenRefresher _tokenRefresher = tokenRefresher;
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    /// <summary>
-    /// Initializes a new instance of the ApiService class.
-    /// </summary>
-    /// <param name="httpClient">The HTTP client.</param>
-    /// <param name="logger">The logger.</param>
-    /// <param name="configuration">The configuration.</param>
-    public ApiService(HttpClient httpClient, ILogger<ApiService> logger, IConfiguration configuration)
+    // Add before each HTTP request
+    private void AttachToken()
     {
-        _httpClient = httpClient;
-        _logger = logger;
-
-        // Set the base address from configuration
-        string apiBaseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5000";
-        _httpClient.BaseAddress = new Uri(apiBaseUrl);
-
-        // Set timeout from configuration
-        if (int.TryParse(configuration["ApiSettings:Timeout"], out int timeoutSeconds))
-        {
-            _httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
-        }
+        _tokenRefresher.AttachTokenToClient(_httpClient);
     }
 
     /// <summary>
@@ -64,6 +61,7 @@ public class ApiService
     {
         try
         {
+            AttachToken();
             var response = await _httpClient.GetAsync(endpoint);
 
             if (response.IsSuccessStatusCode)

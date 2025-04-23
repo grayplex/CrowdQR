@@ -1,9 +1,10 @@
 ﻿using System.Net.Http.Headers;
-using System.Text;
+using System.Security.Claims;
 using System.Text.Json;
 using CrowdQR.Shared.Models.DTOs;
 using CrowdQR.Shared.Models.Enums;
-using CrowdQR.Web.Utilities;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace CrowdQR.Web.Services;
 
@@ -33,31 +34,22 @@ public class AuthenticationService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    // Session keys
-    private const string TokenKey = "Auth:Token";
-    private const string UserIdKey = "Auth:UserId";
-    private const string UsernameKey = "Auth:Username";
-    private const string UserRoleKey = "Auth:Role";
-    private const string AuthExpiryKey = "Auth:Expiry";
-
     /// <summary>
-    /// Attempts to authenticate with the given username or email and password.
+    /// Attempts to authenticate a DJ user with the given credentials.
     /// </summary>
-    /// <param name="usernameOrEmail">The username or email to authenticate with.</param>
-    /// <param name="password">The password to authenticate with.</param>
+    /// <param name="usernameOrEmail">The username or email.</param>
+    /// <param name="password">The password.</param>
     /// <returns>True if authentication was successful, otherwise false.</returns>
-    public async Task<bool> LoginAsync(string usernameOrEmail, string password)
+    public async Task<bool> LoginDjAsync(string usernameOrEmail, string password)
     {
         try
         {
             // Get the base URL from configuration
             var apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5071";
-
-            // Ensure the base address is set
+            // Set the base address
             if (_httpClient.BaseAddress == null)
             {
-                _logger.LogError("HTTP client base address is not set");
-                return false;
+                _httpClient.BaseAddress = new Uri(apiBaseUrl);
             }
 
             // Prepare login request
@@ -67,8 +59,7 @@ public class AuthenticationService
                 Password = password
             };
 
-            // Log the request URL for debugging
-            _logger.LogInformation("Sending login request to {BaseAddress}api/auth/login", _httpClient.BaseAddress);
+            _logger.LogInformation("Sending DJ login request to {BaseAddress}api/auth/login", _httpClient.BaseAddress);
 
             // Send login request to API
             var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginRequest, _jsonOptions);
@@ -76,7 +67,7 @@ public class AuthenticationService
             if (!response.IsSuccessStatusCode)
             {
                 var errorResult = await response.Content.ReadFromJsonAsync<AuthResultDto>(_jsonOptions);
-                _logger.LogWarning("Authentication failed for username/email {UsernameOrEmail}. Status: {StatusCode}, Error: {Error}",
+                _logger.LogWarning("DJ authentication failed for {UsernameOrEmail}. Status: {StatusCode}, Error: {Error}",
                     usernameOrEmail, response.StatusCode, errorResult?.ErrorMessage);
                 return false;
             }
@@ -86,45 +77,185 @@ public class AuthenticationService
 
             if (result == null || !result.Success || result.User == null || string.IsNullOrEmpty(result.Token))
             {
-                _logger.LogWarning("Authentication failed for username/email {UsernameOrEmail}. Invalid response format.", usernameOrEmail);
+                _logger.LogWarning("DJ authentication failed for {UsernameOrEmail}. Invalid response format.", usernameOrEmail);
                 return false;
             }
 
-            // Save auth information to session
-            SaveAuthToSession(result.Token, result.User);
+            // Only allow DJ users to log in through this method
+            if (result.User.Role != UserRole.DJ)
+            {
+                _logger.LogWarning("Non-DJ user attempted to use DJ login: {UsernameOrEmail}", usernameOrEmail);
+                return false;
+            }
+
+            // Create claims for authentication
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, result.User.UserId.ToString()),
+                new(ClaimTypes.Name, result.User.Username),
+                new(ClaimTypes.Role, "DJ"),
+                new("ApiToken", result.Token)
+            };
+
+            if (!string.IsNullOrEmpty(result.User.Email))
+            {
+                claims.Add(new Claim(ClaimTypes.Email, result.User.Email));
+            }
+
+            // Create identity and principal
+            var identity = new ClaimsIdentity(claims, "WebAppCookie");
+            var principal = new ClaimsPrincipal(identity);
+
+            // Sign in
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext != null)
+            {
+                await httpContext.SignInAsync("WebAppCookie", principal, new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddHours(12)
+                });
+            }
 
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during login for username/email {UsernameOrEmail}", usernameOrEmail);
+            _logger.LogError(ex, "Error during DJ login for {UsernameOrEmail}", usernameOrEmail);
             return false;
         }
     }
 
     /// <summary>
-    /// Logs the user out by clearing authentication session data.
+    /// Creates anonymous audience session
     /// </summary>
-    public void Logout()
+    /// <returns>True if successful, false otherwise</returns>
+    public async Task<bool> CreateAudienceSessionAsync(string? username = null)
     {
-        var session = _httpContextAccessor.HttpContext?.Session;
-        if (session != null)
+        try
         {
-            session.Remove(TokenKey);
-            session.Remove(UserIdKey);
-            session.Remove(UsernameKey);
-            session.Remove(UserRoleKey);
-            session.Remove(AuthExpiryKey);
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null)
+            {
+                return false;
+            }
+
+            // Generate temporary username if not provided
+            if (string.IsNullOrEmpty(username))
+            {
+                username = $"guest_{Guid.NewGuid().ToString()[..8]}";
+            }
+
+            // Make API call to create audience user
+            var apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5071";
+            if (_httpClient.BaseAddress == null)
+            {
+                _httpClient.BaseAddress = new Uri(apiBaseUrl);
+            }
+
+            // Create or get audience user
+            var loginRequest = new LoginDto
+            {
+                UsernameOrEmail = username
+                // No password for audience users
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginRequest, _jsonOptions);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to create audience session. Status: {StatusCode}", response.StatusCode);
+                return false;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<AuthResultDto>(_jsonOptions);
+            if (result == null || !result.Success || result.User == null)
+            {
+                return false;
+            }
+
+            // Store audience info in session
+            httpContext.Session.SetString("AudienceId", result.User.UserId.ToString());
+            httpContext.Session.SetString("AudienceUsername", result.User.Username);
+            httpContext.Session.SetString("ApiToken", result.Token ?? "");
+
+            // Sign in with the audience cookie
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, result.User.UserId.ToString()),
+                new(ClaimTypes.Name, result.User.Username),
+                new(ClaimTypes.Role, "Audience")
+            };
+
+            var identity = new ClaimsIdentity(claims, "AudienceCookie");
+            var principal = new ClaimsPrincipal(identity);
+
+            await httpContext.SignInAsync("AudienceCookie", principal, new AuthenticationProperties
+            {
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(1)
+            });
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating audience session");
+            return false;
         }
     }
 
     /// <summary>
-    /// Checks if the user is logged in.
+    /// Logs out the current user.
     /// </summary>
-    /// <returns>True if logged in, otherwise false.</returns>
-    public bool IsLoggedIn()
+    public async Task LogoutAsync()
     {
-        return !string.IsNullOrEmpty(GetToken()) && !IsTokenExpired();
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            return;
+        }
+
+        // Clear all authentication cookies
+        await httpContext.SignOutAsync("WebAppCookie");
+        await httpContext.SignOutAsync("AudienceCookie");
+
+        // Clear session
+        httpContext.Session.Clear();
+    }
+
+    /// <summary>
+    /// Checks if the current user is logged in as a DJ.
+    /// </summary>
+    /// <returns>True if logged in as a DJ, otherwise false.</returns>
+    public bool IsDj()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            return false;
+        }
+
+        return httpContext.User.Identity?.IsAuthenticated == true &&
+               httpContext.User.IsInRole("DJ");
+    }
+
+    /// <summary>
+    /// Checks if the current user is an audience member.
+    /// </summary>
+    /// <returns>True if user is an audience member, otherwise false.</returns>
+    public bool IsAudience()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            return false;
+        }
+
+        // Either authenticated as audience or has audience session
+        return (httpContext.User.Identity?.IsAuthenticated == true &&
+                httpContext.User.IsInRole("Audience")) ||
+               !string.IsNullOrEmpty(httpContext.Session.GetString("AudienceId"));
     }
 
     /// <summary>
@@ -133,19 +264,30 @@ public class AuthenticationService
     /// <returns>The user ID, or null if not logged in.</returns>
     public int? GetUserId()
     {
-        var session = _httpContextAccessor.HttpContext?.Session;
-        if (session == null)
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
         {
             return null;
         }
 
-        var userIdString = session.GetString(UserIdKey);
-        if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
+        // Check claims first (DJ users)
+        if (httpContext.User.Identity?.IsAuthenticated == true)
         {
-            return null;
+            var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var userId))
+            {
+                return userId;
+            }
         }
 
-        return userId;
+        // Then check session (audience)
+        var audienceId = httpContext.Session.GetString("AudienceId");
+        if (!string.IsNullOrEmpty(audienceId) && int.TryParse(audienceId, out var sessionUserId))
+        {
+            return sessionUserId;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -154,152 +296,19 @@ public class AuthenticationService
     /// <returns>The username, or null if not logged in.</returns>
     public string? GetUsername()
     {
-        var session = _httpContextAccessor.HttpContext?.Session;
-        if (session == null)
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
         {
             return null;
         }
 
-        return session.GetString(UsernameKey);
-    }
-
-    /// <summary>
-    /// Gets the current user's role.
-    /// </summary>
-    /// <returns>The user role, or null if not logged in.</returns>
-    public UserRole? GetUserRole()
-    {
-        var session = _httpContextAccessor.HttpContext?.Session;
-        if (session == null)
+        // Check claims first (DJ users)
+        if (httpContext.User.Identity?.IsAuthenticated == true)
         {
-            return null;
+            return httpContext.User.Identity.Name;
         }
 
-        var roleString = session.GetString(UserRoleKey);
-        if (string.IsNullOrEmpty(roleString))
-        {
-            return null;
-        }
-
-        if (Enum.TryParse<UserRole>(roleString, out var role))
-        {
-            return role;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Checks if the current user is a DJ.
-    /// </summary>
-    /// <returns>True if the user is a DJ, otherwise false.</returns>
-    public bool IsDj()
-    {
-        var role = GetUserRole();
-        return role == UserRole.DJ;
-    }
-
-    /// <summary>
-    /// Gets the authentication token for API requests.
-    /// </summary>
-    /// <returns>The token, or null if not logged in.</returns>
-    public string? GetToken()
-    {
-        var session = _httpContextAccessor.HttpContext?.Session;
-        if (session == null)
-        {
-            return null;
-        }
-
-        return session.GetString(TokenKey);
-    }
-
-    /// <summary>
-    /// Adds the authentication token to the HTTP client for API requests.
-    /// </summary>
-    /// <param name="client">The HTTP client to authorize.</param>
-    public void AuthorizeClient(HttpClient client)
-    {
-        var token = GetToken();
-        if (!string.IsNullOrEmpty(token))
-        {
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-    }
-
-    /// <summary>
-    /// Validates and refreshes authentication token with the API.
-    /// </summary>
-    /// <returns>True if the token is valid, otherwise false.</returns>
-    public async Task<bool> ValidateTokenAsync()
-    {
-        try
-        {
-            var token = GetToken();
-            if (string.IsNullOrEmpty(token))
-            {
-                return false;
-            }
-
-            // Set auth header
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-            // Validate token with API
-            var response = await _httpClient.GetAsync("api/auth/validate");
-
-            if (!response.IsSuccessStatusCode)
-            {
-                Logout();
-                return false;
-            }
-
-            // Token is valid, refresh the expiry
-            var session = _httpContextAccessor.HttpContext?.Session;
-            session?.SetString(AuthExpiryKey, DateTime.UtcNow.AddHours(1).ToString("o"));
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error validating auth token");
-            return false;
-        }
-    }
-
-    private void SaveAuthToSession(string token, UserDto user)
-    {
-        var session = _httpContextAccessor.HttpContext?.Session;
-        if (session == null)
-        {
-            return;
-        }
-
-        session.SetString(TokenKey, token);
-        session.SetString(UserIdKey, user.UserId.ToString());
-        session.SetString(UsernameKey, user.Username);
-        session.SetString(UserRoleKey, user.Role.ToString());
-        session.SetString(AuthExpiryKey, DateTime.UtcNow.AddHours(1).ToString("o"));
-    }
-
-    private bool IsTokenExpired()
-    {
-        var session = _httpContextAccessor.HttpContext?.Session;
-        if (session == null)
-        {
-            return true;
-        }
-
-        var expiryString = session.GetString(AuthExpiryKey);
-        if (string.IsNullOrEmpty(expiryString))
-        {
-            return true;
-        }
-
-        if (DateTime.TryParse(expiryString, out var expiry))
-        {
-            return expiry < DateTime.UtcNow;
-        }
-
-        return true;
+        // Then check session (audience)
+        return httpContext.Session.GetString("AudienceUsername");
     }
 }

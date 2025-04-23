@@ -3,7 +3,9 @@ using CrowdQR.Shared.Models.Enums;
 using CrowdQR.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Authorization;
 using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace CrowdQR.Web.Pages.Admin;
 
@@ -18,6 +20,7 @@ namespace CrowdQR.Web.Pages.Admin;
 /// <param name="dashboardService">The dashboard service.</param>
 /// <param name="sessionManager">The session manager.</param>
 /// <param name="logger">The logger.</param>
+[Authorize(Policy = "DjOnly")]
 public class DashboardModel(
     EventService eventService,
     RequestService requestService,
@@ -111,27 +114,14 @@ public class DashboardModel(
     /// </summary>
     public async Task<IActionResult> OnGetAsync()
     {
-        // Check if user is authenticated
-        UserId = _sessionManager.GetCurrentUserId();
-        IsAuthenticated = _sessionManager.IsLoggedIn();
-        IsDj = _sessionManager.IsDj();
-
-        // Redirect non-authenticated or non-DJ users
-        if (!IsAuthenticated)
-        {
-            // Instead of redirecting, we could show a login page in a real implementation
-            ErrorMessage = "You must be logged in to access the DJ dashboard.";
-            return RedirectToPage("/Index");
-        }
-
-        if (!IsDj)
-        {
-            ErrorMessage = "You do not have permission to access the DJ dashboard.";
-            return RedirectToPage("/Index");
-        }
 
         try
         {
+            // Get user details from claims
+            UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+            IsAuthenticated = true;
+            IsDj = true;
+
             // If no event ID is provided, get the DJ's events and use the first one
             if (EventId == null)
             {

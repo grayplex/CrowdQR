@@ -19,6 +19,7 @@ namespace CrowdQR.Web.Pages;
 /// <param name="userService"> The user service.</param>
 /// <param name="sessionManager"> The session manager.</param>
 /// <param name="sessionService"> The session service.</param>
+/// <param name="authService"> The authentication service.</param>
 /// <param name="logger"> The logger.</param>
 public class EventModel(
     EventService eventService,
@@ -27,6 +28,7 @@ public class EventModel(
     UserService userService,
     SessionManager sessionManager,
     SessionService sessionService,
+    AuthenticationService authService,
     ILogger<EventModel> logger) : PageModel
 {
     private readonly EventService _eventService = eventService;
@@ -35,6 +37,7 @@ public class EventModel(
     private readonly UserService _userService = userService;
     private readonly SessionManager _sessionManager = sessionManager;
     private readonly SessionService _sessionService = sessionService;
+    private readonly AuthenticationService _authService = authService;
     private readonly ILogger<EventModel> _logger = logger;
 
     /// <summary>
@@ -99,24 +102,22 @@ public class EventModel(
         try
         {
             // Check if user is authenticated
-            UserId = _sessionManager.GetCurrentUserId();
-            UserName = _sessionManager.GetCurrentUsername();
-            IsAuthenticated = _sessionManager.IsLoggedIn();
+            UserId = _authService.GetUserId();
+            UserName = _authService.GetUsername();
+            IsAuthenticated = UserId.HasValue;
 
             // If no user is logged in, automatically create a temporary user
             if (!IsAuthenticated && !string.IsNullOrEmpty(Slug))
             {
-                string tempUsername = $"guest_{Guid.NewGuid().ToString()[..8]}";
-                bool registered = await _sessionManager.RegisterAndLoginAsync(tempUsername);
-
-                if (!registered)
+                bool audienceCreated = await _authService.CreateAudienceSessionAsync();
+                if (!audienceCreated)
                 {
                     ErrorMessage = "Failed to create temporary user. Please try again.";
                     return Page();
                 }
 
-                UserId = _sessionManager.GetCurrentUserId();
-                UserName = _sessionManager.GetCurrentUsername();
+                UserId = _authService.GetUserId();
+                UserName = _authService.GetUsername();
                 IsAuthenticated = true;
             }
 

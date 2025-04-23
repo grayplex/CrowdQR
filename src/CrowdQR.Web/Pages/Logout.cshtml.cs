@@ -20,9 +20,9 @@ public class LogoutModel(AuthenticationService authService, ILogger<LogoutModel>
     /// <summary>
     /// Handles POST requests to log out.
     /// </summary>
-    public IActionResult OnPost()
+    public async Task<IActionResult> OnPostAsync()
     {
-        _authService.Logout();
+        await _authService.LogoutAsync();
         return RedirectToPage("/Index");
     }
 }
