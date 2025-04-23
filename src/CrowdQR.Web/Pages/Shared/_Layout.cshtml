@@ -90,7 +90,16 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2025 - CrowdQR - <a asp-area="" asp-page="/Privacy">Privacy</a>
+            <div class="row py-3">
+                <div class="col-md-6">
+                    &copy; @DateTime.Now.Year - CrowdQR - <a asp-area="" asp-page="/Privacy">Privacy</a>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="https://github.com/grayplex/CrowdQR" target="_blank" class="text-muted text-decoration-none">
+                        <i class="bi bi-github"></i> View on GitHub
+                    </a>
+                </div>
+            </div>
         </div>
     </footer>
 
