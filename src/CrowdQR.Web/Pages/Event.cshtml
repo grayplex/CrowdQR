@@ -700,6 +700,58 @@
     </script>
 
     <script>
+        // SignalR vote count handler - sync with server values
+        $(document).ready(function() {
+            // Only setup if SignalR exists
+            if (window.CrowdQR && window.CrowdQR.SignalR) {
+                // Set up separate handler specifically for vote events
+                window.CrowdQR.SignalR.on('voteAdded', function(data) {
+                    console.log('Vote added event received:', data);
+
+                    // Find the request element
+                    var requestElement = $(`.list-group-item[data-request-id="${data.requestId}"]`);
+                    if (requestElement.length) {
+                        // Update vote count with the EXACT count from server
+                        var voteElement = requestElement.find('[data-vote-count]');
+                        if (voteElement.length) {
+                            // Use the vote count directly from server
+                            voteElement.text(`${data.voteCount} ${data.voteCount === 1 ? 'vote' : 'votes'}`);
+                        }
+
+                        // Optional: highlight to show it changed
+                        voteElement.addClass('highlight-change');
+                        setTimeout(function() {
+                            voteElement.removeClass('highlight-change');
+                        }, 1500);
+                    }
+                });
+
+                // Similar handler for vote removed
+                window.CrowdQR.SignalR.on('voteRemoved', function(data) {
+                    console.log('Vote removed event received:', data);
+
+                    // Find the request element
+                    var requestElement = $(`.list-group-item[data-request-id="${data.requestId}"]`);
+                    if (requestElement.length) {
+                        // Update vote count with the EXACT count from server
+                        var voteElement = requestElement.find('[data-vote-count]');
+                        if (voteElement.length) {
+                            // Use the vote count directly from server
+                            voteElement.text(`${data.voteCount} ${data.voteCount === 1 ? 'vote' : 'votes'}`);
+                        }
+
+                        // Optional: highlight to show it changed
+                        voteElement.addClass('highlight-change');
+                        setTimeout(function() {
+                            voteElement.removeClass('highlight-change');
+                        }, 1500);
+                    }
+                });
+            }
+        });
+    </script>
+
+    <script>
         // Connection monitor for event page
         (function() {
             // Initialize variables
