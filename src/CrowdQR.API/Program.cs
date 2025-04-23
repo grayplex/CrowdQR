@@ -145,6 +145,7 @@ app.UseRouting();
 app.UseAuthorization();
 app.UseAuthentication();
 app.MapHub<CrowdQRHub>("/hubs/crowdqr");
+app.UseDjRoleValidation();
 
 app.UseHttpsRedirection();
 app.MapControllers();

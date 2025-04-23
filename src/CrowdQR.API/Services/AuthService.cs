@@ -390,12 +390,13 @@ public class AuthService(
         var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Secret"] ?? "temporaryCrowdQRSecretKey12345!@#$%");
 
         var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-            new(ClaimTypes.Name, user.Username),
-            new(ClaimTypes.Role, user.Role.ToString()),
-            new("account_created", user.CreatedAt.ToString("O"))
-        };
+    {
+        new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+        new(ClaimTypes.Name, user.Username),
+        new(ClaimTypes.Role, user.Role.ToString()),
+        new("account_created", user.CreatedAt.ToString("O")),
+        new("email_verified", user.IsEmailVerified.ToString().ToLower())
+    };
 
         // Add email claim if available
         if (!string.IsNullOrEmpty(user.Email))
