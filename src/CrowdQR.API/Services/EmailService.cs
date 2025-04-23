@@ -18,14 +18,30 @@ public class EmailService(ILogger<EmailService> logger, IConfiguration configura
     {
         // This is a placeholder implementation that logs instead of actually sending an email
         // Replace with actual email sending logic in production
-        _logger.LogInformation(
-            "VERIFICATION EMAIL: To: {Email}, For: {Username}, Token: {Token}",
-            email, username, token);
-
         var baseUrl = _configuration["AppSettings:BaseUrl"] ?? "https://localhost:5000";
         var verificationUrl = $"{baseUrl}/verify-email?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
 
-        _logger.LogInformation("Verification URL: {Url}", verificationUrl);
+        _logger.LogInformation("----- VERIFICATION EMAIL -----");
+        _logger.LogInformation("To: {Email}", email);
+        _logger.LogInformation("Subject: Verify your CrowdQR DJ account");
+        _logger.LogInformation("Body:");
+        _logger.LogInformation("Hello {Username},", username);
+        _logger.LogInformation("Thank you for registering as a DJ on CrowdQR.");
+        _logger.LogInformation("Please verify your email by clicking the link below:");
+        _logger.LogInformation("{Url}", verificationUrl);
+        _logger.LogInformation("Or use the following verification code: {Token}", token);
+        _logger.LogInformation("This link will expire in 24 hours.");
+        _logger.LogInformation("If you did not create this account, please ignore this email.");
+        _logger.LogInformation("Thanks,");
+        _logger.LogInformation("The CrowdQR Team");
+        _logger.LogInformation("-----------------------------");
+
+        // In development, let's write the verification URL to the console
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine();
+        Console.WriteLine("✅ VERIFICATION LINK: " + verificationUrl);
+        Console.WriteLine();
+        Console.ResetColor();
 
         // Simulate successful email sending
         return Task.FromResult(true);

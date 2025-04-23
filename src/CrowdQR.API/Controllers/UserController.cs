@@ -1,5 +1,6 @@
 ﻿using CrowdQR.Api.Data;
 using CrowdQR.Api.Models;
+using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
 using CrowdQR.Shared.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -14,12 +15,17 @@ namespace CrowdQR.Api.Controllers;
 /// </summary>
 /// <param name="context">The database context.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="authService">The authentication service.</param>
 [ApiController]
 [Route("api/[controller]")]
-public class UserController(CrowdQRContext context, ILogger<UserController> logger) : ControllerBase
+public class UserController(
+    CrowdQRContext context, 
+    ILogger<UserController> logger,
+    AuthService authService) : ControllerBase
 {
     private readonly CrowdQRContext _context = context;
     private readonly ILogger<UserController> _logger = logger;
+    private readonly AuthService _authService = authService;
 
     // GET: api/user
     /// <summary>
@@ -248,6 +254,59 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Resends the verification email for the current user.
+    /// </summary>
+    /// <returns>Success or failure status.</returns>
+    [HttpPost("resend-verification")]
+    [Authorize]
+    public async Task<IActionResult> ResendVerification()
+    {
+        // Get current user email
+        var email = User.FindFirst(ClaimTypes.Email)?.Value;
+        if (string.IsNullOrEmpty(email))
+        {
+            return BadRequest(new { success = false, message = "No email associated with this account" });
+        }
+
+        var result = await _authService.ResendVerificationEmail(email);
+
+        if (!result)
+        {
+            return BadRequest(new { success = false, message = "Failed to resend verification email" });
+        }
+
+        return Ok(new { success = true, message = "Verification email has been sent" });
+    }
+
+    /// <summary>
+    /// Gets the verification status of the current user.
+    /// </summary>
+    /// <returns>The verification status.</returns>
+    [HttpGet("verification-status")]
+    [Authorize]
+    public async Task<IActionResult> GetVerificationStatus()
+    {
+        // Get current user ID
+        if (!int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new
+        {
+            isEmailVerified = user.IsEmailVerified,
+            email = user.Email,
+            requiresVerification = user.Role == UserRole.DJ && !user.IsEmailVerified
+        });
     }
 
     private async Task<bool> UserExists(int id)

@@ -488,4 +488,22 @@ public class AuthService(
         var user = await _context.Users.FindAsync(userId);
         return user?.Role == UserRole.DJ;
     }
+
+    /// <summary>
+    /// Checks if a user needs to verify their email.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <returns>True if the user needs to verify their email, false otherwise.</returns>
+    public async Task<bool> NeedsEmailVerificationAsync(int userId)
+    {
+        var user = await _context.Users.FindAsync(userId);
+
+        // Only DJ accounts require email verification
+        if (user == null || user.Role != UserRole.DJ)
+        {
+            return false;
+        }
+
+        return !user.IsEmailVerified;
+    }
 }
