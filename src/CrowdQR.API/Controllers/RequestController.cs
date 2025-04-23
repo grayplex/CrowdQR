@@ -145,12 +145,23 @@ public class RequestController(
             return BadRequest("Event does not exist");
         }
 
+        // Check if request exists and load its votes and event ID
+        var user = await _context.Users
+            .Include(u => u.Username)
+            .FirstOrDefaultAsync(u => u.UserId == requestDto.UserId);
+        if (user == null)
+        {
+            return BadRequest("Request does not exist");
+        }
+
         // Check if user exists
+        /*
         var userExists = await _context.Users.AnyAsync(u => u.UserId == requestDto.UserId);
         if (!userExists)
         {
             return BadRequest("User does not exist");
         }
+        */
 
         var request = new Request
         {
@@ -167,7 +178,7 @@ public class RequestController(
         // Send SignalR notification
         try
         {
-            await _hubNotificationService.NotifyRequestAdded(request.EventId, request.RequestId, request.User.Username);
+            await _hubNotificationService.NotifyRequestAdded(request.EventId, request.RequestId, user.Username);
             _logger.LogInformation("SignalR notification sent for new request {RequestId} in event {EventId}",
                 request.RequestId, request.EventId);
         }
