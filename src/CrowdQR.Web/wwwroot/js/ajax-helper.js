@@ -8,7 +8,7 @@ window.CrowdQR.Ajax = (function () {
     }
 
     // Make an authenticated AJAX request
-    function sendRequest(url, method, data, successCallback, errorCallback) {
+    function sendRequest(url, method, data, successCallback, errorCallback, showGlobalLoading = false) {
         // Create headers object with authentication token if available
         const headers = {};
 
@@ -16,6 +16,11 @@ window.CrowdQR.Ajax = (function () {
         const antiForgeryToken = getAntiForgeryToken();
         if (antiForgeryToken) {
             headers['RequestVerificationToken'] = antiForgeryToken;
+        }
+
+        // Show global loading if requested
+        if (showGlobalLoading && window.CrowdQR.Loading) {
+            window.CrowdQR.Loading.show();
         }
 
         // Make the AJAX request
@@ -27,17 +32,43 @@ window.CrowdQR.Ajax = (function () {
             xhrFields: {
                 withCredentials: true // This is crucial, sends cookies with the request
             },
-            success: successCallback,
-            error: errorCallback
+            success: function (response) {
+                // Hide global loading if it was shown
+                if (showGlobalLoading && window.CrowdQR.Loading) {
+                    window.CrowdQR.Loading.hide();
+                }
+
+                // Call success callback
+                if (typeof successCallback === 'function') {
+                    successCallback(response);
+                }
+            },
+            error: function (xhr, status, error) {
+                // Hide global loading if it was shown
+                if (showGlobalLoading && window.CrowdQR.Loading) {
+                    window.CrowdQR.Loading.hide();
+                }
+
+                // Call error callback
+                if (typeof errorCallback === 'function') {
+                    errorCallback(xhr, status, error);
+                }
+            }
         });
     }
 
     return {
-        post: function (url, data, successCallback, errorCallback) {
-            sendRequest(url, 'POST', data, successCallback, errorCallback);
+        post: function (url, data, successCallback, errorCallback, showGlobalLoading = false) {
+            sendRequest(url, 'POST', data, successCallback, errorCallback, showGlobalLoading);
         },
-        get: function (url, successCallback, errorCallback) {
-            sendRequest(url, 'GET', null, successCallback, errorCallback);
+        get: function (url, successCallback, errorCallback, showGlobalLoading = false) {
+            sendRequest(url, 'GET', null, successCallback, errorCallback, showGlobalLoading);
+        },
+        put: function (url, data, successCallback, errorCallback, showGlobalLoading = false) {
+            sendRequest(url, 'PUT', data, successCallback, errorCallback, showGlobalLoading);
+        },
+        delete: function (url, successCallback, errorCallback, showGlobalLoading = false) {
+            sendRequest(url, 'DELETE', null, successCallback, errorCallback, showGlobalLoading);
         }
     };
 })();

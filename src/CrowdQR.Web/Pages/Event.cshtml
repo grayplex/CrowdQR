@@ -194,6 +194,7 @@
             // Only initialize on event pages with a slug
             const slug = '@Model.Slug';
             const eventId = '@Model.EventId';
+            const userId = '@Model.UserId';
 
             if (!slug || !eventId) {
                 return;
@@ -201,7 +202,12 @@
 
             console.log('Initializing SignalR for event:', slug, 'ID:', eventId);
 
-            // Initialize connection when document is ready
+            // Global variables for the page
+            window.eventSlug = slug;
+            window.eventId = eventId;
+            window.userId = userId;
+
+            // Initialize when document is ready
             $(document).ready(function() {
                 // Initialize the SignalR connection
                 if (CrowdQR.SignalR.init(CrowdQR.Config.apiBaseUrl)) {
@@ -213,58 +219,72 @@
                         }
                     });
 
+                    // Initialize request handler
+                    if (CrowdQR.RequestHandler) {
+                        CrowdQR.RequestHandler.init(eventId, userId);
+                        CrowdQR.RequestHandler.setEventSlug(slug);
+                    }
+
                     // Register event handlers
                     registerEventHandlers();
 
-                    // Set up AJAX form submission for votes and song requests
+                    // Set up form handlers
                     setupForms();
                 }
             });
 
             // Set up AJAX form submission for votes and song requests
             function setupForms() {
-                // Set up the vote forms to use AJAX instead of traditional form submission
+                /*// Set up vote forms to use AJAX
                 $('.vote-form').on('submit', function(e) {
                     e.preventDefault();
 
                     const form = $(this);
-                    const formAction = form.attr('action');
-                    const url = formAction || window.location.pathname;
-                    const formData = form.serialize();
+                    const requestId = form.find('input[name="requestId"]').val();
                     const button = form.find('button');
-                    const originalHtml = button.html();
+                    const voteAction = button.data('vote-action'); // 'add' or 'remove'
 
-                    // Show loading state
-                    button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                    // Disable button to prevent double-clicks
+                    button.prop('disabled', true);
 
-                    // Send the authenticated AJAX request
-                    CrowdQR.Ajax.post(url, formData,
-                        function(response) {
-                            // Success callback
-                            console.log('Vote action successful');
-                            // Button state will be updated by SignalR events
-                        },
-                        function(xhr, status, error) {
-                            // Error callback
-                            console.error('Error with vote action:', error);
-                            // Restore the button state
-                            button.prop('disabled', false).html(originalHtml);
+                    // Handle vote action based on type
+                    if (voteAction === 'add') {
+                        // Optimistically update the UI
+                        button.removeClass('btn-outline-primary').addClass('btn-success');
+                        button.html('<i class="bi bi-hand-thumbs-up-fill"></i>');
 
-                            // Show a more detailed error message
-                            let errorMessage = 'Failed to register your vote. Please try again.';
-                            if (xhr.status === 401) {
-                                errorMessage = 'Your session has expired. Please refresh the page and try again.';
-                            } else if (xhr.status === 403) {
-                                errorMessage = 'You don\'t have permission to vote for this request.';
-                            }
+                        // Submit the vote
+                        CrowdQR.RequestHandler.submitVote(requestId)
+                            .catch(error => {
+                                // Revert UI changes on error
+                                button.removeClass('btn-success').addClass('btn-outline-primary');
+                                button.html('<i class="bi bi-hand-thumbs-up"></i>');
+                                button.prop('disabled', false);
 
-                            alert(errorMessage);
-                        }
-                    );
-                });
+                                // Show error toast
+                                showToast('Error', 'Failed to register your vote. Please try again.', 'danger');
+                            });
+                    } else {
+                        // Optimistically update the UI
+                        button.removeClass('btn-success').addClass('btn-outline-primary');
+                        button.html('<i class="bi bi-hand-thumbs-up"></i>');
+
+                        // Submit the vote removal
+                        CrowdQR.RequestHandler.removeVote(requestId)
+                            .catch(error => {
+                                // Revert UI changes on error
+                                button.removeClass('btn-outline-primary').addClass('btn-success');
+                                button.html('<i class="bi bi-hand-thumbs-up-fill"></i>');
+                                button.prop('disabled', false);
+
+                                // Show error toast
+                                showToast('Error', 'Failed to remove your vote. Please try again.', 'danger');
+                            });
+                    }
+                });*/
 
                 // Set up the request form to use AJAX
-                $('#request-form').on('submit', function(e) {
+                /*$('#request-form').on('submit', function(e) {
                     // Only proceed if form is valid
                     if (this.checkValidity()) {
                         e.preventDefault();
@@ -272,173 +292,261 @@
                         const form = $(this);
                         const submitButton = form.find('button[type="submit"]');
                         const originalText = submitButton.text();
+                        const songName = form.find('input[name="NewSongRequest.SongName"]').val();
+                        const artistName = form.find('input[name="NewSongRequest.ArtistName"]').val();
+                        const notes = form.find('textarea[name="NewSongRequest.Notes"]').val();
 
-                        // Show loading state
-                        submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting...');
+                        // Disable button to prevent double submissions
+                        submitButton.prop('disabled', true).text('Submitting...');
 
-                        // Send the AJAX request
-                        $.ajax({
-                            url: window.location.pathname,
-                            type: 'POST',
-                            data: form.serialize(),
-                            success: function() {
-                                // Clear form fields
-                                form.find('input[type="text"], textarea').val('');
+                        // Submit the request
+                        CrowdQR.RequestHandler.submitRequest(songName, artistName, notes)
+                            .then(result => {
+                                if (result.success) {
+                                    // Clear form fields
+                                    form.find('input[type="text"], textarea').val('');
+
+                                    // Show success toast
+                                    showToast('Success', 'Your request has been submitted!', 'success');
+                                } else {
+                                    // Show error toast
+                                    showToast('Error', result.error || 'Failed to submit request', 'danger');
+                                }
 
                                 // Restore button state
                                 submitButton.prop('disabled', false).text(originalText);
-
-                                // Show success message
-                                alert('Your request has been submitted successfully!');
-
-                                // Refresh page to show the new request
-                                window.location.reload();
-                            },
-                            error: function(xhr, status, error) {
+                            })
+                            .catch(error => {
                                 console.error('Error submitting request:', error);
 
                                 // Restore button state
                                 submitButton.prop('disabled', false).text(originalText);
 
-                                // Show error message
-                                alert('Failed to submit your request. Please try again.');
-                            }
-                        });
+                                // Show error toast
+                                showToast('Error', 'Failed to submit your request. Please try again.', 'danger');
+                            });
                     }
+                });*/
+
+                $('#request-form').on('submit', function(e) {
+                    // Let the form submit normally - don't prevent default
+                    // This ensures the POST request is properly sent
+
+                    // Just disable double-submissions
+                    var submitButton = $(this).find('button[type="submit"]');
+                    if (submitButton.prop('disabled')) {
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    submitButton.prop('disabled', true);
+
+                    // Let the form continue with its normal POST action
+                    return true;
+                });
+
+                // Simple vote button handler
+                $('.vote-form').on('submit', function(e) {
+                    // Let the form submit normally - don't prevent default
+                    // This ensures the POST request is properly sent
+
+                    // Just disable double-submissions
+                    var submitButton = $(this).find('button[type="submit"]');
+                    if (submitButton.prop('disabled')) {
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    submitButton.prop('disabled', true);
+
+                    // Let the form continue with its normal POST action
+                    return true;
                 });
             }
 
+            // Simple function to remove loading indicators
+            function hideAllLoadingIndicators() {
+                // Hide any global loading indicators that might be stuck
+                const loadingDiv = document.querySelector('#global-loading');
+                if (loadingDiv) {
+                    loadingDiv.style.display = 'none';
+                }
+            }
+            setTimeout(hideAllLoadingIndicators, 5000);
+
+            // Register event handlers for SignalR
             function registerEventHandlers() {
                 // Update UI when a new request is added
                 CrowdQR.SignalR.on('requestAdded', data => {
                     if (data.eventId == eventId) {
-                        // We'll refresh the page to show the new request
-                        // In a more advanced implementation, we would dynamically add the request
-                        setTimeout(() => location.reload(), 1000);
+                        // Instead of reloading the page, fetch just the new request and add it to the UI
+                        fetchRequestAndAddToUI(data.requestId);
                     }
                 });
 
                 // Update UI when a request status is updated
                 CrowdQR.SignalR.on('requestStatusUpdated', data => {
                     if (data.eventId == eventId) {
-                        // Find the request element
-                        const requestElement = $(`.list-group-item[data-request-id="${data.requestId}"]`);
-                        if (requestElement.length) {
-                            // Update the status badge
-                            let statusBadge = requestElement.find('.badge[data-status]');
-
-                            // Add badge if it doesn't exist
-                            if (!statusBadge.length) {
-                                statusBadge = $('<span class="badge ms-2" data-status></span>');
-                                requestElement.find('small.text-muted').after(statusBadge);
-                            }
-
-                            // Remove existing status classes
-                            statusBadge.removeClass('bg-success bg-secondary');
-                            requestElement.removeClass('bg-light text-muted');
-
-                            // Update badge based on new status
-                            if (data.status === 'Approved') {
-                                statusBadge.addClass('bg-success').text('Approved').attr('data-status', 'approved');
-                                requestElement.addClass('bg-light');
-
-                                // Remove vote button for approved requests
-                                requestElement.find('.vote-form').fadeOut();
-                            } else if (data.status === 'Rejected') {
-                                statusBadge.addClass('bg-secondary').text('Rejected').attr('data-status', 'rejected');
-                                requestElement.addClass('bg-light text-muted');
-
-                                // Remove vote button for rejected requests
-                                requestElement.find('.vote-form').fadeOut();
-                            }
-
-                            // Highlight the row to indicate it's been updated
-                            requestElement.addClass('highlight-change');
-                            setTimeout(() => requestElement.removeClass('highlight-change'), 1500);
-                        }
+                        updateRequestStatus(data.requestId, data.status);
                     }
                 });
 
                 // Update UI when a vote is added
                 CrowdQR.SignalR.on('voteAdded', data => {
                     if (data.eventId == eventId) {
-                        // Find the request element and update vote count
-                        const requestElement = $(`.list-group-item[data-request-id="${data.requestId}"]`);
-                        if (requestElement.length) {
-                            const voteElement = requestElement.find('.badge[data-vote-count]');
-                            voteElement.text(`${data.voteCount} ${data.voteCount === 1 ? 'vote' : 'votes'}`);
-
-                            // Highlight the vote count to show it's been updated
-                            voteElement.addClass('highlight-change');
-                            setTimeout(() => voteElement.removeClass('highlight-change'), 1500);
-
-                            // Update the current user's vote button if appropriate
-                            const voteForm = requestElement.find('.vote-form');
-                            const voteButton = voteForm.find('button');
-
-                            // Re-enable the button after the AJAX request completes
-                            voteButton.prop('disabled', false);
-
-                            // Reorder the list based on new vote counts
-                            reorderRequests();
-                        }
+                        updateVoteCount(data.requestId, data.voteCount, 'add');
                     }
                 });
 
                 // Update UI when a vote is removed
                 CrowdQR.SignalR.on('voteRemoved', data => {
                     if (data.eventId == eventId) {
-                        // Almost identical to voteAdded handler
-                        const requestElement = $(`.list-group-item[data-request-id="${data.requestId}"]`);
-                        if (requestElement.length) {
-                            const voteElement = requestElement.find('.badge[data-vote-count]');
-                            voteElement.text(`${data.voteCount} ${data.voteCount === 1 ? 'vote' : 'votes'}`);
-
-                            // Highlight the vote count to show it's been updated
-                            voteElement.addClass('highlight-change');
-                            setTimeout(() => voteElement.removeClass('highlight-change'), 1500);
-
-                            // Re-enable vote button if needed
-                            const voteForm = requestElement.find('.vote-form');
-                            const voteButton = voteForm.find('button');
-                            voteButton.prop('disabled', false);
-
-                            // Reorder the list based on new vote counts
-                            reorderRequests();
-                        }
+                        updateVoteCount(data.requestId, data.voteCount, 'remove');
                     }
                 });
 
                 // Track connection status
                 CrowdQR.SignalR.on('connectionStatus', data => {
-                    const statusIndicator = $('#connection-status');
-                    if (statusIndicator.length) {
-                        statusIndicator.removeClass('bg-success bg-warning bg-secondary bg-danger');
-
-                        if (data.status === 'connected') {
-                            statusIndicator.addClass('bg-success').html('<i class="bi bi-broadcast"></i> Live');
-                        } else if (data.status === 'reconnecting') {
-                            statusIndicator.addClass('bg-warning').html('<i class="bi bi-broadcast"></i> Reconnecting...');
-                        } else {
-                            statusIndicator.addClass('bg-danger').html('<i class="bi bi-broadcast-pin"></i> Offline');
-                        }
-                    }
+                    updateConnectionStatus(data.status);
                 });
             }
 
-            // Reorder requests based on vote count
+            // Update vote count on the UI
+            function updateVoteCount(requestId, voteCount, action) {
+                // Find the request element
+                const requestElement = $(`.list-group-item[data-request-id="${requestId}"]`);
+                if (!requestElement.length) return;
+
+                // Update vote count display
+                const voteElement = requestElement.find('.badge[data-vote-count]');
+                voteElement.text(`${voteCount} ${voteCount === 1 ? 'vote' : 'votes'}`);
+
+                // Find the vote button
+                const voteForm = requestElement.find('.vote-form');
+                const voteButton = voteForm.find('button');
+
+                // Enable the button (it might be disabled from AJAX request)
+                voteButton.prop('disabled', false);
+
+                // Update button appearance if this is the current user's vote
+                if (voteButton.length && voteButton.data('vote-action') !== action) {
+                    if (action === 'add') {
+                        // User voted - update button to filled style
+                        voteButton.removeClass('btn-outline-primary').addClass('btn-success');
+                        voteButton.html('<i class="bi bi-hand-thumbs-up-fill"></i>');
+                        voteButton.data('vote-action', 'remove');
+                        
+                        // Update form action
+                        voteForm.attr('action', voteForm.attr('action').replace('Vote', 'RemoveVote'));
+                    } else {
+                        // User removed vote - update button to outline style
+                        voteButton.removeClass('btn-success').addClass('btn-outline-primary');
+                        voteButton.html('<i class="bi bi-hand-thumbs-up"></i>');
+                        voteButton.data('vote-action', 'add');
+                        
+                        // Update form action
+                        voteForm.attr('action', voteForm.attr('action').replace('RemoveVote', 'Vote'));
+                    }
+                }
+
+                // Highlight the vote count
+                voteElement.addClass('highlight-change');
+                setTimeout(() => voteElement.removeClass('highlight-change'), 1500);
+
+                // Reorder the list
+                reorderRequests();
+            }
+
+            // Update request status on the UI
+            function updateRequestStatus(requestId, status) {
+                // Find the request element
+                const requestElement = $(`.list-group-item[data-request-id="${requestId}"]`);
+                if (!requestElement.length) return;
+
+                // Get or create status badge
+                let statusBadge = requestElement.find('.badge[data-status]');
+                if (!statusBadge.length) {
+                    statusBadge = $('<span class="badge ms-2" data-status></span>');
+                    requestElement.find('small.text-muted').after(statusBadge);
+                }
+
+                // Reset styles
+                statusBadge.removeClass('bg-success bg-secondary');
+                requestElement.removeClass('bg-light text-muted');
+
+                // Apply new status styles
+                if (status === 'Approved') {
+                    statusBadge.addClass('bg-success').text('Approved').attr('data-status', 'approved');
+                    requestElement.addClass('bg-light');
+                    
+                    // Hide vote button for approved requests
+                    requestElement.find('.vote-form').fadeOut();
+                } else if (status === 'Rejected') {
+                    statusBadge.addClass('bg-secondary').text('Rejected').attr('data-status', 'rejected');
+                    requestElement.addClass('bg-light text-muted');
+                    
+                    // Hide vote button for rejected requests
+                    requestElement.find('.vote-form').fadeOut();
+                }
+
+                // Highlight the change
+                requestElement.addClass('highlight-change');
+                setTimeout(() => requestElement.removeClass('highlight-change'), 1500);
+
+                // Reorder the list
+                reorderRequests();
+            }
+
+            // Toast notification system
+            function showToast(title, message, type = 'info') {
+                // Create toast container if it doesn't exist
+                if (!$('#toast-container').length) {
+                    $('body').append('<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;"></div>');
+                }
+
+                // Generate unique ID for this toast
+                const toastId = 'toast-' + Date.now();
+
+                // Create toast HTML
+                const toastHtml = `
+                    <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
+                        <div class="toast-header bg-${type} text-white">
+                            <strong class="me-auto">${title}</strong>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                `;
+
+                // Add toast to container
+                $('#toast-container').append(toastHtml);
+
+                // Initialize and show the toast
+                const toastElement = document.getElementById(toastId);
+                const toast = new bootstrap.Toast(toastElement);
+                toast.show();
+
+                // Remove toast from DOM when hidden
+                $(toastElement).on('hidden.bs.toast', function() {
+                    $(this).remove();
+                });
+            }
+
+            // Reorder requests based on vote count and status
             function reorderRequests() {
                 const requestList = $('#request-list');
                 const requests = requestList.find('.list-group-item').get();
 
                 if (requests.length <= 1) return; // Nothing to sort
 
-                // Custom sort function - by votes (desc) and then status (pending first)
+                // Sort by votes (desc) and then status (pending first)
                 requests.sort((a, b) => {
                     const aVoteText = $(a).find('[data-vote-count]').text();
                     const bVoteText = $(b).find('[data-vote-count]').text();
 
-                    // Extract vote count numbers
+                    // Extract vote counts
                     const aVotes = parseInt(aVoteText.split(' ')[0]) || 0;
                     const bVotes = parseInt(bVoteText.split(' ')[0]) || 0;
 
@@ -461,13 +569,128 @@
                     return 0;
                 });
 
-                // Update the DOM
+                // Update DOM order
                 $.each(requests, function(idx, request) {
                     requestList.append(request);
                 });
             }
 
-            // Listen for beforeunload to properly leave the event
+            // Update connection status indicator
+            function updateConnectionStatus(status) {
+                const statusIndicator = $('#connection-status');
+                if (!statusIndicator.length) return;
+
+                statusIndicator.removeClass('bg-success bg-warning bg-secondary bg-danger');
+
+                switch (status) {
+                    case 'connected':
+                        statusIndicator.addClass('bg-success').html('<i class="bi bi-broadcast"></i> Live');
+                        break;
+                    case 'reconnecting':
+                        statusIndicator.addClass('bg-warning').html('<i class="bi bi-broadcast"></i> Reconnecting...');
+                        break;
+                    case 'failed':
+                    case 'error':
+                        statusIndicator.addClass('bg-danger').html('<i class="bi bi-broadcast-pin"></i> Offline');
+                        // Show refresh button
+                        if (!$('#refresh-connection').length) {
+                            statusIndicator.after(
+                                '<button id="refresh-connection" class="btn btn-sm btn-outline-danger ms-2" onclick="window.location.reload()">' +
+                                '<i class="bi bi-arrow-clockwise"></i> Refresh</button>'
+                            );
+                        }
+                        break;
+                    default:
+                        statusIndicator.addClass('bg-secondary').html('<i class="bi bi-broadcast-pin"></i> Connecting');
+                        break;
+                }
+            }
+
+            // Fetch a request from the API and add it to the UI
+            async function fetchRequestAndAddToUI(requestId) {
+                try {
+                    // Make API request to get the request details
+                    const response = await fetch(`${CrowdQR.Config.apiBaseUrl}/api/request/${requestId}`);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch request: ${response.status}`);
+                    }
+
+                    const request = await response.json();
+
+                    // Remove empty message if present
+                    $('#empty-requests-message').remove();
+
+                    // Create HTML for new request
+                    const requestHtml = createRequestElement(request);
+
+                    // Add to the list
+                    $('#request-list').prepend(requestHtml);
+
+                    // Highlight the new request
+                    const newElement = $(`.list-group-item[data-request-id="${requestId}"]`);
+                    newElement.addClass('highlight-change');
+                    setTimeout(() => newElement.removeClass('highlight-change'), 1500);
+
+                    // Update request count
+                    const count = $('#request-list .list-group-item').length;
+                    $('#request-count').text(`${count} total`);
+
+                    // Set up event handlers for the new request
+                    setupForms();
+
+                    // Reorder the list
+                    reorderRequests();
+                } catch (error) {
+                    console.error('Error fetching request:', error);
+
+                    // Instead of showing an error, just reload the page as a fallback
+                    window.location.reload();
+                }
+            }
+
+            // Create HTML for a request element
+            function createRequestElement(request) {
+                const isApproved = request.status === 'Approved';
+                const isRejected = request.status === 'Rejected';
+                const isPending = !isApproved && !isRejected;
+                const statusClass = isApproved ? 'bg-light' : (isRejected ? 'bg-light text-muted' : '');
+                const statusBadge = isApproved ?
+                    '<span class="badge bg-success ms-2" data-status="approved">Approved</span>' :
+                    (isRejected ? '<span class="badge bg-secondary ms-2" data-status="rejected">Rejected</span>' : '');
+
+                // Determine if current user has voted
+                const userHasVoted = request.userHasVoted;
+
+                // Only show vote button for pending requests
+                const voteButtonHtml = isPending ? `
+                    <form method="post" asp-page-handler="${userHasVoted ? 'RemoveVote' : 'Vote'}" class="vote-form">
+                        <input type="hidden" name="requestId" value="${request.requestId}" />
+                        <input type="hidden" name="slug" value="${slug}" />
+                        <button type="submit" class="btn btn-sm ${userHasVoted ? 'btn-success' : 'btn-outline-primary'} mb-1" data-vote-action="${userHasVoted ? 'remove' : 'add'}">
+                            <i class="bi bi-hand-thumbs-up${userHasVoted ? '-fill' : ''}"></i>
+                        </button>
+                    </form>
+                ` : '';
+
+                return `
+                    <div class="list-group-item ${statusClass}" data-request-id="${request.requestId}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">${request.songName}</h5>
+                                <p class="mb-1 text-muted">${request.artistName || ''}</p>
+                                <small class="text-muted">Requested by ${request.requester || 'Anonymous'}</small>
+                                ${statusBadge}
+                            </div>
+                            <div class="d-flex flex-column align-items-center">
+                                ${voteButtonHtml}
+                                <span class="badge bg-secondary" data-vote-count>${request.voteCount} ${request.voteCount === 1 ? 'vote' : 'votes'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Clean up when leaving the page
             window.addEventListener('beforeunload', function() {
                 if (CrowdQR.SignalR.isConnected() && CrowdQR.SignalR.getCurrentEventId()) {
                     CrowdQR.SignalR.leaveEvent();
