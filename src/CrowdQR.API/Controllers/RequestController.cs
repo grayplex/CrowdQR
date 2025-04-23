@@ -167,7 +167,7 @@ public class RequestController(
         // Send SignalR notification
         try
         {
-            await _hubNotificationService.NotifyRequestAdded(request.EventId, request.RequestId);
+            await _hubNotificationService.NotifyRequestAdded(request.EventId, request.RequestId, request.User.Username);
             _logger.LogInformation("SignalR notification sent for new request {RequestId} in event {EventId}",
                 request.RequestId, request.EventId);
         }

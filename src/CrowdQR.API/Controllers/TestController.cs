@@ -30,7 +30,7 @@ public class TestController(IHubNotificationService hubService, ILogger<TestCont
     {
         try
         {
-            await _hubService.NotifyRequestAdded(eventId, 999);
+            await _hubService.NotifyRequestAdded(eventId, 999, "TestControllerUser");
             await _hubService.NotifyUserJoinedEvent(eventId, "TestUser");
 
             return Ok(new { message = $"Broadcast sent to event {eventId}" });

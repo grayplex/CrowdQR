@@ -168,7 +168,7 @@ public class VoteController(
             // Send SignalR notification about the new vote
             try
             {
-                await _hubNotificationService.NotifyVoteAdded(request.EventId, request.RequestId, voteCount);
+                await _hubNotificationService.NotifyVoteAdded(request.EventId, request.RequestId, voteCount, request.UserId);
                 _logger.LogInformation("SignalR notification sent for vote added to request {RequestId}, new count: {VoteCount}",
                     request.RequestId, voteCount);
             }

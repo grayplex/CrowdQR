@@ -17,11 +17,11 @@ public class HubNotificationService(IHubContext<CrowdQRHub> hubContext, ILogger<
     private readonly ILogger<HubNotificationService> _logger = logger;
 
     /// <inheritdoc/>
-    public async Task NotifyRequestAdded(int eventId, int requestId)
+    public async Task NotifyRequestAdded(int eventId, int requestId, string requesterName)
     {
         _logger.LogInformation("Broadcasting RequestAdded for event {EventId}, request {RequestId}", eventId, requestId);
         await _hubContext.Clients.Group($"event-{eventId}")
-            .SendAsync("requestAdded", new { eventId, requestId });
+            .SendAsync("requestAdded", new { eventId, requestId, requesterName });
     }
 
     /// <inheritdoc/>
@@ -34,12 +34,12 @@ public class HubNotificationService(IHubContext<CrowdQRHub> hubContext, ILogger<
     }
 
     /// <inheritdoc/>
-    public async Task NotifyVoteAdded(int eventId, int requestId, int voteCount)
+    public async Task NotifyVoteAdded(int eventId, int requestId, int voteCount, int userId)
     {
         _logger.LogInformation("Broadcasting VoteAdded for event {EventId}, request {RequestId}, count {VoteCount}",
             eventId, requestId, voteCount);
         await _hubContext.Clients.Group($"event-{eventId}")
-            .SendAsync("voteAdded", new { eventId, requestId, voteCount });
+            .SendAsync("voteAdded", new { eventId, requestId, voteCount, userId });
     }
 
     /// <inheritdoc/>
