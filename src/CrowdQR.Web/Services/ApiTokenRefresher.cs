@@ -36,7 +36,7 @@ public class ApiTokenRefresher(
         // Check if user is authenticated (DJ users)
         if (httpContext.User.Identity?.IsAuthenticated == true)
         {
-            _logger.LogInformation("User is authenticated: {Username}, Roles: {Roles}", 
+            _logger.LogInformation("User is authenticated: {Username}, Roles: {Roles}",
                 httpContext.User.Identity.Name,
                 string.Join(", ", httpContext.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value)));
 
@@ -44,7 +44,10 @@ public class ApiTokenRefresher(
             var token = httpContext.User.FindFirst("ApiToken")?.Value;
             if (!string.IsNullOrEmpty(token))
             {
-                _logger.LogInformation("Found API token in claims, attaching to request");
+                _logger.LogInformation("Found API token in claims, length: {TokenLength}, prefix: {TokenPrefix}...",
+                    token.Length,
+                    token.Length > 10 ? token[..10] : token);
+
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
                 return true;
             }

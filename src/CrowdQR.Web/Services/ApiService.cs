@@ -149,29 +149,6 @@ public class ApiService(
     }
 
     /// <summary>
-    /// Makes a POST request to the specified endpoint with error handling.
-    /// </summary>
-    /// <typeparam name="TRequest">The type of the request body.</typeparam>
-    /// <param name="endpoint">The API endpoint.</param>
-    /// <param name="data">The request body.</param>
-    /// <param name="defaultErrorMessage">The default error message to use if the API doesn't provide one.</param>
-    /// <returns>True if the request was successful, false otherwise.</returns>
-    /// <exception cref="ApiException">Thrown when the API request fails.</exception>
-    public async Task<bool> PostWithErrorHandlingAsync<TRequest>(string endpoint, TRequest data, string defaultErrorMessage = "Failed to save data")
-    {
-        try
-        {
-            var (success, _) = await PostAsync<TRequest, object>(endpoint, data);
-            return success;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "API POST request failed: {Endpoint}", endpoint);
-            throw new ApiException(defaultErrorMessage, ex);
-        }
-    }
-
-    /// <summary>
     /// Makes a POST request to the specified endpoint.
     /// </summary>
     /// <typeparam name="TRequest">The type of the request body.</typeparam>
@@ -179,7 +156,7 @@ public class ApiService(
     /// <param name="endpoint">The API endpoint.</param>
     /// <param name="data">The request body.</param>
     /// <returns>The deserialized response and success flag.</returns>
-    public async Task<(bool Success, TResponse? Response)> PostAsync<TRequest, TResponse>(
+    public async Task<(bool Success, TResponse? Response, string? ErrorMessage)> PostAsync<TRequest, TResponse>(
         string endpoint, TRequest data)
     {
         try
@@ -205,24 +182,24 @@ public class ApiService(
                 try
                 {
                     var result = await response.Content.ReadFromJsonAsync<TResponse>(_jsonOptions);
-                    return (true, result);
+                    return (true, result, null);
                 }
                 catch (JsonException ex)
                 {
                     _logger.LogError(ex, "Error deserializing response from {Endpoint}: {Content}", endpoint, responseContent);
-                    return (false, default);
+                    return (false, default, ex.Message);
                 }
             }
 
             _logger.LogWarning("API POST request failed: {Endpoint} - {StatusCode} - {Content}",
                 endpoint, response.StatusCode, responseContent);
 
-            return (false, default);
+            return (false, default, null);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error making POST request to {Endpoint}", endpoint);
-            return (false, default);
+            return (false, default, ex.Message);
         }
     }
 
@@ -360,96 +337,5 @@ public class ApiService(
     {
         LogApiError(endpoint, ex);
         return ApiErrorHelper.GetUserFriendlyErrorMessage(ex);
-    }
-
-    /// <summary>
-    /// Makes a debug POST request with detailed logging.
-    /// </summary>
-    /// <typeparam name="TRequest">The type of the request.</typeparam>
-    /// <typeparam name="TResponse">The expected response type.</typeparam>
-    /// <param name="endpoint">The API endpoint.</param>
-    /// <param name="data">The request data.</param>
-    /// <returns>The response and success flag.</returns>
-    public async Task<(bool Success, TResponse? Response)> DebugPostAsync<TRequest, TResponse>(
-        string endpoint, TRequest data)
-    {
-        try
-        {
-            // Ensure token is attached
-            AttachToken();
-
-            // Log the request in detail
-            var jsonContent = JsonSerializer.Serialize(data, _jsonOptions);
-            _logger.LogInformation("DEBUG POST Request to {Endpoint}:", endpoint);
-            _logger.LogInformation("Request Content: {Content}", jsonContent);
-
-            // Log token status
-            var hasAuth = _httpClient.DefaultRequestHeaders.Authorization != null;
-            _logger.LogInformation("Authorization header present: {HasAuth}", hasAuth);
-            if (hasAuth)
-            {
-                _logger.LogInformation("Authorization header scheme: {Scheme}",
-                    _httpClient.DefaultRequestHeaders.Authorization?.Scheme ?? "No Authorization Header");
-
-                var token = _httpClient.DefaultRequestHeaders.Authorization?.Parameter;
-
-                if (!string.IsNullOrEmpty(token) && token.Length > 10)
-                {
-                    _logger.LogInformation("Token prefix: {TokenPrefix}...", token[..10]);
-                }
-            }
-
-            // Check all request headers
-            _logger.LogInformation("All Request Headers:");
-            foreach (var header in _httpClient.DefaultRequestHeaders)
-            {
-                _logger.LogInformation("  {Key}: {Value}", header.Key, string.Join(", ", header.Value));
-            }
-
-            // Create explicit request message for more control
-            var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
-            {
-                Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
-            };
-
-            // Send the request
-            var response = await _httpClient.SendAsync(request);
-
-            // Log the response in detail
-            var statusCode = (int)response.StatusCode;
-            _logger.LogInformation("DEBUG Response Status: {StatusCode} {ReasonPhrase}",
-                statusCode, response.ReasonPhrase);
-
-            var responseContent = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation("DEBUG Response Content: {Content}", responseContent);
-
-            // Log response headers
-            _logger.LogInformation("Response Headers:");
-            foreach (var header in response.Headers)
-            {
-                _logger.LogInformation("  {Key}: {Value}", header.Key, string.Join(", ", header.Value));
-            }
-
-            if (response.IsSuccessStatusCode)
-            {
-                try
-                {
-                    var result = await response.Content.ReadFromJsonAsync<TResponse>(_jsonOptions);
-                    return (true, result);
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogError(ex, "DEBUG Error deserializing response: {Content}", responseContent);
-                    return (false, default);
-                }
-            }
-
-            return (false, default);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "DEBUG Error in POST request to {Endpoint}", endpoint);
-            return (false, default);
-        }
     }
 }

@@ -59,16 +59,14 @@ public class VerifyEmailModel(ApiService apiService, ILogger<VerifyEmailModel> l
                 Token = Token
             };
 
-            var response = await _apiService.PostWithErrorHandlingAsync(
-                "api/auth/verify-email",
-                verifyDto,
-                "Failed to verify email");
+            // FIX: Use a strongly typed DTO for the response
+            var (success, response, error) = await _apiService.PostAsync<object, object>("api/auth/verify-email", verifyDto);
 
-            IsVerified = response;
+            /*IsVerified = response;
             Message = IsVerified
                 ? "Your email has been verified successfully! You can now log in."
                 : "Invalid or expired verification link. Please request a new verification link.";
-
+            */
             return Page();
         }
         catch (ApiService.ApiException ex)

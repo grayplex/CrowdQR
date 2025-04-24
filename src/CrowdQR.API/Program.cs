@@ -56,6 +56,30 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+
+    // Enable debugging for JWT events
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError("Authentication failed: {Exception}", context.Exception);
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Token validated successfully for user: {Name}", context.Principal?.Identity?.Name);
+            return Task.CompletedTask;
+        },
+        OnMessageReceived = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("JWT token received: {Token}",
+                context.Token?.Length > 10 ? context.Token[..10] + "..." : "None");
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // Add authorization services
@@ -140,14 +164,17 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandling(); // Custom middleware for global exception handling
-app.UseAuthorizationLogging(); // Custom middleware for logging authorization events
 app.UseCors("AllowWebApp"); // Enable CORS for the web app
-app.UseRouting(); // Enable routing
+
+app.UseRouting(); // Must be before auth middleware
+app.UseAuthentication(); // Enable authentication middleware, must come before authorization
 app.UseAuthorization(); // Enable authorization middleware
-app.UseAuthentication(); // Enable authentication middleware
-app.MapHub<CrowdQRHub>("/hubs/crowdqr"); // Map SignalR hub
+
+app.UseAuthorizationLogging(); // Custom middleware for logging authorization events
 app.UseDjRoleValidation(); // Custom middleware for DJ role validation
+
 // app.UseHttpsRedirection(); // Redirect HTTP to HTTPS // Disabled while in development mode
+app.MapHub<CrowdQRHub>("/hubs/crowdqr"); // Map SignalR hub
 app.MapControllers(); // Map controllers to routes
 
 app.Run(); 
