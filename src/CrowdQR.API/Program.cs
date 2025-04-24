@@ -129,7 +129,8 @@ if (app.Environment.IsDevelopment())
     try
     {
         var context = services.GetRequiredService<CrowdQRContext>();
-        DbSeeder.SeedAsync(context).Wait();
+        // DbSeeder.SeedAsync(context).Wait();
+        context.Database.Migrate(); // Apply migrations
     }
     catch (Exception ex)
     {
@@ -138,19 +139,18 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-app.UseExceptionHandling();
-app.UseAuthorizationLogging();
-app.UseCors("AllowWebApp");
-app.UseRouting();
-app.UseAuthorization();
-app.UseAuthentication();
-app.MapHub<CrowdQRHub>("/hubs/crowdqr");
-app.UseDjRoleValidation();
+app.UseExceptionHandling(); // Custom middleware for global exception handling
+app.UseAuthorizationLogging(); // Custom middleware for logging authorization events
+app.UseCors("AllowWebApp"); // Enable CORS for the web app
+app.UseRouting(); // Enable routing
+app.UseAuthorization(); // Enable authorization middleware
+app.UseAuthentication(); // Enable authentication middleware
+app.MapHub<CrowdQRHub>("/hubs/crowdqr"); // Map SignalR hub
+app.UseDjRoleValidation(); // Custom middleware for DJ role validation
+// app.UseHttpsRedirection(); // Redirect HTTP to HTTPS // Disabled while in development mode
+app.MapControllers(); // Map controllers to routes
 
-app.UseHttpsRedirection();
-app.MapControllers();
-
-app.Run();
+app.Run(); 
 
 // Helper method to build connection string from individual environment variables
 static string BuildConnectionString(IConfiguration configuration)
