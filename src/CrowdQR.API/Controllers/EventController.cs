@@ -155,8 +155,16 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
     public async Task<ActionResult<IEnumerable<object>>> GetEventsByDJ(int djUserId)
     {
         // Regular users should only be able to get their own events
-        if (!User.IsInRole("DJ") && djUserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var currentUserId))
         {
+            _logger.LogWarning("Events retrieval attempted with invalid user ID claim: {ClaimValue}", userIdClaim ?? "null");
+            return BadRequest("Invalid user identity");
+        }
+
+        if (!User.IsInRole("DJ") && djUserId != currentUserId)
+        {
+            _logger.LogWarning("Unauthorized attempt to access events for DJ {DjUserId} by user {CurrentUserId}", djUserId, currentUserId);
             return Forbid();
         }
 
@@ -164,6 +172,8 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
             .Where(e => e.DjUserId == djUserId)
             .Include(e => e.DJ)
             .ToListAsync();
+
+        _logger.LogInformation("Retrieved {Count} events for DJ {DjUserId}", events.Count, djUserId);
 
         // Format the response to avoid circular references
         var formattedEvents = events.Select(e => new
@@ -198,6 +208,22 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
             return BadRequest(ModelState);
         }
 
+        // Get the current user's ID from the claims
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var currentUserId))
+        {
+            _logger.LogWarning("DJ creation attempted with invalid user ID claim: {ClaimValue}", userIdClaim ?? "null");
+            return BadRequest("Invalid user identity");
+        }
+        
+        // Check that DJs can only create events with their own ID
+        if (eventDto.DjUserId != currentUserId)
+        {
+            _logger.LogWarning("DJ creation attempted with mismatched IDs. Token ID: {CurrentUserId}, DTO ID: {DtoUserId}", 
+                currentUserId, eventDto.DjUserId);
+            return BadRequest("You can only create events for yourself");
+        }
+
         // Check if DJ user exists
         var djExists = await _context.Users.AnyAsync(u => u.UserId == eventDto.DjUserId);
         if (!djExists)
@@ -222,6 +248,9 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
 
         _context.Events.Add(@event);
         await _context.SaveChangesAsync();
+        
+        _logger.LogInformation("Event created successfully: {EventId}, {EventName}, by DJ {DjUserId}", 
+            @event.EventId, @event.Name, @event.DjUserId);
 
         return CreatedAtAction(nameof(GetEvent), new { id = @event.EventId }, @event);
     }
@@ -244,8 +273,16 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
         }
 
         // DJs should only update their own events
-        if (@event.DjUserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var currentUserId))
         {
+            _logger.LogWarning("Event update attempted with invalid user ID claim: {ClaimValue}", userIdClaim ?? "null");
+            return BadRequest("Invalid user identity");
+        }
+
+        if (@event.DjUserId != currentUserId)
+        {
+            _logger.LogWarning("Unauthorized attempt to update event {EventId} by user {CurrentUserId}", id, currentUserId);
             return Forbid();
         }
 
@@ -309,13 +346,23 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
         }
 
         // DJs should only delete their own events
-        if (@event.DjUserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var currentUserId))
         {
+            _logger.LogWarning("Event deletion attempted with invalid user ID claim: {ClaimValue}", userIdClaim ?? "null");
+            return BadRequest("Invalid user identity");
+        }
+
+        if (@event.DjUserId != currentUserId)
+        {
+            _logger.LogWarning("Unauthorized attempt to delete event {EventId} by user {CurrentUserId}", id, currentUserId);
             return Forbid();
         }
 
         _context.Events.Remove(@event);
         await _context.SaveChangesAsync();
+        
+        _logger.LogInformation("Event {EventId} deleted successfully by DJ {DjUserId}", id, currentUserId);
 
         return NoContent();
     }

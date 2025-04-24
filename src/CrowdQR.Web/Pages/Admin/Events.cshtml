@@ -111,7 +111,7 @@
     <div class="modal fade" id="createEventModal" tabindex="-1" aria-labelledby="createEventModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="post" asp-page-handler="Create">
+                <form method="post" asp-page-handler="CreateAsync">
                     <div class="modal-header">
                         <h5 class="modal-title" id="createEventModalLabel">Create New Event</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -147,7 +147,7 @@
     <div class="modal fade" id="editEventModal" tabindex="-1" aria-labelledby="editEventModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="post" asp-page-handler="Update">
+                <form method="post" asp-page-handler="UpdateAsync">
                     <div class="modal-header">
                         <h5 class="modal-title" id="editEventModalLabel">Edit Event</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -191,7 +191,7 @@
     <div class="modal fade" id="deleteEventModal" tabindex="-1" aria-labelledby="deleteEventModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="post" asp-page-handler="Delete">
+                <form method="post" asp-page-handler="DeleteAsync">
                     <input type="hidden" id="deleteEventId" name="eventId" />
                     <div class="modal-header">
                         <h5 class="modal-title" id="deleteEventModalLabel">Confirm Deletion</h5>
