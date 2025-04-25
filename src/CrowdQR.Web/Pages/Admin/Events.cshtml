@@ -111,7 +111,7 @@
     <div class="modal fade" id="createEventModal" tabindex="-1" aria-labelledby="createEventModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="post" >
+                <form method="post" asp-page-handler="Create">
                     <div class="modal-header">
                         <h5 class="modal-title" id="createEventModalLabel">Create New Event</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -119,17 +119,18 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label asp-for="NewEvent.Name" class="form-label">Event Name</label>
-                            <input asp-for="NewEvent.Name" class="form-control" required />
+                            <input asp-for="NewEvent.Name" class="form-control" required minlength="3" maxlength="200" />
+                            <div class="form-text">Must be between 3 and 200 characters</div>
                             <span asp-validation-for="NewEvent.Name" class="text-danger"></span>
                         </div>
                         <div class="mb-3">
                             <label asp-for="NewEvent.Slug" class="form-label">Event Slug</label>
                             <div class="input-group">
                                 <span class="input-group-text">crowdqr.com/event/</span>
-                                <input asp-for="NewEvent.Slug" class="form-control" required pattern="^[a-z0-9-]+$" />
+                                <input asp-for="NewEvent.Slug" class="form-control" required pattern="^[a-z0-9-]+$" minlength="3" maxlength="100" />
                             </div>
                             <div class="form-text">
-                                Use lowercase letters, numbers, and hyphens only. This will be used in the URL.
+                                Use lowercase letters, numbers, and hyphens only. Must be between 3 and 100 characters.
                             </div>
                             <span asp-validation-for="NewEvent.Slug" class="text-danger"></span>
                         </div>
@@ -147,7 +148,7 @@
     <div class="modal fade" id="editEventModal" tabindex="-1" aria-labelledby="editEventModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="post" >
+                <form method="post" asp-page-handler="Update">
                     <div class="modal-header">
                         <h5 class="modal-title" id="editEventModalLabel">Edit Event</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -156,17 +157,18 @@
                         <input type="hidden" asp-for="EditEvent.EventId" id="editEventId" />
                         <div class="mb-3">
                             <label asp-for="EditEvent.Name" class="form-label">Event Name</label>
-                            <input asp-for="EditEvent.Name" class="form-control" id="editEventName" required />
+                            <input asp-for="EditEvent.Name" class="form-control" id="editEventName" required minlength="3" maxlength="200" />
+                            <div class="form-text">Must be between 3 and 200 characters</div>
                             <span asp-validation-for="EditEvent.Name" class="text-danger"></span>
                         </div>
                         <div class="mb-3">
                             <label asp-for="EditEvent.Slug" class="form-label">Event Slug</label>
                             <div class="input-group">
                                 <span class="input-group-text">crowdqr.com/event/</span>
-                                <input asp-for="EditEvent.Slug" class="form-control" id="editEventSlug" required pattern="^[a-z0-9-]+$" />
+                                <input asp-for="EditEvent.Slug" class="form-control" id="editEventSlug" required pattern="^[a-z0-9-]+$" minlength="3" maxlength="100" />
                             </div>
                             <div class="form-text">
-                                Use lowercase letters, numbers, and hyphens only. This will be used in the URL.
+                                Use lowercase letters, numbers, and hyphens only. Must be between 3 and 100 characters.
                             </div>
                             <span asp-validation-for="EditEvent.Slug" class="text-danger"></span>
                         </div>
@@ -191,7 +193,7 @@
     <div class="modal fade" id="deleteEventModal" tabindex="-1" aria-labelledby="deleteEventModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="post" >
+                <form method="post" asp-page-handler="Delete">
                     <input type="hidden" id="deleteEventId" name="eventId" />
                     <div class="modal-header">
                         <h5 class="modal-title" id="deleteEventModalLabel">Confirm Deletion</h5>
@@ -249,11 +251,17 @@
                 nameInput.addEventListener('input', function () {
                     // Only auto-generate if slug is empty or hasn't been manually edited
                     if (slugInput.dataset.manuallyEdited !== 'true') {
-                        const slug = this.value
+                        let slug = this.value
                             .toLowerCase()
                             .replace(/[^\w\s-]/g, '') // Remove special characters
                             .replace(/\s+/g, '-')     // Replace spaces with hyphens
                             .replace(/-+/g, '-');     // Remove consecutive hyphens
+                        
+                        // Ensure slug is at least 3 characters long
+                        if (slug.length > 0 && slug.length < 3) {
+                            // Pad with extra characters if too short
+                            slug = slug.padEnd(3, slug.charAt(0));
+                        }
 
                         slugInput.value = slug;
                     }
