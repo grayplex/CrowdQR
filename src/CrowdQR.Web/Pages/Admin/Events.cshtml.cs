@@ -14,9 +14,6 @@ namespace CrowdQR.Web.Pages.Admin;
 /// <remarks>
 /// Initializes a new instance of the <see cref="EventsModel"/> class.
 /// </remarks>
-/// <remarks>
-/// Initializes a new instance of the <see cref="EventsModel"/> class.
-/// </remarks>
 /// <param name="eventService">The event service.</param>
 /// <param name="logger">The logger.</param>
 [Authorize(Policy = "DjOnly")]
@@ -85,17 +82,14 @@ public class EventsModel(EventService eventService, ILogger<EventsModel> logger)
     /// </summary>
     public async Task<IActionResult> OnPostCreateAsync()
     {
-        _logger.LogInformation("[1 - OK] Creating new event");
+        _logger.LogInformation("Creating new event");
         
-        // Log the submitted values
-        _logger.LogInformation("Submitted values - Name: '{Name}' (length: {NameLength}), Slug: '{Slug}' (length: {SlugLength})", 
-            NewEvent.Name, 
-            NewEvent.Name.Length,
-            NewEvent.Slug,
-            NewEvent.Slug.Length);
-            
         try
         {
+            // Clear existing validation and only validate NewEvent
+            ModelState.Clear();
+            TryValidateModel(NewEvent, nameof(NewEvent));
+
             if (!ModelState.IsValid)
             {
                 // Log detailed validation errors
@@ -115,20 +109,17 @@ public class EventsModel(EventService eventService, ILogger<EventsModel> logger)
                     }
                 }
                 
-                _logger.LogInformation("[2 - ERROR] Model is invalid: {ModelState}", ModelState);
                 await OnGetAsync();
                 return Page();
             }
-            _logger.LogInformation("[2 - OK] Model is valid");
 
             // Get the current user's ID
             if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
             {
-                _logger.LogInformation("[3 - ERROR] Unable to determine user identity. Please try logging in again.");
+                _logger.LogInformation("Unable to determine user identity. Please try logging in again.");
                 ErrorMessage = "Unable to determine user identity. Please try logging in again.";
                 return RedirectToPage("/Login");
             }
-            _logger.LogInformation("[3 - OK] User ID: {UserId}", userId);
 
             // Create the event
             var eventDto = new EventCreateDto
@@ -138,26 +129,25 @@ public class EventsModel(EventService eventService, ILogger<EventsModel> logger)
                 Slug = NewEvent.Slug,
                 IsActive = true
             };
-            _logger.LogInformation("[4 - OK] Event DTO: {EventDto}", eventDto);
 
             var (success, createdEvent) = await _eventService.CreateEventAsync(eventDto);
-            _logger.LogInformation("[5 - OK] Success: {Success}, Created Event: {CreatedEvent}", success, createdEvent);
+            _logger.LogInformation("Success: {Success}, Created Event: {CreatedEvent}", success, createdEvent);
 
             if (!success || createdEvent == null)
             {
-                _logger.LogInformation("[6 - ERROR] Failed to create event. Please check the event details and try again.");
+                _logger.LogInformation("Failed to create event. Please check the event details and try again.");
                 ErrorMessage = $"Failed to create event. Please check the event details and try again.";
                 await OnGetAsync();
                 return Page();
             }
-            _logger.LogInformation("[6 - OK] Event created successfully");
+            _logger.LogInformation("Event created successfully");
 
             SuccessMessage = $"Event '{createdEvent.Name}' created successfully!";
             return RedirectToPage();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[FATAl] Error creating new event");
+            _logger.LogError(ex, "Error creating new event");
             ErrorMessage = "An error occurred while creating the event. Please try again.";
             await OnGetAsync();
             return Page();
