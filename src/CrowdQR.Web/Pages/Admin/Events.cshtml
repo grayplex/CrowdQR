@@ -223,10 +223,10 @@
 
     <script>
         function prepareEditEvent(id, name, slug, isActive) {
-            document.getElementById('editEventId').value = id;
-            document.getElementById('editEventName').value = name;
-            document.getElementById('editEventSlug').value = slug;
-            document.getElementById('editEventActive').checked = isActive;
+            document.getElementById('EditEvent_EventId').value = id;
+            document.getElementById('EditEvent_Name').value = name;
+            document.getElementById('EditEvent_Slug').value = slug;
+            document.getElementById('EditEvent_IsActive').checked = isActive;
 
             // Show the modal
             const modal = new bootstrap.Modal(document.getElementById('editEventModal'));
