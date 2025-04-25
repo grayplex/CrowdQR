@@ -109,11 +109,11 @@ public class EventsModel(EventService eventService, ILogger<EventsModel> logger)
                 IsActive = true
             };
 
-            var (success, createdEvent, errorMessage) = await _eventService.CreateEventAsync(eventDto);
+            var (success, createdEvent) = await _eventService.CreateEventAsync(eventDto);
 
             if (!success || createdEvent == null)
             {
-                ErrorMessage = $"Failed to create event. Please check the event details and try again - {errorMessage}";
+                ErrorMessage = $"Failed to create event. Please check the event details and try again.";
                 await OnGetAsync();
                 return Page();
             }

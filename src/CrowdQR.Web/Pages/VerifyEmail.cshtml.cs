@@ -60,7 +60,7 @@ public class VerifyEmailModel(ApiService apiService, ILogger<VerifyEmailModel> l
             };
 
             // FIX: Use a strongly typed DTO for the response
-            var (success, response, error) = await _apiService.PostAsync<object, object>("api/auth/verify-email", verifyDto);
+            var (success, response) = await _apiService.PostAsync<object, object>("api/auth/verify-email", verifyDto);
 
             /*IsVerified = response;
             Message = IsVerified

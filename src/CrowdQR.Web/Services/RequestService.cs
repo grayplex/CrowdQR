@@ -62,7 +62,7 @@ public class RequestService(ApiService apiService, ILogger<RequestService> logge
                 requestDto.SongName, requestDto.ArtistName, requestDto.EventId, requestDto.UserId);
 
             // Use the ApiService for making the request
-            var (success, response, error) = await _apiService.PostAsync<RequestCreateDto, RequestDto>(BaseEndpoint, requestDto);
+            var (success, response) = await _apiService.PostAsync<RequestCreateDto, RequestDto>(BaseEndpoint, requestDto);
 
             // Log response status
             _logger.LogInformation("Request creation success: {Success}", success);

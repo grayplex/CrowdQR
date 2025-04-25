@@ -91,7 +91,7 @@ namespace CrowdQR.Web.Pages
                         ConfirmPassword
                     };
 
-                    var (success, response, error) = await _apiService.PostAsync<object, object>("/api/auth/register", djRegisterRequest);
+                    var (success, response) = await _apiService.PostAsync<object, object>("/api/auth/register", djRegisterRequest);
                     
                     if (success)
                     {
@@ -100,7 +100,7 @@ namespace CrowdQR.Web.Pages
                     }
                     else
                     {
-                        ErrorMessage = $"Registration failed. Please try again. - {error}";
+                        ErrorMessage = $"Failed to create event. Please check the event details and try again.";
                         return Page();
                     }
                 }
@@ -113,7 +113,7 @@ namespace CrowdQR.Web.Pages
                         Role = UserRole.Audience
                     };
 
-                    var (success, response, error) = await _apiService.PostAsync<object, object>("/api/user", userCreateRequest);
+                    var (success, response) = await _apiService.PostAsync<object, object>("/api/user", userCreateRequest);
                     
                     if (success)
                     {
@@ -122,7 +122,7 @@ namespace CrowdQR.Web.Pages
                     }
                     else
                     {
-                        ErrorMessage = $"Registration failed. Please try again. - {error}";
+                        ErrorMessage = $"Failed to create event. Please check the event details and try again.";
                         return Page();
                     }
                 }

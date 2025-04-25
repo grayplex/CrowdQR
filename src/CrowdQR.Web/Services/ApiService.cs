@@ -98,57 +98,6 @@ public class ApiService(
     }
 
     /// <summary>
-    /// Makes a GET request to the specified endpoint, with error handling
-    /// </summary>
-    /// <typeparam name="T">The type to deserialize the response to.</typeparam>
-    /// <param name="endpoint">The API endpoint.</param>
-    /// <param name="defaultErrorMessage">The default error message to use if the API doesn't provide one.</param>
-    /// <returns>The deserialized response.</returns>
-    /// <exception cref="ApiException">Thrown when the API request fails.</exception>
-    public async Task<T?> GetWithErrorHandlingAsync<T>(string endpoint, string defaultErrorMessage = "Failed to retrieve data")
-    {
-        try
-        {
-            // Ensure token is attached
-            AttachToken();
-
-            _logger.LogInformation("Making GET request to {Endpoint}", endpoint);
-
-            var response = await _httpClient.GetAsync(endpoint);
-            var responseContent = await response.Content.ReadAsStringAsync();
-
-            if (response.IsSuccessStatusCode)
-            {
-                try
-                {
-                    return await response.Content.ReadFromJsonAsync<T>(_jsonOptions);
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogError(ex, "Error deserializing response from {Endpoint}: {Content}", endpoint, responseContent);
-                    throw new ApiException("Failed to parse API response", ex);
-                }
-            }
-
-            _logger.LogWarning("API request failed: {Endpoint} - {StatusCode} - {Content}",
-                endpoint, response.StatusCode, responseContent);
-
-            var errorContent = await response.Content.ReadAsStringAsync();
-            throw new HttpRequestException($"API error: {response.StatusCode}. Details: {errorContent}");
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "HTTP error in GET request to {Endpoint}", endpoint);
-            throw new ApiException(defaultErrorMessage, ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error making GET request to {Endpoint}", endpoint);
-            throw new ApiException(defaultErrorMessage, ex);
-        }
-    }
-
-    /// <summary>
     /// Makes a POST request to the specified endpoint.
     /// </summary>
     /// <typeparam name="TRequest">The type of the request body.</typeparam>
@@ -156,7 +105,7 @@ public class ApiService(
     /// <param name="endpoint">The API endpoint.</param>
     /// <param name="data">The request body.</param>
     /// <returns>The deserialized response and success flag.</returns>
-    public async Task<(bool Success, TResponse? Response, string? ErrorMessage)> PostAsync<TRequest, TResponse>(
+    public async Task<(bool Success, TResponse? Response)> PostAsync<TRequest, TResponse>(
         string endpoint, TRequest data)
     {
         try
@@ -182,24 +131,24 @@ public class ApiService(
                 try
                 {
                     var result = await response.Content.ReadFromJsonAsync<TResponse>(_jsonOptions);
-                    return (true, result, null);
+                    return (true, result);
                 }
                 catch (JsonException ex)
                 {
                     _logger.LogError(ex, "Error deserializing response from {Endpoint}: {Content}", endpoint, responseContent);
-                    return (false, default, ex.Message);
+                    return (false, default);
                 }
             }
 
             _logger.LogWarning("API POST request failed: {Endpoint} - {StatusCode} - {Content}",
                 endpoint, response.StatusCode, responseContent);
 
-            return (false, default, null);
+            return (false, default);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error making POST request to {Endpoint}", endpoint);
-            return (false, default, ex.Message);
+            return (false, default);
         }
     }
 

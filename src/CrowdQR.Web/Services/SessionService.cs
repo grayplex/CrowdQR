@@ -34,10 +34,10 @@ public class SessionService(ApiService apiService, ILogger<SessionService> logge
     /// <returns>The created/updated session and success flag.</returns>
     public async Task<(bool Success, SessionDto? Session)> CreateOrUpdateSessionAsync(SessionCreateDto sessionDto)
     {
-        var (success, response, error) = await _apiService.PostAsync<SessionCreateDto, SessionDto>(BaseEndpoint, sessionDto);
+        var (success, response) = await _apiService.PostAsync<SessionCreateDto, SessionDto>(BaseEndpoint, sessionDto);
         if (!success)
         {
-            _logger.LogError("Failed to create or update session: {Error}", error);
+            _logger.LogError("Failed to create or update session");
             return (false, null);
         }
         if (response == null)
