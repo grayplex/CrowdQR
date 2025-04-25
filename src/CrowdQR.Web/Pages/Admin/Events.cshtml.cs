@@ -83,7 +83,7 @@ public class EventsModel(EventService eventService, ILogger<EventsModel> logger)
     public async Task<IActionResult> OnPostCreateAsync()
     {
         _logger.LogInformation("Creating new event");
-        
+            
         try
         {
             // Clear existing validation and only validate NewEvent
@@ -161,10 +161,39 @@ public class EventsModel(EventService eventService, ILogger<EventsModel> logger)
     {
         try
         {
+            // Clear existing validation and only validate UpdateEvent
+            ModelState.Clear();
+            TryValidateModel(EditEvent, nameof(EditEvent));
+
             if (!ModelState.IsValid)
             {
+                // Log detailed validation errors
+                foreach (var key in ModelState.Keys)
+                {
+                    var state = ModelState[key];
+                    if (state?.Errors.Count > 0)
+                    {
+                        foreach (var error in state.Errors)
+                        {
+                            _logger.LogInformation("Validation error for {Key}: {Error}", key, error.ErrorMessage);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Key {Key} has no errors but may be invalid", key);
+                    }
+                }
+
                 await OnGetAsync();
                 return Page();
+            }
+
+            // Get the current user's ID
+            if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+            {
+                _logger.LogInformation("Unable to determine user identity. Please try logging in again.");
+                ErrorMessage = "Unable to determine user identity. Please try logging in again.";
+                return RedirectToPage("/Login");
             }
 
             // Create the event update DTO
@@ -179,10 +208,12 @@ public class EventsModel(EventService eventService, ILogger<EventsModel> logger)
 
             if (!success)
             {
+                _logger.LogInformation("Failed to update event. Please check the event details and try again.");
                 ErrorMessage = "Failed to update event. Please try again.";
                 await OnGetAsync();
                 return Page();
             }
+            _logger.LogInformation("Event updated successfully");
 
             SuccessMessage = "Event updated successfully!";
             return RedirectToPage();
