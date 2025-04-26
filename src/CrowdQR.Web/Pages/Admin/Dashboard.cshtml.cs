@@ -134,7 +134,7 @@ public class DashboardModel(
                 if (events.Count == 0)
                 {
                     // For demo purposes, use a default event
-                    LoadDemoData();
+                    // LoadDemoData();
                     return Page();
                 }
 
@@ -182,7 +182,7 @@ public class DashboardModel(
             _logger.LogError(ex, "Error loading dashboard for event {EventId}", EventId);
 
             // For demo purposes, load demo data on error
-            LoadDemoData();
+            // LoadDemoData();
             return Page();
         }
     }
