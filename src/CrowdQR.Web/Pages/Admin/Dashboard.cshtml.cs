@@ -114,7 +114,6 @@ public class DashboardModel(
     /// </summary>
     public async Task<IActionResult> OnGetAsync()
     {
-
         try
         {
             // Get user details from claims
