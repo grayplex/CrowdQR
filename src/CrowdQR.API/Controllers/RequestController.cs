@@ -147,11 +147,10 @@ public class RequestController(
 
         // Check if request exists and load its votes and event ID
         var user = await _context.Users
-            .Include(u => u.Username)
             .FirstOrDefaultAsync(u => u.UserId == requestDto.UserId);
         if (user == null)
         {
-            return BadRequest("Request does not exist");
+            return BadRequest("User does not exist");
         }
 
         // Check if user exists
