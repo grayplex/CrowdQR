@@ -64,7 +64,19 @@ public class UserService(ApiService apiService, ILogger<UserService> logger)
     /// <returns>The created user and success flag.</returns>
     public async Task<(bool Success, UserDto? User)> CreateUserAsync(UserCreateDto userDto)
     {
-        return await _apiService.PostAsync<UserCreateDto, UserDto>(BaseEndpoint, userDto);
+        var (success, response) = await _apiService.PostAsync<UserCreateDto, UserDto>(BaseEndpoint, userDto);
+        if (!success)
+        {
+            _logger.LogError("Failed to create user");
+            return (false, null);
+        }
+        if (response == null)
+        {
+            _logger.LogError("Failed to create user: No response received");
+            return (false, null);
+        }
+        _logger.LogInformation("User created successfully: {UserId}", response.UserId);
+        return (true, response);
     }
 
     /// <summary>

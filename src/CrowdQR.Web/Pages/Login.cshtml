@@ -1,0 +1,56 @@
+﻿@page
+@model LoginModel
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h1 class="h4 mb-0">Login</h1>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i> @Model.ErrorMessage
+                        </div>
+                    }
+
+                    <p class="mb-4">Enter your credentials to login to your account.</p>
+
+                    <form method="post">
+                        <div class="mb-3">
+                            <label asp-for="UsernameOrEmail" class="form-label">Username or Email</label>
+                            <input asp-for="UsernameOrEmail" class="form-control" autofocus placeholder="Enter username or email">
+                            <span asp-validation-for="UsernameOrEmail" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Password" class="form-label">Password</label>
+                            <input asp-for="Password" class="form-control" type="password" placeholder="Enter your password">
+                            <span asp-validation-for="Password" class="text-danger"></span>
+                        </div>
+
+                        <input type="hidden" asp-for="ReturnUrl" />
+                        <button type="submit" class="btn btn-primary w-100">Login</button>
+                    </form>
+
+                    <div class="mt-4 text-center">
+                        <p class="text-muted small mb-0">
+                            Don't have an account? <a asp-page="/Register" class="text-decoration-none">Register here</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

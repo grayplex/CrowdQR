@@ -19,6 +19,7 @@ namespace CrowdQR.Web.Pages;
 /// <param name="userService"> The user service.</param>
 /// <param name="sessionManager"> The session manager.</param>
 /// <param name="sessionService"> The session service.</param>
+/// <param name="authService"> The authentication service.</param>
 /// <param name="logger"> The logger.</param>
 public class EventModel(
     EventService eventService,
@@ -27,6 +28,7 @@ public class EventModel(
     UserService userService,
     SessionManager sessionManager,
     SessionService sessionService,
+    AuthenticationService authService,
     ILogger<EventModel> logger) : PageModel
 {
     private readonly EventService _eventService = eventService;
@@ -35,6 +37,7 @@ public class EventModel(
     private readonly UserService _userService = userService;
     private readonly SessionManager _sessionManager = sessionManager;
     private readonly SessionService _sessionService = sessionService;
+    private readonly AuthenticationService _authService = authService;
     private readonly ILogger<EventModel> _logger = logger;
 
     /// <summary>
@@ -99,24 +102,22 @@ public class EventModel(
         try
         {
             // Check if user is authenticated
-            UserId = _sessionManager.GetCurrentUserId();
-            UserName = _sessionManager.GetCurrentUsername();
-            IsAuthenticated = _sessionManager.IsLoggedIn();
+            UserId = _authService.GetUserId();
+            UserName = _authService.GetUsername();
+            IsAuthenticated = UserId.HasValue;
 
             // If no user is logged in, automatically create a temporary user
             if (!IsAuthenticated && !string.IsNullOrEmpty(Slug))
             {
-                string tempUsername = $"guest_{Guid.NewGuid().ToString()[..8]}";
-                bool registered = await _sessionManager.RegisterAndLoginAsync(tempUsername);
-
-                if (!registered)
+                bool audienceCreated = await _authService.CreateAudienceSessionAsync();
+                if (!audienceCreated)
                 {
                     ErrorMessage = "Failed to create temporary user. Please try again.";
                     return Page();
                 }
 
-                UserId = _sessionManager.GetCurrentUserId();
-                UserName = _sessionManager.GetCurrentUsername();
+                UserId = _authService.GetUserId();
+                UserName = _authService.GetUsername();
                 IsAuthenticated = true;
             }
 
@@ -181,43 +182,47 @@ public class EventModel(
     /// <returns>Redirect to the event page.</returns>
     public async Task<IActionResult> OnPostAsync()
     {
-        if (!ModelState.IsValid)
-        {
-            return await OnGetAsync();
-        }
-
-        UserId = _sessionManager.GetCurrentUserId();
-        if (!UserId.HasValue)
-        {
-            ErrorMessage = "You must be logged in to submit a request.";
-            return RedirectToPage(new { slug = Slug });
-        }
-
-        // Get event ID from slug
-        if (string.IsNullOrEmpty(Slug))
-        {
-            ErrorMessage = "Invalid event code.";
-            return RedirectToPage();
-        }
-
-        var eventData = await _eventService.GetEventBySlugAsync(Slug);
-        if (eventData == null)
-        {
-            ErrorMessage = "Event not found.";
-            return RedirectToPage();
-        }
-
-        // Create the request
-        var requestDto = new RequestCreateDto
-        {
-            UserId = UserId.Value,
-            EventId = eventData.EventId,
-            SongName = NewSongRequest.SongName,
-            ArtistName = NewSongRequest.ArtistName
-        };
-
         try
         {
+            if (!ModelState.IsValid)
+            {
+                return await OnGetAsync();
+            }
+
+            // Get user ID
+            UserId = _authService.GetUserId();
+            if (!UserId.HasValue)
+            {
+                ErrorMessage = "You must be logged in to submit a request.";
+                return RedirectToPage(new { slug = Slug });
+            }
+
+            // Get event ID from slug
+            if (string.IsNullOrEmpty(Slug))
+            {
+                ErrorMessage = "Invalid event code.";
+                return RedirectToPage();
+            }
+
+            var eventData = await _eventService.GetEventBySlugAsync(Slug);
+            if (eventData == null)
+            {
+                ErrorMessage = "Event not found.";
+                return RedirectToPage();
+            }
+
+            // Create the request
+            var requestDto = new RequestCreateDto
+            {
+                UserId = UserId.Value,
+                EventId = eventData.EventId,
+                SongName = NewSongRequest.SongName,
+                ArtistName = NewSongRequest.ArtistName
+            };
+
+            _logger.LogInformation("Creating song request: {SongName} by {ArtistName} for event {EventId} by user {UserId}",
+                requestDto.SongName, requestDto.ArtistName, requestDto.EventId, requestDto.UserId);
+
             var (success, request) = await _requestService.CreateRequestAsync(requestDto);
 
             if (!success || request == null)
@@ -238,7 +243,7 @@ public class EventModel(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating request for user {UserId} in event {EventId}", UserId, eventData.EventId);
+            _logger.LogError(ex, "Error creating request for user {UserId} in event {Slug}", UserId, Slug);
             ErrorMessage = "An error occurred while submitting your request. Please try again.";
             return RedirectToPage(new { slug = Slug });
         }
@@ -251,7 +256,7 @@ public class EventModel(
     /// <returns>Redirect to the event page.</returns>
     public async Task<IActionResult> OnPostVoteAsync(int requestId)
     {
-        UserId = _sessionManager.GetCurrentUserId();
+        UserId = _authService.GetUserId();
         if (!UserId.HasValue)
         {
             ErrorMessage = "You must be logged in to vote.";
@@ -260,20 +265,27 @@ public class EventModel(
 
         try
         {
+            _logger.LogInformation("User {UserId} is voting for request {RequestId}", UserId.Value, requestId);
+
+            // Attach the authentication token to the API client
+            _logger.LogInformation("Ensuring authentication token is attached before voting");
+
             var voteDto = new VoteCreateDto
             {
                 UserId = UserId.Value,
                 RequestId = requestId
             };
 
-            var (success, _) = await _voteService.CreateVoteAsync(voteDto);
+            var (success, vote) = await _voteService.CreateVoteAsync(voteDto);
 
             if (!success)
             {
+                _logger.LogWarning("Vote creation failed for user {UserId} on request {RequestId}", UserId.Value, requestId);
                 ErrorMessage = "Failed to submit your vote. You may have already voted for this request.";
                 return RedirectToPage(new { slug = Slug });
             }
 
+            _logger.LogInformation("Vote successfully created for user {UserId} on request {RequestId}", UserId.Value, requestId);
             SuccessMessage = "Your vote has been counted!";
             return RedirectToPage(new { slug = Slug });
         }
@@ -292,7 +304,7 @@ public class EventModel(
     /// <returns>Redirect to the event page.</returns>
     public async Task<IActionResult> OnPostRemoveVoteAsync(int requestId)
     {
-        UserId = _sessionManager.GetCurrentUserId();
+        UserId = _authService.GetUserId();
         if (!UserId.HasValue)
         {
             ErrorMessage = "You must be logged in to remove your vote.";
@@ -301,6 +313,8 @@ public class EventModel(
 
         try
         {
+            _logger.LogInformation("User {UserId} is removing vote for request {RequestId}", UserId.Value, requestId);
+
             bool success = await _voteService.DeleteVoteByUserAndRequestAsync(UserId.Value, requestId);
 
             if (!success)

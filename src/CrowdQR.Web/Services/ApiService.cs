@@ -10,36 +10,33 @@ namespace CrowdQR.Web.Services;
 /// <summary>
 /// Service for making API calls to the backend.
 /// </summary>
-public class ApiService
+/// <remarks>
+/// Initializes a new instance of the ApiService class.
+/// </remarks>
+/// <param name="httpClient">The HTTP client.</param>
+/// <param name="logger">The logger.</param>
+/// <param name="configuration">The configuration.</param>
+/// <param name="tokenRefresher"> The API token refresher.</param>
+public class ApiService(
+    HttpClient httpClient,
+    ILogger<ApiService> logger, 
+    IConfiguration configuration, 
+    ApiTokenRefresher tokenRefresher)
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<ApiService> _logger;
+    private readonly HttpClient _httpClient = httpClient;
+    private readonly ILogger<ApiService> _logger = logger;
+    private readonly IConfiguration _configuration = configuration;
+    private readonly ApiTokenRefresher _tokenRefresher = tokenRefresher;
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    /// <summary>
-    /// Initializes a new instance of the ApiService class.
-    /// </summary>
-    /// <param name="httpClient">The HTTP client.</param>
-    /// <param name="logger">The logger.</param>
-    /// <param name="configuration">The configuration.</param>
-    public ApiService(HttpClient httpClient, ILogger<ApiService> logger, IConfiguration configuration)
+    // Add before each HTTP request
+    private void AttachToken()
     {
-        _httpClient = httpClient;
-        _logger = logger;
-
-        // Set the base address from configuration
-        string apiBaseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5000";
-        _httpClient.BaseAddress = new Uri(apiBaseUrl);
-
-        // Set timeout from configuration
-        if (int.TryParse(configuration["ApiSettings:Timeout"], out int timeoutSeconds))
-        {
-            _httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
-        }
+        _tokenRefresher.AttachTokenToClient(_httpClient);
     }
 
     /// <summary>
@@ -64,15 +61,32 @@ public class ApiService
     {
         try
         {
+            // Ensure token is attached
+            AttachToken();
+
+            _logger.LogInformation("Making GET request to {Endpoint}", endpoint);
+
             var response = await _httpClient.GetAsync(endpoint);
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Response from {Endpoint}: Status={StatusCode}, Content={Content}",
+                endpoint, response.StatusCode, responseContent.Length > 100 ? responseContent[..100] + "..." : responseContent);
 
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadFromJsonAsync<T>(_jsonOptions);
+                try
+                {
+                    return await response.Content.ReadFromJsonAsync<T>(_jsonOptions);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogError(ex, "Error deserializing response from {Endpoint}: {Content}", endpoint, responseContent);
+                    return default;
+                }
             }
 
-            _logger.LogWarning("API request failed: {Endpoint} - {StatusCode}",
-                endpoint, response.StatusCode);
+            _logger.LogWarning("API request failed: {Endpoint} - {StatusCode} - {Content}",
+                endpoint, response.StatusCode, responseContent);
 
             return default;
         }
@@ -80,66 +94,6 @@ public class ApiService
         {
             _logger.LogError(ex, "Error making GET request to {Endpoint}", endpoint);
             return default;
-        }
-    }
-
-    /// <summary>
-    /// Makes a GET request to the specified endpoint, with error handling
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="endpoint"></param>
-    /// <param name="defaultErrorMessage"></param>
-    /// <returns></returns>
-    /// <exception cref="ApiException"></exception>
-    public async Task<T?> GetWithErrorHandlingAsync<T>(string endpoint, string defaultErrorMessage = "Failed to retrieve data")
-    {
-        try
-        {
-            var response = await _httpClient.GetAsync(endpoint);
-
-            if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadFromJsonAsync<T>(_jsonOptions);
-            }
-
-            _logger.LogWarning("API request failed: {Endpoint} - {StatusCode}",
-                endpoint, response.StatusCode);
-
-            var errorContent = await response.Content.ReadAsStringAsync();
-            throw new HttpRequestException($"API error: {response.StatusCode}. Details: {errorContent}");
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "HTTP error in GET request to {Endpoint}", endpoint);
-            throw new ApiException(defaultErrorMessage, ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error making GET request to {Endpoint}", endpoint);
-            throw new ApiException(defaultErrorMessage, ex);
-        }
-    }
-
-    /// <summary>
-    /// Makes a POST request to the specified endpoint with error handling.
-    /// </summary>
-    /// <typeparam name="TRequest"></typeparam>
-    /// <param name="endpoint"></param>
-    /// <param name="data"></param>
-    /// <param name="defaultErrorMessage"></param>
-    /// <returns></returns>
-    /// <exception cref="ApiException"></exception>
-    public async Task<bool> PostWithErrorHandlingAsync<TRequest>(string endpoint, TRequest data, string defaultErrorMessage = "Failed to save data")
-    {
-        try
-        {
-            var (success, _) = await PostAsync<TRequest, object>(endpoint, data);
-            return success;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "API POST request failed: {Endpoint}", endpoint);
-            throw new ApiException(defaultErrorMessage, ex);
         }
     }
 
@@ -156,16 +110,38 @@ public class ApiService
     {
         try
         {
+            // Ensure token is attached
+            AttachToken();
+
+            // Log the request details
+            var requestJson = JsonSerializer.Serialize(data, _jsonOptions);
+            _logger.LogInformation("Making POST request to {Endpoint} with data: {Data}",
+                endpoint, requestJson);
+
+            // Send the request
             var response = await _httpClient.PostAsJsonAsync(endpoint, data, _jsonOptions);
+
+            // Read and log the response
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Response from {Endpoint}: Status={StatusCode}, Content={Content}",
+                endpoint, response.StatusCode, responseContent.Length > 100 ? responseContent[..100] + "..." : responseContent);
 
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<TResponse>(_jsonOptions);
-                return (true, result);
+                try
+                {
+                    var result = await response.Content.ReadFromJsonAsync<TResponse>(_jsonOptions);
+                    return (true, result);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogError(ex, "Error deserializing response from {Endpoint}: {Content}", endpoint, responseContent);
+                    return (false, default);
+                }
             }
 
-            _logger.LogWarning("API POST request failed: {Endpoint} - {StatusCode}",
-                endpoint, response.StatusCode);
+            _logger.LogWarning("API POST request failed: {Endpoint} - {StatusCode} - {Content}",
+                endpoint, response.StatusCode, responseContent);
 
             return (false, default);
         }
@@ -187,15 +163,28 @@ public class ApiService
     {
         try
         {
+            // Ensure token is attached
+            AttachToken();
+
+            // Log the request details
+            var requestJson = JsonSerializer.Serialize(data, _jsonOptions);
+            _logger.LogInformation("Making PUT request to {Endpoint} with data: {Data}",
+                endpoint, requestJson);
+
             var response = await _httpClient.PutAsJsonAsync(endpoint, data, _jsonOptions);
+
+            // Read and log the response
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Response from {Endpoint}: Status={StatusCode}, Content={Content}",
+                endpoint, response.StatusCode, responseContent.Length > 100 ? responseContent[..100] + "..." : responseContent);
 
             if (response.IsSuccessStatusCode)
             {
                 return true;
             }
 
-            _logger.LogWarning("API PUT request failed: {Endpoint} - {StatusCode}",
-                endpoint, response.StatusCode);
+            _logger.LogWarning("API PUT request failed: {Endpoint} - {StatusCode} - {Content}",
+                endpoint, response.StatusCode, responseContent);
 
             return false;
         }
@@ -215,15 +204,25 @@ public class ApiService
     {
         try
         {
+            // Ensure token is attached
+            AttachToken();
+
+            _logger.LogInformation("Making PUT request to {Endpoint} with no body", endpoint);
+
             var response = await _httpClient.PutAsync(endpoint, null);
+
+            // Read and log the response
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Response from {Endpoint}: Status={StatusCode}, Content={Content}",
+                endpoint, response.StatusCode, responseContent.Length > 100 ? responseContent[..100] + "..." : responseContent);
 
             if (response.IsSuccessStatusCode)
             {
                 return true;
             }
 
-            _logger.LogWarning("API PUT request failed: {Endpoint} - {StatusCode}",
-                endpoint, response.StatusCode);
+            _logger.LogWarning("API PUT request failed: {Endpoint} - {StatusCode} - {Content}",
+                endpoint, response.StatusCode, responseContent);
 
             return false;
         }
@@ -243,15 +242,25 @@ public class ApiService
     {
         try
         {
+            // Ensure token is attached
+            AttachToken();
+
+            _logger.LogInformation("Making DELETE request to {Endpoint}", endpoint);
+
             var response = await _httpClient.DeleteAsync(endpoint);
+
+            // Read and log the response
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Response from {Endpoint}: Status={StatusCode}, Content={Content}",
+                endpoint, response.StatusCode, responseContent.Length > 100 ? responseContent[..100] + "..." : responseContent);
 
             if (response.IsSuccessStatusCode)
             {
                 return true;
             }
 
-            _logger.LogWarning("API DELETE request failed: {Endpoint} - {StatusCode}",
-                endpoint, response.StatusCode);
+            _logger.LogWarning("API DELETE request failed: {Endpoint} - {StatusCode} - {Content}",
+                endpoint, response.StatusCode, responseContent);
 
             return false;
         }

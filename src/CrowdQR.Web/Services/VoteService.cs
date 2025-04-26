@@ -34,7 +34,19 @@ public class VoteService(ApiService apiService, ILogger<VoteService> logger)
     /// <returns>The created vote and success flag.</returns>
     public async Task<(bool Success, VoteDto? Vote)> CreateVoteAsync(VoteCreateDto voteDto)
     {
-        return await _apiService.PostAsync<VoteCreateDto, VoteDto>(BaseEndpoint, voteDto);
+        var (success, response) = await _apiService.PostAsync<VoteCreateDto, VoteDto>(BaseEndpoint, voteDto);
+        if (!success)
+        {
+            _logger.LogError("Failed to create vote");
+            return (false, null);
+        }
+        if (response == null)
+        {
+            _logger.LogError("Failed to create vote: No response received");
+            return (false, null);
+        }
+        _logger.LogInformation("Vote created successfully: {VoteId}", response.VoteId);
+        return (true, response);
     }
 
     /// <summary>

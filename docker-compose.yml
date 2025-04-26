@@ -1,8 +1,8 @@
 services:
-  web:
+  api:
     build:
-      context: ./src/CrowdQR.API
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: CrowdQR.API/Dockerfile
     ports:
       - "5000:5000"
     depends_on:
@@ -14,6 +14,22 @@ services:
       - DB_NAME=${POSTGRES_DB}
       - DB_USER=${POSTGRES_USER}
       - DB_PASSWORD=${POSTGRES_PASSWORD}
+    networks:
+      - crowdqr-network
+
+  web:
+    build:
+      context: ./src
+      dockerfile: CrowdQR.Web/Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - API_URL=http://api:5000
+    depends_on:
+      - api
+    networks:
+      - crowdqr-network
   
   db:
     image: postgres:17
@@ -26,6 +42,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - crowdqr-network
+
+networks:
+  crowdqr-network:
+    driver: bridge
 
 volumes:
   db_data:

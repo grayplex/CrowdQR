@@ -1,0 +1,41 @@
+﻿@page
+@model VerifyEmailModel
+@{
+    ViewData["Title"] = "Verify Email";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h1 class="h4 mb-0">Email Verification</h1>
+                </div>
+                <div class="card-body text-center">
+                    @if (Model.IsVerified)
+                    {
+                        <div class="mb-4 text-success">
+                            <i class="bi bi-check-circle-fill" style="font-size: 3rem;"></i>
+                        </div>
+                        <h2 class="h5 mb-3">Email Verified Successfully!</h2>
+                        <p>Your email has been verified and your DJ account is now active.</p>
+                        <div class="mt-4">
+                            <a href="/login" class="btn btn-primary">Login to Your Account</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-4 text-danger">
+                            <i class="bi bi-exclamation-triangle-fill" style="font-size: 3rem;"></i>
+                        </div>
+                        <h2 class="h5 mb-3">Verification Failed</h2>
+                        <p>@Model.Message</p>
+                        <div class="mt-4">
+                            <a href="/login" class="btn btn-primary">Return to Login</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

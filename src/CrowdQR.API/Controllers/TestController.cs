@@ -1,4 +1,5 @@
 ﻿using CrowdQR.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CrowdQR.Api.Controllers;
@@ -13,6 +14,7 @@ namespace CrowdQR.Api.Controllers;
 /// <param name="logger">The logger.</param>
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "DJ")]
 public class TestController(IHubNotificationService hubService, ILogger<TestController> logger) : ControllerBase
 {
     private readonly IHubNotificationService _hubService = hubService;
@@ -28,7 +30,7 @@ public class TestController(IHubNotificationService hubService, ILogger<TestCont
     {
         try
         {
-            await _hubService.NotifyRequestAdded(eventId, 999);
+            await _hubService.NotifyRequestAdded(eventId, 999, "TestControllerUser");
             await _hubService.NotifyUserJoinedEvent(eventId, "TestUser");
 
             return Ok(new { message = $"Broadcast sent to event {eventId}" });

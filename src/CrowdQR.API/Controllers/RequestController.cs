@@ -3,8 +3,10 @@ using CrowdQR.Api.Models;
 using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
 using CrowdQR.Shared.Models.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CrowdQR.Api.Controllers;
 
@@ -13,7 +15,7 @@ namespace CrowdQR.Api.Controllers;
 /// </summary>
 /// <param name="context">The database context.</param>
 /// <param name="logger">The logger.</param>
-/// /// <param name="hubNotificationService">The hub notification service.</param>
+/// <param name="hubNotificationService">The hub notification service.</param>
 [ApiController]
 [Route("api/[controller]")]
 public class RequestController(
@@ -125,6 +127,12 @@ public class RequestController(
     [HttpPost]
     public async Task<ActionResult<Request>> CreateRequest (RequestCreateDto requestDto)
     {
+        // Check if the user is creating a request as themselves
+        if (!User.IsInRole("DJ") && requestDto.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -137,12 +145,23 @@ public class RequestController(
             return BadRequest("Event does not exist");
         }
 
+        // Check if request exists and load its votes and event ID
+        var user = await _context.Users
+            .Include(u => u.Username)
+            .FirstOrDefaultAsync(u => u.UserId == requestDto.UserId);
+        if (user == null)
+        {
+            return BadRequest("Request does not exist");
+        }
+
         // Check if user exists
+        /*
         var userExists = await _context.Users.AnyAsync(u => u.UserId == requestDto.UserId);
         if (!userExists)
         {
             return BadRequest("User does not exist");
         }
+        */
 
         var request = new Request
         {
@@ -159,7 +178,7 @@ public class RequestController(
         // Send SignalR notification
         try
         {
-            await _hubNotificationService.NotifyRequestAdded(request.EventId, request.RequestId);
+            await _hubNotificationService.NotifyRequestAdded(request.EventId, request.RequestId, user.Username);
             _logger.LogInformation("SignalR notification sent for new request {RequestId} in event {EventId}",
                 request.RequestId, request.EventId);
         }
@@ -180,6 +199,7 @@ public class RequestController(
     /// <param name="statusDto">The new status data.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpPut("{id}/status")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> UpdateRequestStatus(int id, RequestStatusUpdateDto statusDto)
     {
         var request = await _context.Requests.FindAsync(id);
@@ -224,6 +244,7 @@ public class RequestController(
     /// <param name="id">The ID of the request to delete.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> DeleteRequest(int id)
     {
         var request = await _context.Requests.FindAsync(id);

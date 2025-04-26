@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace CrowdQR.API.Migrations
+namespace CrowdQR.Api.Migrations
 {
     [DbContext(typeof(CrowdQRContext))]
     [Migration("20250419173058_InitialCreate")]

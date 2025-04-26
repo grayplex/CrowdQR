@@ -14,6 +14,7 @@ window.CrowdQR.SignalR = (function () {
     let isConnected = false;
     let reconnectInterval = null;
     let eventHandlers = {};
+    let lastRequestId = 0;
 
     // Initialize the connection
     function initConnection(apiBaseUrl) {
@@ -157,7 +158,6 @@ window.CrowdQR.SignalR = (function () {
                     const delay = Math.min(maxDelay, baseDelay * Math.pow(2, retryCount));
 
                     console.log(`Attempting to reconnect to SignalR hub (attempt ${retryCount + 1}/${maxRetryCount})...`);
-                    console.log(`Next retry in ${delay / 1000} seconds if unsuccessful`);
 
                     startConnection()
                         .then(success => {
@@ -178,31 +178,11 @@ window.CrowdQR.SignalR = (function () {
                         status: 'failed',
                         error: 'Maximum reconnection attempts reached'
                     });
-
-                    // Show a UI notification to the user
-                    showReconnectFailedUI();
                 }
             } else {
                 clearReconnectTimer();
             }
         }, 5000); // Check connection status every 5 seconds
-    }
-
-    // Show a UI notification that reconnection failed
-    function showReconnectFailedUI() {
-        // Create an element to show the reconnection failure
-        const reconnectElement = document.createElement('div');
-        reconnectElement.className = 'position-fixed top-0 start-0 w-100 p-3 bg-danger text-white text-center';
-        reconnectElement.style.zIndex = 9999;
-        reconnectElement.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-exclamation-triangle-fill me-2"></i> Connection lost. Real-time updates are unavailable.</span>
-                <button class="btn btn-sm btn-outline-light" onclick="window.location.reload()">
-                    <i class="bi bi-arrow-clockwise me-1"></i> Refresh
-                </button>
-            </div>
-        `;
-        document.body.appendChild(reconnectElement);
     }
 
     // Clear the reconnect timer
@@ -269,13 +249,12 @@ window.CrowdQR.SignalR = (function () {
     }
 
     // Attempt connection with fallback to alternate transport methods
-    async function attemptConnectionWithFallback() {
+    async function attemptConnectionWithFallback(apiBaseUrl) {
         // Try WebSockets first (default)
         try {
             console.log("Attempting to connect with WebSockets...");
             connection = new signalR.HubConnectionBuilder()
                 .withUrl(`${apiBaseUrl}/hubs/crowdqr`, {
-                    skipNegotiation: true,
                     transport: signalR.HttpTransportType.WebSockets
                 })
                 .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
@@ -285,6 +264,8 @@ window.CrowdQR.SignalR = (function () {
             await setupConnectionHandlers();
             await connection.start();
             console.log("Connected successfully using WebSockets");
+            isConnected = true;
+            triggerEvent('connectionStatus', { status: 'connected' });
             return true;
         } catch (wsError) {
             console.warn("WebSocket connection failed:", wsError);
@@ -303,6 +284,8 @@ window.CrowdQR.SignalR = (function () {
                 await setupConnectionHandlers();
                 await connection.start();
                 console.log("Connected successfully using Server-Sent Events");
+                isConnected = true;
+                triggerEvent('connectionStatus', { status: 'connected' });
                 return true;
             } catch (sseError) {
                 console.warn("Server-Sent Events connection failed:", sseError);
@@ -321,9 +304,13 @@ window.CrowdQR.SignalR = (function () {
                     await setupConnectionHandlers();
                     await connection.start();
                     console.log("Connected successfully using Long Polling");
+                    isConnected = true;
+                    triggerEvent('connectionStatus', { status: 'connected' });
                     return true;
                 } catch (lpError) {
                     console.error("All connection methods failed:", lpError);
+                    isConnected = false;
+                    triggerEvent('connectionStatus', { status: 'failed' });
                     return false;
                 }
             }
@@ -337,20 +324,12 @@ window.CrowdQR.SignalR = (function () {
             console.warn("SignalR reconnecting:", error);
             isConnected = false;
             triggerEvent('connectionStatus', { status: 'reconnecting' });
-            updateConnectionUI(false);
-
-            // Pause heartbeat during reconnection
-            stopHeartbeat();
         });
 
         connection.onreconnected(connectionId => {
             console.log("SignalR reconnected:", connectionId);
             isConnected = true;
             triggerEvent('connectionStatus', { status: 'connected' });
-            updateConnectionUI(true);
-
-            // Restart heartbeat
-            startHeartbeat();
 
             // Rejoin event group if was previously in one
             if (eventId) {
@@ -362,10 +341,6 @@ window.CrowdQR.SignalR = (function () {
             console.warn("SignalR connection closed:", error);
             isConnected = false;
             triggerEvent('connectionStatus', { status: 'disconnected' });
-            updateConnectionUI(false);
-
-            // Stop heartbeat
-            stopHeartbeat();
 
             // Set up a manual reconnect if automatic reconnection fails
             startReconnectTimer();
@@ -373,6 +348,73 @@ window.CrowdQR.SignalR = (function () {
 
         // Register standard event handlers
         registerStandardEventHandlers();
+    }
+
+    // Check the health of the connection
+    async function checkHealth() {
+        if (!isConnected || !connection) {
+            return false;
+        }
+
+        try {
+            // We'll try to invoke a simple ping method on the server
+            // If it throws an exception, the connection is unhealthy
+            await connection.invoke('Ping');
+            return true;
+        } catch (error) {
+            console.warn('Connection health check failed:', error);
+            return false;
+        }
+    }
+
+    // Reconnect to the server
+    async function reconnect() {
+        if (isConnected) {
+            // Already connected
+            return true;
+        }
+
+        try {
+            // Try to stop the connection first if it's in a strange state
+            try {
+                await connection.stop();
+            } catch (stopError) {
+                // Ignore errors when stopping
+            }
+
+            // Start the connection
+            await connection.start();
+            isConnected = true;
+            triggerEvent('connectionStatus', { status: 'connected' });
+            return true;
+        } catch (error) {
+            console.error("Reconnection failed:", error);
+            isConnected = false;
+            triggerEvent('connectionStatus', { status: 'error', error });
+            return false;
+        }
+    }
+
+    // Measure connection latency
+    async function measureLatency() {
+        if (!isConnected || !connection) {
+            return null;
+        }
+
+        try {
+            const start = performance.now();
+            await connection.invoke('Ping');
+            const end = performance.now();
+
+            const roundTripTime = Math.round(end - start);
+            return {
+                roundTripTime,
+                timestamp: Date.now()
+            };
+        } catch (error) {
+            console.warn('Latency measurement failed:', error);
+            return null;
+        }
     }
 
     // Public API
@@ -384,6 +426,10 @@ window.CrowdQR.SignalR = (function () {
         on: on,
         getConnection: () => connection,
         isConnected: () => isConnected,
-        getCurrentEventId: () => eventId
+        getCurrentEventId: () => eventId,
+        reconnect: reconnect,
+        checkHealth: checkHealth,
+        measureLatency: measureLatency,
+        attemptConnectionWithFallback: attemptConnectionWithFallback
     };
 })();

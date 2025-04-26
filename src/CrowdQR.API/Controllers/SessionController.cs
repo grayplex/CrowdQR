@@ -2,8 +2,10 @@
 using CrowdQR.Api.Models;
 using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CrowdQR.Api.Controllers;
 
@@ -30,6 +32,7 @@ public class SessionController(
     /// </summary>
     /// <returns>A list of all sessions.</returns>
     [HttpGet]
+    [Authorize(Roles = "DJ")]
     public async Task<ActionResult<IEnumerable<object>>> GetSessions()
     {
         var sessions = await _context.Sessions
@@ -58,6 +61,7 @@ public class SessionController(
     /// <param name="id">The ID of the session to retrieve.</param>
     /// <returns>The requested session or a 404 Not Found response.</returns>
     [HttpGet("{id}")]
+    [Authorize]
     public async Task<ActionResult<object>> GetSession(int id)
     {
         var session = await _context.Sessions
@@ -68,6 +72,12 @@ public class SessionController(
         if (session == null)
         {
             return NotFound();
+        }
+
+        // Users should only access their own sessions
+        if (!User.IsInRole("DJ") && session.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
         }
 
         // Format the response to avoid circular references
@@ -91,8 +101,23 @@ public class SessionController(
     /// <param name="eventId">The ID of the event.</param>
     /// <returns>A list of sessions for the specified event.</returns>
     [HttpGet("event/{eventId}")]
+    [Authorize]
     public async Task<ActionResult<IEnumerable<object>>> GetSessionsByEvent(int eventId)
     {
+        // Get the event to check if the requesting user is the event DJ
+        var @event = await _context.Events.FindAsync(eventId);
+        if (@event == null)
+        {
+            return NotFound("Event not found");
+        }
+
+        // Only allow the event's DJ or other DJs to access all sessions
+        if (!User.IsInRole("DJ") && @event.DjUserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
+        // Get all sessions for the event
         var sessions = await _context.Sessions
             .Where(s => s.EventId == eventId)
             .Include(s => s.User)
@@ -119,8 +144,15 @@ public class SessionController(
     /// <param name="userId">The ID of the user.</param>
     /// <returns>A list of sessions for the specified user.</returns>
     [HttpGet("user/{userId}")]
+    [Authorize]
     public async Task<ActionResult<IEnumerable<object>>> GetSessionsByUser(int userId)
     {
+        // Check to ensure users can only access their own sessions
+        if (!User.IsInRole("DJ") && userId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         var sessions = await _context.Sessions
             .Where(s => s.UserId == userId)
             .Include(s => s.Event)
@@ -148,8 +180,19 @@ public class SessionController(
     /// <param name="userId">The ID of the user.</param>
     /// <returns>The matching session or a 404 Not Found response.</returns>
     [HttpGet("event/{eventId}/user/{userId}")]
+    [Authorize]
     public async Task<ActionResult<object>> GetSessionByEventAndUser(int eventId, int userId)
     {
+        // Check if this is the user's own session or the DJ for this event
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var @event = await _context.Events.FindAsync(eventId);
+
+        if (!User.IsInRole("DJ") && userId != currentUserId &&
+            (@event == null || @event.DjUserId != currentUserId))
+        {
+            return Forbid();
+        }
+
         var session = await _context.Sessions
             .Include(s => s.User)
             .Include(s => s.Event)
@@ -181,8 +224,15 @@ public class SessionController(
     /// <param name="sessionDto">The session data.</param>
     /// <returns>The created session and a 201 Created response, or an error.</returns>
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<Session>> CreateOrUpdateSession(SessionCreateDto sessionDto)
     {
+        // Check to ensure users can only create sessions for themselves
+        if (!User.IsInRole("DJ") && sessionDto.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -260,12 +310,19 @@ public class SessionController(
     /// <param name="id">The ID of the session.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpPut("{id}/increment-request-count")]
+    [Authorize]
     public async Task<IActionResult> IncrementRequestCount(int id)
     {
         var session = await _context.Sessions.FindAsync(id);
         if (session == null)
         {
             return NotFound();
+        }
+
+        // Check if this is the user's own session or the DJ
+        if (!User.IsInRole("DJ") && session.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
         }
 
         session.RequestCount++;
@@ -284,12 +341,19 @@ public class SessionController(
     /// <param name="id">The ID of the session to refresh.</param>
     /// <returns>A 204 No Content response, or an error</returns>
     [HttpPut("{id}/refresh")]
+    [Authorize]
     public async Task<IActionResult> RefreshSession(int id)
     {
         var session = await _context.Sessions.FindAsync(id);
         if (session == null)
         {
             return NotFound();
+        }
+
+        // Check if this is the user's own session or the DJ
+        if (!User.IsInRole("DJ") && session.UserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
         }
 
         session.LastSeen = DateTime.UtcNow;
@@ -307,6 +371,7 @@ public class SessionController(
     /// <param name="id">The ID of the session to delete.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> DeleteSession(int id)
     {
         var session = await _context.Sessions.FindAsync(id);

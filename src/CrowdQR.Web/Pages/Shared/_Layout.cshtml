@@ -1,6 +1,9 @@
 ﻿@using Microsoft.Extensions.Configuration
+@using CrowdQR.Web.Services
+@using Microsoft.AspNetCore.Http
 @inject IConfiguration Configuration
 @inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment HostEnvironment
+@inject IHttpContextAccessor HttpContextAccessor
 
 <!DOCTYPE html>
 <html lang="en">
@@ -30,20 +33,73 @@
                             <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
-                        </li>
-                        <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-page="/Event">Join Event</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-page="/Event" asp-route-slug="demo">Demo Event</a>
                         </li>
+                        @if (User.IsInRole("DJ"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Dashboard">DJ Dashboard</a>
+                            </li>
+                        }
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Dashboard">DJ Dashboard</a>
+                            <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/ApiTest">Api Testing</a>
-                        </li>
+                    </ul>
+                    <ul class="navbar-nav">
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-person-circle"></i> @User.Identity.Name
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                    <li>
+                                        <span class="dropdown-item-text">
+                                            <small class="text-muted">@(User.IsInRole("DJ") ? "DJ Account" : "Audience Account")</small>
+                                        </span>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="post" action="/Logout">
+                                            <button type="submit" class="dropdown-item">Logout</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else if (Context.Session.GetString("AudienceId") != null)
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-person-circle"></i> @Context.Session.GetString("AudienceUsername")
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                    <li>
+                                        <span class="dropdown-item-text">
+                                            <small class="text-muted">Audience Account</small>
+                                        </span>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="post" action="/Logout">
+                                            <button type="submit" class="dropdown-item">Logout</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Login">Login</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Register">Register</a>
+                            </li>
+                        }
                     </ul>
                 </div>
             </div>
@@ -57,7 +113,16 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2025 - CrowdQR - <a asp-area="" asp-page="/Privacy">Privacy</a>
+            <div class="row py-3">
+                <div class="col-md-6">
+                    &copy; @DateTime.Now.Year - CrowdQR - <a asp-area="" asp-page="/Privacy">Privacy</a>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="https://github.com/grayplex/CrowdQR" target="_blank" class="text-muted text-decoration-none">
+                        <i class="bi bi-github"></i> View on GitHub
+                    </a>
+                </div>
+            </div>
         </div>
     </footer>
 
@@ -79,6 +144,8 @@
     <script src="~/js/validation.js" asp-append-version="true"></script>
     <script src="~/js/session.js" asp-append-version="true"></script>
     <script src="~/js/signalr-client.js" asp-append-version="true"></script>
+    <script src="~/js/ajax-helper.js" asp-append-version="true"></script>
+    <script src="~/js/request-handler.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

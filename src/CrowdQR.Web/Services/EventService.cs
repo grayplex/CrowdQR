@@ -65,7 +65,26 @@ public class EventService(ApiService apiService, ILogger<EventService> logger)
     /// <returns>The created event and success flag.</returns>
     public async Task<(bool Success, EventDto? Event)> CreateEventAsync(EventCreateDto eventDto)
     {
-        return await _apiService.PostAsync<EventCreateDto, EventDto>(BaseEndpoint, eventDto);
+        try
+        {
+            _logger.LogInformation("Creating event: {EventName} with slug {Slug} for DJ {DjUserId}",
+                eventDto.Name, eventDto.Slug, eventDto.DjUserId);
+
+            var (success, response) = await _apiService.PostAsync<EventCreateDto, EventDto>(BaseEndpoint, eventDto);
+
+            if (success && response != null)
+            {
+                return (true, response);
+            }
+
+            _logger.LogWarning("Failed to create event {EventName}", eventDto.Name);
+            return (false, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating event {EventName}", eventDto.Name);
+            return (false, null);
+        }
     }
 
     /// <summary>

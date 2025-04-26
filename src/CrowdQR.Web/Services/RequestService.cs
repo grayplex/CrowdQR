@@ -1,4 +1,5 @@
 ﻿using CrowdQR.Shared.Models.DTOs;
+using System.Net.Http;
 
 namespace CrowdQR.Web.Services;
 
@@ -54,7 +55,41 @@ public class RequestService(ApiService apiService, ILogger<RequestService> logge
     /// <returns>The created request and success flag.</returns>
     public async Task<(bool Success, RequestDto? Request)> CreateRequestAsync(RequestCreateDto requestDto)
     {
-        return await _apiService.PostAsync<RequestCreateDto, RequestDto>(BaseEndpoint, requestDto);
+        try
+        {
+            // Add logging to diagnose issues
+            _logger.LogInformation("Creating song request: Song '{SongName}' by '{ArtistName}' for event {EventId} by user {UserId}",
+                requestDto.SongName, requestDto.ArtistName, requestDto.EventId, requestDto.UserId);
+
+            // Use the ApiService for making the request
+            var (success, response) = await _apiService.PostAsync<RequestCreateDto, RequestDto>(BaseEndpoint, requestDto);
+
+            // Log response status
+            _logger.LogInformation("Request creation success: {Success}", success);
+
+            if (success && response != null)
+            {
+                return (true, response);
+            }
+
+            _logger.LogWarning("API request failed: Failed to create request for song {SongName}", requestDto.SongName);
+            return (false, default);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error making POST request to {Endpoint} with song request: {SongName}",
+                BaseEndpoint, requestDto.SongName);
+            return (false, default);
+        }
+    }
+
+    /// <summary>
+    /// Gets the underlying API service for direct access.
+    /// </summary>
+    /// <returns>The API service.</returns>
+    public ApiService GetApiService()
+    {
+        return _apiService;
     }
 
     /// <summary>

@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace CrowdQR.API.Migrations
+namespace CrowdQR.Api.Migrations
 {
     [DbContext(typeof(CrowdQRContext))]
     partial class CrowdQRContextModelSnapshot : ModelSnapshot
@@ -193,6 +193,28 @@ namespace CrowdQR.API.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("EmailTokenExpiry")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmailVerificationToken")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsEmailVerified")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("PasswordSalt")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("Role")
                         .IsRequired()

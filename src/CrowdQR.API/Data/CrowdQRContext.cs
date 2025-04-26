@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using CrowdQR.Api.Models;
 using CrowdQR.Shared.Models.Enums;
 
@@ -11,10 +11,8 @@ namespace CrowdQR.Api.Data;
 /// Initializes a new instance of the <see cref="CrowdQRContext"/> class.
 /// </remarks>
 /// <param name="options">The options to be used by the context.</param>
-
 public class CrowdQRContext(DbContextOptions<CrowdQRContext> options) : DbContext(options)
 {
-
     /// <summary>
     /// Gets or sets the users in the database.
     /// </summary>

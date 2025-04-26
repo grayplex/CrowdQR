@@ -1,9 +1,12 @@
 ﻿using CrowdQR.Api.Data;
 using CrowdQR.Api.Models;
+using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
 using CrowdQR.Shared.Models.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CrowdQR.Api.Controllers;
 
@@ -12,12 +15,17 @@ namespace CrowdQR.Api.Controllers;
 /// </summary>
 /// <param name="context">The database context.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="authService">The authentication service.</param>
 [ApiController]
 [Route("api/[controller]")]
-public class UserController(CrowdQRContext context, ILogger<UserController> logger) : ControllerBase
+public class UserController(
+    CrowdQRContext context, 
+    ILogger<UserController> logger,
+    AuthService authService) : ControllerBase
 {
     private readonly CrowdQRContext _context = context;
     private readonly ILogger<UserController> _logger = logger;
+    private readonly AuthService _authService = authService;
 
     // GET: api/user
     /// <summary>
@@ -25,6 +33,7 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// </summary>
     /// <returns>A list of all users.</returns>
     [HttpGet]
+    [Authorize(Roles = "DJ")] // Only DJs should see all users
     public async Task<ActionResult<IEnumerable<object>>> GetUsers()
     {
         var users = await _context.Users.ToListAsync();
@@ -48,10 +57,16 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// <param name="id">The ID of the user to retrieve.</param>
     /// <returns>The requested user or a 404 Not Found response.</returns>
     [HttpGet("{id}")]
+    [Authorize]
     public async Task<ActionResult<object>> GetUser(int id)
     {
-        var user = await _context.Users.FindAsync(id);
+        // Regular users should only be able to get their own user info
+        if (!User.IsInRole("DJ") && id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
 
+        var user = await _context.Users.FindAsync(id);
         if (user == null)
         {
             return NotFound();
@@ -76,6 +91,7 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// <param name="role">The role to filter by.</param>
     /// <returns>A list of users with the specified role.</returns>
     [HttpGet("role/{role}")]
+    [Authorize]
     public async Task<ActionResult<IEnumerable<object>>> GetUsersByRole(UserRole role)
     {
         var users = await _context.Users
@@ -130,6 +146,7 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// <param name="userDto">The user data.</param>
     /// <returns>The created user and a 201 Created response, or an error.</returns>
     [HttpPost]
+    [Authorize(Roles = "DJ")]
     public async Task<ActionResult<User>> CreateUser(UserCreateDto userDto)
     {
         if (!ModelState.IsValid)
@@ -164,8 +181,15 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// <param name="userDto">The updated user data.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpPut("{id}")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> UpdateUser(int id, UserUpdateDto userDto)
     {
+        // Regular users should only be able to update their own info
+        if (!User.IsInRole("DJ") && id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        {
+            return Forbid();
+        }
+
         var user = await _context.Users.FindAsync(id);
         if (user == null)
         {
@@ -217,6 +241,7 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
     /// <param name="id">The ID of the user to delete.</param>
     /// <returns>A 204 No Content response, or an error.</returns>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "DJ")]
     public async Task<IActionResult> DeleteUser(int id)
     {
         var user = await _context.Users.FindAsync(id);
@@ -229,6 +254,59 @@ public class UserController(CrowdQRContext context, ILogger<UserController> logg
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Resends the verification email for the current user.
+    /// </summary>
+    /// <returns>Success or failure status.</returns>
+    [HttpPost("resend-verification")]
+    [Authorize]
+    public async Task<IActionResult> ResendVerification()
+    {
+        // Get current user email
+        var email = User.FindFirst(ClaimTypes.Email)?.Value;
+        if (string.IsNullOrEmpty(email))
+        {
+            return BadRequest(new { success = false, message = "No email associated with this account" });
+        }
+
+        var result = await _authService.ResendVerificationEmail(email);
+
+        if (!result)
+        {
+            return BadRequest(new { success = false, message = "Failed to resend verification email" });
+        }
+
+        return Ok(new { success = true, message = "Verification email has been sent" });
+    }
+
+    /// <summary>
+    /// Gets the verification status of the current user.
+    /// </summary>
+    /// <returns>The verification status.</returns>
+    [HttpGet("verification-status")]
+    [Authorize]
+    public async Task<IActionResult> GetVerificationStatus()
+    {
+        // Get current user ID
+        if (!int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new
+        {
+            isEmailVerified = user.IsEmailVerified,
+            email = user.Email,
+            requiresVerification = user.Role == UserRole.DJ && !user.IsEmailVerified
+        });
     }
 
     private async Task<bool> UserExists(int id)

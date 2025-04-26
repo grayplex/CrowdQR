@@ -3,6 +3,9 @@ using CrowdQR.Api.Middleware;
 using CrowdQR.Api.Hubs;
 using CrowdQR.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +32,61 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IHubNotificationService, HubNotificationService>();
+builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Add JWT authentication services
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Secret"] ?? "temporaryCrowdQRSecretKey12345!@#$%")),
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "CrowdQR.Api",
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "CrowdQR.Web",
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+
+    // Enable debugging for JWT events
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError("Authentication failed: {Exception}", context.Exception);
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Token validated successfully for user: {Name}", context.Principal?.Identity?.Name);
+            return Task.CompletedTask;
+        },
+        OnMessageReceived = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("JWT token received: {Token}",
+                context.Token?.Length > 10 ? context.Token[..10] + "..." : "None");
+            return Task.CompletedTask;
+        }
+    };
+});
+
+// Add authorization services
+builder.Services.AddAuthorization();
+
+// Register auth service
+builder.Services.AddScoped<AuthService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -95,7 +153,8 @@ if (app.Environment.IsDevelopment())
     try
     {
         var context = services.GetRequiredService<CrowdQRContext>();
-        DbSeeder.SeedAsync(context).Wait();
+        // DbSeeder.SeedAsync(context).Wait();
+        context.Database.Migrate(); // Apply migrations
     }
     catch (Exception ex)
     {
@@ -104,16 +163,21 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-app.UseExceptionHandling();
-app.UseCors("AllowWebApp");
-app.UseRouting();
-app.UseAuthorization();
-app.MapHub<CrowdQRHub>("/hubs/crowdqr");
+app.UseExceptionHandling(); // Custom middleware for global exception handling
+app.UseCors("AllowWebApp"); // Enable CORS for the web app
 
-app.UseHttpsRedirection();
-app.MapControllers();
+app.UseRouting(); // Must be before auth middleware
+app.UseAuthentication(); // Enable authentication middleware, must come before authorization
+app.UseAuthorization(); // Enable authorization middleware
 
-app.Run();
+app.UseAuthorizationLogging(); // Custom middleware for logging authorization events
+app.UseDjRoleValidation(); // Custom middleware for DJ role validation
+
+// app.UseHttpsRedirection(); // Redirect HTTP to HTTPS // Disabled while in development mode
+app.MapHub<CrowdQRHub>("/hubs/crowdqr"); // Map SignalR hub
+app.MapControllers(); // Map controllers to routes
+
+app.Run(); 
 
 // Helper method to build connection string from individual environment variables
 static string BuildConnectionString(IConfiguration configuration)

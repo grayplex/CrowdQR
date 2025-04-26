@@ -10,8 +10,9 @@ public interface IHubNotificationService
     /// </summary>
     /// <param name="eventId">The ID of the event.</param>
     /// <param name="requestId">The ID of the new request.</param>
+    /// <param name="requesterName"> The name of the user who added the request.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task NotifyRequestAdded(int eventId, int requestId);
+    Task NotifyRequestAdded(int eventId, int requestId, string requesterName);
 
     /// <summary>
     /// Notifies clients that a request's status has been updated.
@@ -28,8 +29,9 @@ public interface IHubNotificationService
     /// <param name="eventId">The ID of the event.</param>
     /// <param name="requestId">The ID of the request that received a vote.</param>
     /// <param name="voteCount">The new vote count.</param>
+    /// <param name="userId">The ID of the user who voted.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task NotifyVoteAdded(int eventId, int requestId, int voteCount);
+    Task NotifyVoteAdded(int eventId, int requestId, int voteCount, int userId);
 
     /// <summary>
     /// Notifies clients that a vote has been removed from a request.
