@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using CrowdQR.Api.Models;
 using CrowdQR.Shared.Models.Enums;
 
@@ -14,7 +14,6 @@ namespace CrowdQR.Api.Data;
 
 public class CrowdQRContext(DbContextOptions<CrowdQRContext> options) : DbContext(options)
 {
-
     /// <summary>
     /// Gets or sets the users in the database.
     /// </summary>
