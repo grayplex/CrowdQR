@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CrowdQR.Api.Models;
@@ -6,7 +6,6 @@ namespace CrowdQR.Api.Models;
 /// <summary>
 /// Represents a user's vote for a song request.
 /// </summary>
-
 public class Vote
 {
     /// <summary>

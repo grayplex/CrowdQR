@@ -52,8 +52,8 @@ builder.Services.AddAuthorizationBuilder()
                         .AddPolicy("AudienceAccess", policy =>
         policy.RequireAssertion(context =>
             context.User.Identity?.IsAuthenticated == true ||
-            context.Resource is HttpContext httpContext &&
-            httpContext.Session.GetString("AudienceId") != null));
+            (context.Resource is HttpContext httpContext &&
+            httpContext.Session.GetString("AudienceId") != null)));
 
 // Add API services
 builder.Services.AddScoped<ApiService>(sp =>
