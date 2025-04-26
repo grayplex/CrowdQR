@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using CrowdQR.Shared.Models.Enums;
 using Microsoft.Extensions.Logging;
@@ -8,7 +8,6 @@ namespace CrowdQR.Api.Models;
 /// <summary>
 /// Represents a user in the system, either an audience member or DJ.
 /// </summary>
-
 public class User
 {
     /// <summary>
