@@ -129,8 +129,6 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- SignalR Client Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.12/signalr.min.js"></script>
 
     <!-- App Configuration -->
     <script>
@@ -147,6 +145,8 @@
     <script src="~/js/signalr-client.js" asp-append-version="true"></script>
     <script src="~/js/ajax-helper.js" asp-append-version="true"></script>
     <script src="~/js/request-handler.js" asp-append-version="true"></script>
+    <script src="~/js/signalr/dist/browser/signalr.js"></script>
+
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
