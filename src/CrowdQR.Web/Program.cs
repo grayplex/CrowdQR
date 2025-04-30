@@ -108,6 +108,7 @@ builder.Services.AddRazorPages(options =>
     // Require DJ role for admin pages
     options.Conventions.AuthorizeFolder("/Admin", "DjOnly");
 });
+builder.Services.AddSignalR();
 
 // Setup detailed logging
 builder.Logging.AddConsole();
