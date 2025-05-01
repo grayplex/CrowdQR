@@ -163,12 +163,12 @@ public class VoteController(
             await _context.SaveChangesAsync();
 
             // Calculate new vote count
-            int voteCount = request.Votes.Count + 1;
+            int voteCount = await _context.Votes.CountAsync(v => v.RequestId == voteDto.RequestId);
 
             // Send SignalR notification about the new vote
             try
             {
-                await _hubNotificationService.NotifyVoteAdded(request.EventId, request.RequestId, voteCount, request.UserId);
+                await _hubNotificationService.NotifyVoteAdded(request.EventId, request.RequestId, voteCount, voteDto.UserId);
                 _logger.LogInformation("SignalR notification sent for vote added to request {RequestId}, new count: {VoteCount}",
                     request.RequestId, voteCount);
             }
