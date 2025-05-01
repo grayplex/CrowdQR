@@ -324,9 +324,7 @@
         (function() {
             // Only initialize for dashboard with an eventId
             const eventId = '@Model.EventId';
-            if (!eventId) {
-                return;
-            }
+            if (!eventId) return;
 
             console.log('Initializing SignalR for Dashboard event ID:', eventId);
 
@@ -334,13 +332,9 @@
             $(document).ready(function() {
                 // Initialize the SignalR connection
                 if (CrowdQR.SignalR.init(CrowdQR.Config.apiBaseUrl)) {
-                    // Start the connection
                     CrowdQR.SignalR.start().then(connected => {
                         if (connected) {
-                            // Join the event group
                             CrowdQR.SignalR.joinEvent(eventId);
-
-                            // Update UI to show we're connected
                             updateConnectionStatus('connected');
                         } else {
                             updateConnectionStatus('disconnected');
@@ -348,16 +342,21 @@
                     });
 
                     // Register event handlers
-                    registerEventHandlers();
+                    setupEventHandlers();
                 } else {
                     updateConnectionStatus('error');
                 }
+
+                // Setup form handlers
+                setupFormHandlers();
             });
 
             // Update the connection status indicator
             function updateConnectionStatus(status) {
-                const indicator = $('.badge[data-connection-status]');
-                indicator.removeClass('bg-success bg-warning bg-danger');
+                const indicator = $('[data-connection-status]');
+                if (!indicator.length) return;
+
+                indicator.removeClass('bg-success bg-warning bg-danger bg-secondary');
 
                 switch (status) {
                     case 'connected':
@@ -370,96 +369,167 @@
                         break;
                     case 'disconnected':
                     case 'error':
-                    default:
+                    case 'failed':
                         indicator.addClass('bg-danger')
                             .html('<i class="bi bi-broadcast-pin"></i> Updates Offline');
-                        break;
+                    default:
+                        indicator.addClass('bg-secondary')
+                            .html('<i class="bi bi-broadcast-pin"></i> Connecting...');
                 }
+                // Update last update time
+                $('#last-update-time').text(new Date().toLocaleTimeString());
             }
 
             // Register all event handlers
-            function registerEventHandlers() {
-                // Listen for connection status changes
+            function setupEventHandlers() {
+                // Handle connection status changes
                 CrowdQR.SignalR.on('connectionStatus', data => {
                     updateConnectionStatus(data.status);
                 });
 
-                // Listen for new requests
+                // Handle new request added
                 CrowdQR.SignalR.on('requestAdded', data => {
                     if (data.eventId == eventId) {
-                        notifyNewRequest();
+                        console.log('New request received:', data);
 
-                        // If we're on the pending tab, refresh to show new request
+                        // Update the pending count in the UI
+                        updatePendingCount(1);
+
+                        // If on pending tab, notify about new request
                         if ($('.nav-link.active').attr('href').includes('tab=pending')) {
-                            refreshWithDelay(2000);
+                            // Options: either reload the page or display notification
+                            showNotification('New Song Request',
+                                'A new song request has been added. Refresh to see it.',
+                                () => window.location.reload());
                         }
                     }
                 });
 
-                // Listen for status updates
+                // Handle request status updates
                 CrowdQR.SignalR.on('requestStatusUpdated', data => {
                     if (data.eventId == eventId) {
-                        // Find the request row and update it
+                        console.log('Request status updated:', data);
+
+                        // Find the row for this request
                         const row = $(`tr[data-request-id="${data.requestId}"]`);
-                        if (row.length) {
-                            if (data.status === 'Approved') {
-                                // If on pending tab, remove the row since it's now approved
-                                if ($('.nav-link.active').attr('href').includes('tab=pending')) {
-                                    fadeOutAndRemove(row);
-                                } else if ($('.nav-link.active').attr('href').includes('tab=approved')) {
-                                    refreshWithDelay(1500);
-                                }
-                            } else if (data.status === 'Rejected') {
-                                // If on pending tab, remove the row since it's now rejected
-                                if ($('.nav-link.active').attr('href').includes('tab=pending')) {
-                                    fadeOutAndRemove(row);
-                                } else if ($('.nav-link.active').attr('href').includes('tab=rejected')) {
-                                    refreshWithDelay(1500);
-                                }
-                            } else if (data.status === 'Pending') {
-                                // If request is moved back to pending
-                                if (!$('.nav-link.active').attr('href').includes('tab=pending')) {
-                                    refreshWithDelay(1500);
-                                }
+                        if (!row.length) return;
+
+                        // Update counters and UI based on new status
+                        if (data.status === 'Approved') {
+                            updateCounterBadges('Approved');
+                            // If on pending tab, remove the row
+                            if ($('.nav-link.active').attr('href').includes('tab=pending')) {
+                                fadeOutAndRemove(row);
+                            }
+                        } else if (data.status === 'Rejected') {
+                            updateCounterBadges('Rejected');
+                            // If on pending tab, remove the row
+                            if ($('.nav-link.active').attr('href').includes('tab=pending')) {
+                                fadeOutAndRemove(row);
+                            }
+                        } else if (data.status === 'Pending') {
+                            updateCounterBadges('Pending');
+                            // If not on pending tab, provide notification
+                            if (!$('.nav-link.active').attr('href').includes('tab=pending')) {
+                                showSuccessToast('Request moved to pending');
                             }
                         }
                     }
                 });
 
-                // Listen for vote changes
+                // Handle vote changes
                 CrowdQR.SignalR.on('voteAdded', data => {
                     if (data.eventId == eventId) {
+                        console.log('Vote added:', data);
                         updateVoteCount(data.requestId, data.voteCount);
                     }
                 });
 
                 CrowdQR.SignalR.on('voteRemoved', data => {
                     if (data.eventId == eventId) {
+                        console.log('Vote removed:', data);
                         updateVoteCount(data.requestId, data.voteCount);
                     }
                 });
 
-                // Listen for user joined event
+                // Handle user joined event
                 CrowdQR.SignalR.on('userJoinedEvent', data => {
                     if (data.eventId == eventId) {
-                        const activeUsers = parseInt($('.card:contains("Active Users") .card-text').text()) || 0;
-                        $('.card:contains("Active Users") .card-text').text(activeUsers + 1);
+                        console.log('User joined event:', data);
+                        incrementActiveUsers();
                     }
+                });
+            }
+
+            // Setup AJAX form handlers
+            function setupFormHandlers() {
+                // Handle approve/reject/move forms via AJAX
+                $('form[asp-page-handler="Approve"], form[asp-page-handler="Reject"], form[asp-page-handler="MoveToPending"]')
+                    .on('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const form = $(this);
+                    const requestId = form.find('input[name="requestId"]').val();
+                    const actionType = form.attr('asp-page-handler');
+                    
+                    // Determine new status based on action
+                    let newStatus;
+                    if (actionType === 'Approve') newStatus = 'Approved';
+                    else if (actionType === 'Reject') newStatus = 'Rejected';
+                    else if (actionType === 'MoveToPending') newStatus = 'Pending';
+                    
+                    // Show loading state
+                    const button = form.find('button[type="submit"]');
+                    const originalHtml = button.html();
+                    button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                    
+                    // Submit the form via AJAX
+                    $.ajax({
+                        url: form.attr('action') || window.location.pathname,
+                        type: 'POST',
+                        data: form.serialize(),
+                        success: function() {
+                            // No need to update UI here as SignalR will handle that
+                            showSuccessToast(`Request ${newStatus.toLowerCase()} successfully!`);
+                            
+                            // Remove the row if we're on a non-matching tab
+                            const currentTab = $('.nav-link.active').attr('href').split('=')[1];
+                            if ((newStatus === 'Approved' && currentTab !== 'approved') ||
+                                (newStatus === 'Rejected' && currentTab !== 'rejected') ||
+                                (newStatus === 'Pending' && currentTab !== 'pending')) {
+                                
+                                const row = $(`tr[data-request-id="${requestId}"]`);
+                                fadeOutAndRemove(row);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error(`Error updating request ${requestId} status:`, error);
+                            
+                            // Restore button state
+                            button.prop('disabled', false).html(originalHtml);
+                            
+                            // Show error message
+                            showErrorToast('Failed to update request status. Please try again.');
+                        }
+                    });
                 });
             }
 
             // Update vote count for a specific request
             function updateVoteCount(requestId, voteCount) {
-                const voteBadge = $(`tr[data-request-id="${requestId}"] .badge:contains("thumbs-up")`);
-                if (voteBadge.length) {
-                    voteBadge.html(`<i class="bi bi-hand-thumbs-up"></i> ${voteCount}`);
-                    voteBadge.addClass('highlight-change');
-                    setTimeout(() => voteBadge.removeClass('highlight-change'), 1500);
+                const voteBadge = $(`tr[data-request-id="${requestId}"] .badge[data-vote-count]`);
+                if (!voteBadge.length) return;
 
-                    // If on pending tab, reorder the table based on vote count
-                    if ($('.nav-link.active').attr('href').includes('tab=pending')) {
-                        reorderPendingTable();
-                    }
+                // Update the text
+                voteBadge.html(`<i class="bi bi-hand-thumbs-up"></i> ${voteCount}`);
+
+                // Highlight the change
+                voteBadge.addClass('highlight-change');
+                setTimeout(() => voteBadge.removeClass('highlight-change'), 1500);
+
+                // If on pending tab, reorder the table
+                if ($('.nav-link.active').attr('href').includes('tab=pending')) {
+                    reorderPendingTable();
                 }
             }
 
@@ -467,6 +537,9 @@
             function reorderPendingTable() {
                 const table = $('table tbody');
                 const rows = table.find('tr').get();
+
+                // Only continue if theres rows to sort
+                if (rows.length <= 1) return;
 
                 // Sort rows by vote count
                 rows.sort(function(a, b) {
@@ -496,385 +569,199 @@
                 });
             }
 
-            // Show a notification for new requests
-            function notifyNewRequest() {
+            // Increment active users count
+            function incrementActiveUsers() {
+                const activeUsersElement = $('.card:contains("Active Users") .display-6');
+                const currentCount = parseInt(activeUsersElement.text()) || 0;
+                activeUsersElement.text(currentCount + 1);
+
+                // Highlight the change
+                activeUsersElement.addClass('highlight-change');
+                setTimeout(() => activeUsersElement.removeClass('highlight-change'), 1500);
+            }
+
+            // Update counter badges when request status changes
+            function updateCounterBadges(newStatus) {
+                // Get current counts
+                const pendingBadge = $('.nav-link:contains("Pending") .badge');
+                const approvedBadge = $('.nav-link:contains("Approved") .badge');
+                const rejectedBadge = $('.nav-link:contains("Rejected") .badge');
+
+                let pendingCount = parseInt(pendingBadge.text()) || 0;
+                let approvedCount = parseInt(approvedBadge.text()) || 0;
+                let rejectedCount = parseInt(rejectedBadge.text()) || 0;
+
+                // Update based on the action
+                if (newStatus === 'Approved') {
+                    pendingCount = Math.max(0, pendingCount - 1);
+                    approvedCount += 1;
+                } else if (newStatus === 'Rejected') {
+                    pendingCount = Math.max(0, pendingCount - 1);
+                    rejectedCount += 1;
+                } else if (newStatus === 'Pending') {
+                    pendingCount += 1
+                }
+
+                // Update the badge texts
+                pendingBadge.text(pendingCount);
+                approvedBadge.text(approvedCount);
+                rejectedBadge.text(rejectedCount);
+
+                // Also update the card counts
+                $('.card:contains("Pending Requests") .display-6').text(pendingCount);
+                $('.card:contains("Approved") .display-6').text(approvedCount);
+                $('.card:contains("Rejected Requests") .display-6').text(rejectedCount);
+            }
+
+            // Increment the pending count
+            function updatePendingCount(increment) {
+                // Update badge count
+                const pendingBadge = $('.nav-link:contains("Pending") .badge');
+                const currentCount = parseInt(pendingBadge.text()) || 0;
+                pendingBadge.text(currentCount + increment);
+
+                // Update card count
+                const pendingCountDisplay = $('.card:contains("Pending Requests") .display-6');
+                const cardCount = parseInt(pendingCountDisplay.text()) || 0;
+                pendingCountDisplay.text(cardCount + increment);
+
+                // Highlight the change
+                pendingBadge.addClass('highlight-change');
+                setTimeout(() => pendingBadge.removeClass('highlight-change'), 1500);
+            }
+
+            // Show toast notification for success
+            function showSuccessToast(message) {
+                // Create toast container if it doesn't exist
+                if ($('#toast-container').length === 0) {
+                    $('body').append('<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 11"></div>');
+                }
+
+                const toastId = 'toast-' + Date.now();
+                const toastHtml = `
+                    <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-header bg-success text-white">
+                            <i class="bi bi-check-circle me-2"></i>
+                            <strong class="me-auto">Success</strong>
+                            <small>just now</small>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                `;
+
+                $('#toast-container').append(toastHtml);
+                const toast = new bootstrap.Toast(document.getElementById(toastId));
+                toast.show();
+
+                // Remove toast after it's hidden
+                $(`#${toastId}`).on('hidden.bs.toast', function() {
+                    $(this).remove();
+                });
+            }
+
+            // Show toast notification for errors
+            function showErrorToast(message) {
+                // Create toast container if it doesn't exist
+                if ($('#toast-container').length === 0) {
+                    $('body').append('<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 11"></div>');
+                }
+
+                const toastId = 'toast-' + Date.now();
+                const toastHtml = `
+                    <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-header bg-danger text-white">
+                            <i class="bi bi-exclamation-circle me-2"></i>
+                            <strong class="me-auto">Error</strong>
+                            <small>just now</small>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                `;
+
+                $('#toast-container').append(toastHtml);
+                const toast = new bootstrap.Toast(document.getElementById(toastId));
+                toast.show();
+
+                // Remove toast after it's hidden
+                $(`#${toastId}`).on('hidden.bs.toast', function() {
+                    $(this).remove();
+                });
+            }
+
+            // Show browser notification for important updates
+            function showNotification(title, body, clickCallback) {
+                // Check if browser notifications are supported
                 if (!('Notification' in window)) {
-                    console.log('This browser does not support desktop notification');
+                    console.log('This browser does not support notifications');
                     return;
                 }
 
+                // Check if permission is already granted
                 if (Notification.permission === 'granted') {
-                    const notification = new Notification('New Song Request', {
-                        body: 'A new song request has been submitted',
+                    const notification = new Notification(title, {
+                        body: body,
                         icon: '/favicon.ico'
                     });
 
-                    // Automatically close after 5 seconds
+                    // Auto-close after 5 seconds
                     setTimeout(() => notification.close(), 5000);
 
-                    // Focus window when notification clicked
-                    notification.onclick = function() {
-                        window.focus();
-                        this.close();
-                    };
-                } else if (Notification.permission !== 'denied') {
-                    Notification.requestPermission();
+                    // Handle click
+                    if (typeof clickCallback === 'function') {
+                        notification.onclick = function() {
+                            clickCallback();
+                            this.close();
+                        };
+                    }
+                }
+                // Otherwise, request permission
+                else if (Notification.permission !== 'denied') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            showNotification(title, body, clickCallback);
+                        }
+                    });
                 }
 
-                // Visual cue in UI
-                const pendingCount = $('.nav-link:contains("Pending") .badge');
-                const currentCount = parseInt(pendingCount.text()) || 0;
-                pendingCount.text(currentCount + 1);
+                // Always show toast as fallback
+                showSuccessToast(body);
 
-                // Play a sound if possible
+                // Try to play notification sound
                 try {
                     const audio = new Audio('/sounds/notification.mp3');
-                    audio.play();
+                    audio.play().catch(e => console.log('Could not play notification sound', e));
                 } catch (e) {
                     console.log('Audio notification not supported');
                 }
             }
 
-            // Refresh the page with a delay
-            function refreshWithDelay(delay) {
-                setTimeout(() => {
-                    window.location.reload();
-                }, delay || 1000);
-            }
-
             // Clean up connection when leaving the page
             window.addEventListener('beforeunload', function() {
-                if (CrowdQR.SignalR.isConnected() && CrowdQR.SignalR.getCurrentEventId()) {
+                if (CrowdQR.SignalR.isConnected()) {
                     CrowdQR.SignalR.leaveEvent();
                 }
             });
-        })();
-    </script>
 
-    <script>
-        // Handle form submissions via AJAX to prevent page reloads when approving/rejecting requests
-        $(document).ready(function() {
-            // Find all approve and reject forms
-            $('form[asp-page-handler="Approve"], form[asp-page-handler="Reject"], form[asp-page-handler="MoveToPending"]').on('submit', function(e) {
-                e.preventDefault();
-
-                const form = $(this);
-                const requestId = form.find('input[name="requestId"]').val();
-                const actionType = form.attr('asp-page-handler');
-
-                // Determine if we're approving, rejecting, or moving to pending
-                let newStatus;
-                if (actionType === 'Approve') {
-                    newStatus = 'Approved';
-                } else if (actionType === 'Reject') {
-                    newStatus = 'Rejected';
-                } else if (actionType === 'MoveToPending') {
-                    newStatus = 'Pending';
-                }
-
-                // Show loading state
-                const button = form.find('button[type="submit"]');
-                const originalHtml = button.html();
-                button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
-
-                $.ajax({
-                    url: form.attr('action') || window.location.pathname,
-                    type: 'POST',
-                    data: form.serialize(),
-                    success: function(response) {
-                        console.log(`Request ${requestId} status updated to ${newStatus}`);
-
-                        // No need to update UI here, SignalR notifications will handle that
-                        // In case SignalR fails, we'll show a success message
-                        if (newStatus === 'Approved') {
-                            showSuccessToast('Request approved successfully!');
-                        } else if (newStatus === 'Rejected') {
-                            showSuccessToast('Request rejected successfully!');
-                        } else {
-                            showSuccessToast('Request moved to pending successfully!');
-                        }
-
-                        // Remove the row with animation if we're on a non-matching tab
-                        const currentTab = $('.nav-link.active').attr('href').split('=')[1];
-                        if ((newStatus === 'Approved' && currentTab !== 'approved') ||
-                            (newStatus === 'Rejected' && currentTab !== 'rejected') ||
-                            (newStatus === 'Pending' && currentTab !== 'pending')) {
-
-                            const row = $(`tr[data-request-id="${requestId}"]`);
-                            row.fadeOut(400, function() {
-                                row.remove();
-
-                                // Update counter badges
-                                updateCounterBadges(newStatus);
-                            });
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error(`Error updating request ${requestId} status:`, error);
-
-                        // Restore button
-                        button.prop('disabled', false).html(originalHtml);
-
-                        // Show error message
-                        showErrorToast('Failed to update request status. Please try again.');
-                    }
-                });
-            });
-        });
-
-        // Show success toast notification
-        function showSuccessToast(message) {
-            // Create toast element if it doesn't exist
-            if ($('#toast-container').length === 0) {
-                $('body').append('<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 11"></div>');
-            }
-
-            const toastId = 'toast-' + Date.now();
-            const toastHtml = `
-                <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="toast-header bg-success text-white">
-                        <i class="bi bi-check-circle me-2"></i>
-                        <strong class="me-auto">Success</strong>
-                        <small>just now</small>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                    <div class="toast-body">
-                        ${message}
-                    </div>
-                </div>
-            `;
-
-            $('#toast-container').append(toastHtml);
-            const toast = new bootstrap.Toast(document.getElementById(toastId));
-            toast.show();
-
-            // Remove toast element after it's hidden
-            $(`#${toastId}`).on('hidden.bs.toast', function() {
-                $(this).remove();
-            });
-        }
-
-        // Show error toast notification
-        function showErrorToast(message) {
-            // Create toast element if it doesn't exist
-            if ($('#toast-container').length === 0) {
-                $('body').append('<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 11"></div>');
-            }
-
-            const toastId = 'toast-' + Date.now();
-            const toastHtml = `
-                <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="toast-header bg-danger text-white">
-                        <i class="bi bi-exclamation-circle me-2"></i>
-                        <strong class="me-auto">Error</strong>
-                        <small>just now</small>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                    <div class="toast-body">
-                        ${message}
-                    </div>
-                </div>
-            `;
-
-            $('#toast-container').append(toastHtml);
-            const toast = new bootstrap.Toast(document.getElementById(toastId));
-            toast.show();
-
-            // Remove toast element after it's hidden
-            $(`#${toastId}`).on('hidden.bs.toast', function() {
-                $(this).remove();
-            });
-        }
-
-        // Update counter badges when request status changes
-        function updateCounterBadges(newStatus) {
-            // Get current counts
-            const pendingBadge = $('.nav-link:contains("Pending") .badge');
-            const approvedBadge = $('.nav-link:contains("Approved") .badge');
-            const rejectedBadge = $('.nav-link:contains("Rejected") .badge');
-
-            const pendingCount = parseInt(pendingBadge.text()) || 0;
-            const approvedCount = parseInt(approvedBadge.text()) || 0;
-            const rejectedCount = parseInt(rejectedBadge.text()) || 0;
-
-            // Update based on the action
-            if (newStatus === 'Approved') {
-                pendingBadge.text(Math.max(0, pendingCount - 1));
-                approvedBadge.text(approvedCount + 1);
-            } else if (newStatus === 'Rejected') {
-                pendingBadge.text(Math.max(0, pendingCount - 1));
-                rejectedBadge.text(rejectedCount + 1);
-            } else if (newStatus === 'Pending') {
-                // Could be coming from either approved or rejected
-                // For simplicity, we'll let SignalR handle this more complex scenario
-                // by refreshing the page after a delay
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
-            }
-        }
-    </script>
-
-    <script>
-        // Connection monitor for the dashboard
-        (function() {
-            let connectionMonitorInterval = null;
-            const MONITOR_INTERVAL = 60000; // Check every minute
-
-            // Start monitoring when document is ready
-            $(document).ready(function() {
-                startConnectionMonitor();
-            });
-
-            // Set up connection monitoring
-            function startConnectionMonitor() {
-                // Clear any existing interval
-                if (connectionMonitorInterval) {
-                    clearInterval(connectionMonitorInterval);
-                }
-
-                // Run an initial health check
-                checkConnectionHealth();
-
-                // Set up periodic health checks
-                connectionMonitorInterval = setInterval(checkConnectionHealth, MONITOR_INTERVAL);
-            }
-
-            // Check the health of the SignalR connection
-            async function checkConnectionHealth() {
-                if (!CrowdQR.SignalR.isConnected()) {
-                    updateConnectionStatus('disconnected');
-                    await attemptReconnect();
-                    return;
-                }
-
-                // Measure latency
-                const latency = await CrowdQR.SignalR.measureLatency();
-                if (latency) {
-                    console.log('Connection latency:', latency);
-                    updateConnectionLatency(latency.roundTripTime);
-                } else {
-                    console.warn('Could not measure connection latency');
-                }
-
-                // Check overall connection health
-                const isHealthy = await CrowdQR.SignalR.checkHealth();
-                if (!isHealthy) {
-                    console.warn('Connection health check failed');
-                    updateConnectionStatus('unhealthy');
-                    await attemptReconnect();
-                } else {
-                    updateConnectionStatus('healthy');
-                }
-            }
-
-            // Attempt to reconnect
-            async function attemptReconnect() {
-                console.log('Attempting to reconnect...');
-                updateConnectionStatus('reconnecting');
-
-                const reconnected = await CrowdQR.SignalR.reconnect();
-                if (reconnected) {
-                    console.log('Successfully reconnected');
-                    updateConnectionStatus('connected');
-
-                    // Rejoin the event
-                    const eventId = '@Model.EventId';
-                    if (eventId) {
-                        await CrowdQR.SignalR.joinEvent(eventId);
-                    }
-                } else {
-                    console.error('Failed to reconnect');
-                    updateConnectionStatus('failed');
-
-                    // Show reconnect button
-                    showReconnectButton();
-                }
-            }
-
-            // Update connection status UI
-            function updateConnectionStatus(status) {
-                const statusBadge = $('[data-connection-status]');
-                if (!statusBadge.length) return;
-
-                statusBadge.removeClass('bg-success bg-danger bg-warning bg-secondary');
-
-                switch (status) {
-                    case 'connected':
-                    case 'healthy':
-                        statusBadge.addClass('bg-success')
-                            .html('<i class="bi bi-broadcast"></i> Live Updates Active');
-                        break;
-                    case 'reconnecting':
-                        statusBadge.addClass('bg-warning')
-                            .html('<i class="bi bi-broadcast"></i> Reconnecting...');
-                        break;
-                    case 'unhealthy':
-                        statusBadge.addClass('bg-warning')
-                            .html('<i class="bi bi-broadcast"></i> Connection Unstable');
-                        break;
-                    case 'disconnected':
-                    case 'failed':
-                    default:
-                        statusBadge.addClass('bg-danger')
-                            .html('<i class="bi bi-broadcast-pin"></i> Updates Offline');
-                        break;
-                }
-            }
-
-            // Update latency display
-            function updateConnectionLatency(latencyMs) {
-                const latencyElement = $('.connection-latency');
-                if (latencyElement.length) {
-                    latencyElement.text(`${latencyMs}ms`);
-
-                    // Add visual indicators based on latency
-                    latencyElement.removeClass('text-success text-warning text-danger');
-                    if (latencyMs < 100) {
-                        latencyElement.addClass('text-success');
-                    } else if (latencyMs < 300) {
-                        latencyElement.addClass('text-warning');
-                    } else {
-                        latencyElement.addClass('text-danger');
-                    }
-                }
-            }
-
-            // Show a reconnect button when connection fails
-            function showReconnectButton() {
-                const statusBadge = $('[data-connection-status]');
-                if (!statusBadge.length) return;
-
-                // Add reconnect button if it doesn't exist
-                if (!$('#reconnect-button').length) {
-                    statusBadge.after(`
-                        <button id="reconnect-button" class="btn btn-sm btn-warning ms-2">
-                            <i class="bi bi-arrow-clockwise"></i> Reconnect
-                        </button>
-                    `);
-
-                    // Add event handler
-                    $('#reconnect-button').on('click', async function() {
-                        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Reconnecting...');
-
-                        await attemptReconnect();
-
-                        // Remove the button if reconnection was successful
-                        if (CrowdQR.SignalR.isConnected()) {
-                            $(this).remove();
-                        } else {
-                            $(this).prop('disabled', false).html('<i class="bi bi-arrow-clockwise"></i> Reconnect');
+            // Set up periodic connection health checks
+            setInterval(function() {
+                if (CrowdQR.SignalR.isConnected()) {
+                    // Update the connection latency display
+                    CrowdQR.SignalR.measureLatency().then(latency => {
+                        if (latency) {
+                            $('.connection-latency').text(`${latency.roundTripTime}ms`);
                         }
                     });
-                }
-            }
 
-            // Cleanup when leaving the page
-            window.addEventListener('beforeunload', function() {
-                if (connectionMonitorInterval) {
-                    clearInterval(connectionMonitorInterval);
+                    // Update the last check time
+                    $('#last-update-time').text(new Date().toLocaleTimeString());
                 }
-            });
+            }, 30000); // Check every 30 seconds
         })();
     </script>
 }
