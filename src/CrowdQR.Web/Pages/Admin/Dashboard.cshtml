@@ -395,12 +395,20 @@
                         // Update the pending count in the UI
                         updatePendingCount(1);
 
-                        // If on pending tab, notify about new request
-                        if ($('.nav-link.active').attr('href').includes('tab=pending')) {
-                            // Options: either reload the page or display notification
+                        // If on pending tab, add the new request to the table
+                        if ($('a.nav-link:contains("Pending")').hasClass('active')) {
+                            // Fetch the new request details
+                            fetchRequestDetails(data.requestId, (request) => {
+                                // Add the new request to the table
+                                addRequestToTable(request);
+                                // Reorder the table
+                                reorderPendingTable();
+                            });
+                        } else {
+                            // Show notification if not on pending tab
                             showNotification('New Song Request',
-                                'A new song request has been added. Refresh to see it.',
-                                () => window.location.reload());
+                                'A new song request has been added to the pending queue.',
+                                () => $('.nav-link:contains("Pending")').click());
                         }
                     }
                 });
@@ -410,30 +418,55 @@
                     if (data.eventId == eventId) {
                         console.log('Request status updated:', data);
 
+                        // Update counters based on new status
+                        updateCounterBadges(data.status);
+
+                        // Get active tab
+                        const isPendingTabActive = $('a.nav-link:contains("Pending")').hasClass('active');
+                        const isApprovedTabActive = $('a.nav-link:contains("Approved")').hasClass('active');
+                        const isRejectedTabActive = $('a.nav-link:contains("Rejected")').hasClass('active');
+
                         // Find the row for this request
                         const row = $(`tr[data-request-id="${data.requestId}"]`);
                         if (!row.length) return;
 
-                        // Update counters and UI based on new status
+                        // Handle UI updates based on which tab is active and the new status
                         if (data.status === 'Approved') {
-                            updateCounterBadges('Approved');
-                            // If on pending tab, remove the row
-                            if ($('.nav-link.active').attr('href').includes('tab=pending')) {
+                            if (isPendingTabActive && row.length) {
+                                // If we're on pending tab and this request was just approved, remove it
                                 fadeOutAndRemove(row);
+                            } else if (isApprovedTabActive && !row.length) {
+                                // If we're on approved tab and this is a newly approved request, fetch and add it
+                                fetchRequestDetails(data.requestId, (request) => {
+                                    addApprovedRequestToTable(request);
+                                });
                             }
                         } else if (data.status === 'Rejected') {
-                            updateCounterBadges('Rejected');
-                            // If on pending tab, remove the row
-                            if ($('.nav-link.active').attr('href').includes('tab=pending')) {
+                            if (isPendingTabActive && row.length) {
+                                // If we're on pending tab and this request was just rejected, remove it
                                 fadeOutAndRemove(row);
+                            } else if (isRejectedTabActive && !row.length) {
+                                // If we're on rejected tab and this is a newly rejected request, fetch and add it
+                                fetchRequestDetails(data.requestId, (request) => {
+                                    addRejectedRequestToTable(request);
+                                });
                             }
                         } else if (data.status === 'Pending') {
-                            updateCounterBadges('Pending');
-                            // If not on pending tab, provide notification
-                            if (!$('.nav-link.active').attr('href').includes('tab=pending')) {
-                                showSuccessToast('Request moved to pending');
+                            if ((isApprovedTabActive || isRejectedTabActive) && row.length) {
+                                // If we're on approved/rejected tab and this request was moved to pending, remove it
+                                fadeOutAndRemove(row);
+                            } else if (isPendingTabActive && !row.length) {
+                                // If we're on pending tab and this is a newly pending request, fetch and add it
+                                fetchRequestDetails(data.requestId, (request) => {
+                                    addRequestToTable(request);
+                                    reorderPendingTable();
+                                });
                             }
                         }
+
+                        // Show a toast notification
+                        showSuccessToast(`Request ${data.requestId} has been ${data.status.toLowerCase()}`);
+
                     }
                 });
 
@@ -459,6 +492,76 @@
                         incrementActiveUsers();
                     }
                 });
+            }
+
+            // Fetch request details
+            function fetchRequestDetails(requestId, callback) {
+                $.ajax({
+                    url: `${CrowdQR.Config.apiBaseUrl}/api/request/${requestId}`,
+                    type: 'GET',
+                    success: function(data) {
+                        if (typeof callback === 'function') {
+                            callback(data);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error(`Error fetching request ${requestId}:`, error);
+                        showErrorToast('Failed to fetch new request details');
+                    }
+                });
+            }
+
+            // Create a new table row for a request
+            function addRequestToTable(request) {
+                // Create a new row element
+                const newRowHtml = `
+                    <tr data-request-id="${request.requestId}" class="highlight-change">
+                        <td class="fw-bold">${request.songName}</td>
+                        <td>${request.artistName || ''}</td>
+                        <td>${request.requester || 'Anonymous'}</td>
+                        <td>
+                            <span class="badge bg-primary" data-vote-count="${request.requestId}">
+                                <i class="bi bi-hand-thumbs-up"></i> ${request.voteCount || 0}
+                            </span>
+                        </td>
+                        <td>${new Date(request.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <form method="post" asp-page-handler="Approve" class="d-inline">
+                                    <input type="hidden" name="requestId" value="${request.requestId}" />
+                                    <input type="hidden" name="eventId" value="${eventId}" />
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-check"></i> Approve
+                                    </button>
+                                </form>
+                                <form method="post" asp-page-handler="Reject" class="d-inline ms-1">
+                                    <input type="hidden" name="requestId" value="${request.requestId}" />
+                                    <input type="hidden" name="eventId" value="${eventId}" />
+                                    <button type="submit" class="btn btn-sm btn-secondary">
+                                        <i class="bi bi-x"></i> Reject
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+
+                // Check if there's a "no requests" message to remove
+                const noRequestsRow = $('tbody tr td[colspan="6"]:contains("No pending requests")').closest('tr');
+                if (noRequestsRow.length) {
+                    noRequestsRow.remove();
+                }
+
+                // Add the new row to the table
+                $('tbody').prepend(newRowHtml);
+
+                // Set up form handlers for the new row
+                setupFormHandlers();
+
+                // Remove highlight after a delay
+                setTimeout(() => {
+                    $(`tr[data-request-id="${request.requestId}"]`).removeClass('highlight-change');
+                }, 1500);
             }
 
             // Setup AJAX form handlers
@@ -528,7 +631,7 @@
                 setTimeout(() => voteBadge.removeClass('highlight-change'), 1500);
 
                 // If on pending tab, reorder the table
-                if ($('.nav-link.active').attr('href').includes('tab=pending')) {
+                if ($('a.nav-link:contains("Pending")').hasClass('active')) {
                     reorderPendingTable();
                 }
             }
