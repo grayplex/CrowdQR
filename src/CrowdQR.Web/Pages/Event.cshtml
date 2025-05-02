@@ -87,12 +87,6 @@
                                 <input asp-for="NewSongRequest.ArtistName" class="form-control">
                                 <span asp-validation-for="NewSongRequest.ArtistName" class="text-danger"></span>
                             </div>
-                            <div class="form-group mb-3">
-                                <label asp-for="NewSongRequest.Notes" class="form-label"></label>
-                                <textarea asp-for="NewSongRequest.Notes" class="form-control" rows="2"></textarea>
-                                <span asp-validation-for="NewSongRequest.Notes" class="text-danger"></span>
-                                <div class="form-text">Any additional information for the DJ</div>
-                            </div>
                             <input type="hidden" name="slug" value="@Model.Slug" />
                             <button type="submit" class="btn btn-primary w-100">Submit Request</button>
                         </form>
