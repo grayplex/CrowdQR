@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -107,6 +108,7 @@ builder.Services.AddRazorPages(options =>
     // Require DJ role for admin pages
     options.Conventions.AuthorizeFolder("/Admin", "DjOnly");
 });
+builder.Services.AddSignalR();
 
 // Setup detailed logging
 builder.Logging.AddConsole();
@@ -136,5 +138,17 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseStatusCodePagesWithRedirects("/AccessDenied?code={0}");
 app.MapRazorPages();
+
+// Theme endpoint
+app.MapPost("/api/theme", (HttpContext context, JsonDocument body) =>
+{
+    var isDarkTheme = body.RootElement.GetProperty("isDarkTheme").GetBoolean();
+    context.Response.Cookies.Append("theme", isDarkTheme ? "dark" : "light", new CookieOptions 
+    { 
+        Expires = DateTimeOffset.UtcNow.AddYears(1),
+        HttpOnly = false // Allow JavaScript to read this cookie
+    });
+    return Results.Ok();
+});
 
 app.Run();

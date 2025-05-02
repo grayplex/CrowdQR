@@ -89,4 +89,25 @@ public class UserService(ApiService apiService, ILogger<UserService> logger)
     {
         return await _apiService.PutAsync($"{BaseEndpoint}/{id}", userDto);
     }
+
+    /// <summary>
+    /// Deletes the current user by ID.
+    /// </summary>
+    /// <param name="id">The user ID.</param>
+    /// <returns>True if successful, false otherwise.</returns>
+    public async Task<bool> DeleteUserAsync(int id)
+    {
+        return await _apiService.DeleteAsync($"{BaseEndpoint}/{id}");
+    }
+
+    /// <summary>
+    /// Changes the user's password.
+    /// </summary>
+    /// <param name="changePasswordDto">The change password DTO.</param>
+    /// <returns>True if successful, false otherwise.</returns>
+    public async Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto)
+    {
+        var (success, _) = await _apiService.PostAsync<ChangePasswordDto, object>("api/auth/change-password", changePasswordDto);
+        return success;
+    }
 }

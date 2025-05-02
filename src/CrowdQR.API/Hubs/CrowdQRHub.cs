@@ -65,4 +65,13 @@ public class CrowdQRHub(ILogger<CrowdQRHub> logger) : Hub
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"event-{eventId}");
         _logger.LogInformation("Client {ConnectionId} left event {EventId}", Context.ConnectionId, eventId);
     }
+
+    /// <summary>
+    /// Simple ping method to check connection health
+    /// </summary>
+    /// <returns>A completed task.</returns>
+    public Task Ping() 
+    {
+        return Task.CompletedTask;
+    }
 }

@@ -30,7 +30,10 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(options => {
+    options.EnableDetailedErrors = true;
+    options.MaximumReceiveMessageSize = 102400; // 100 KB
+});
 builder.Services.AddScoped<IHubNotificationService, HubNotificationService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<ITokenService, TokenService>();

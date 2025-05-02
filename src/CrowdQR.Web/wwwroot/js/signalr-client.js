@@ -12,23 +12,27 @@ window.CrowdQR.SignalR = (function () {
     let connection = null;
     let eventId = null;
     let isConnected = false;
-    let reconnectInterval = null;
     let eventHandlers = {};
-    let lastRequestId = 0;
 
     // Initialize the connection
-    function initConnection(apiBaseUrl) {
+    function init(apiBaseUrl) {
         if (!apiBaseUrl) {
             console.error("API base URL is required");
             return false;
         }
 
+        console.log("Connecting to SignalR hub at:", apiBaseUrl + "/hubs/crowdqr");
+
         try {
             // Build the SignalR connection
             connection = new signalR.HubConnectionBuilder()
-                .withUrl(`${apiBaseUrl}/hubs/crowdqr`)
+                .withUrl(`${apiBaseUrl}/hubs/crowdqr`, {
+                    skipNegotiation: false,
+                    transport: signalR.HttpTransportType.WebSockets
+                })
                 .withAutomaticReconnect([0, 2000, 5000, 10000, 30000]) // Retry policy
-                .configureLogging(signalR.LogLevel.Information)
+                //.withAutomaticReconnect()
+                .configureLogging(signalR.LogLevel.Debug)
                 .build();
 
             // Set up connection event handlers
@@ -55,7 +59,6 @@ window.CrowdQR.SignalR = (function () {
                 triggerEvent('connectionStatus', { status: 'disconnected' });
 
                 // Set up a manual reconnect if automatic reconnection fails
-                startReconnectTimer();
             });
 
             // Register standard event handlers
@@ -69,7 +72,7 @@ window.CrowdQR.SignalR = (function () {
     }
 
     // Start the connection
-    async function startConnection() {
+    async function start() {
         if (!connection) {
             console.error("Connection not initialized");
             return false;
@@ -87,7 +90,7 @@ window.CrowdQR.SignalR = (function () {
             triggerEvent('connectionStatus', { status: 'connected' });
 
             // Clear any reconnect timer since we're connected
-            clearReconnectTimer();
+            //clearReconnectTimer();
 
             return true;
         } catch (error) {
@@ -96,7 +99,7 @@ window.CrowdQR.SignalR = (function () {
             triggerEvent('connectionStatus', { status: 'error', error });
 
             // Set up reconnect timer
-            startReconnectTimer();
+            // startReconnectTimer();
 
             return false;
         }
@@ -142,6 +145,7 @@ window.CrowdQR.SignalR = (function () {
     }
 
     // Set up a reconnect timer with exponential backoff
+    /*
     function startReconnectTimer() {
         clearReconnectTimer();
 
@@ -192,6 +196,7 @@ window.CrowdQR.SignalR = (function () {
             reconnectInterval = null;
         }
     }
+    */
 
     // Register standard event handlers for CrowdQR events
     function registerStandardEventHandlers() {
@@ -249,6 +254,7 @@ window.CrowdQR.SignalR = (function () {
     }
 
     // Attempt connection with fallback to alternate transport methods
+    /*
     async function attemptConnectionWithFallback(apiBaseUrl) {
         // Try WebSockets first (default)
         try {
@@ -349,9 +355,12 @@ window.CrowdQR.SignalR = (function () {
         // Register standard event handlers
         registerStandardEventHandlers();
     }
+    */
 
     // Check the health of the connection
-    async function checkHealth() {
+    function checkHealth() {
+        return isConnected;
+        /*
         if (!isConnected || !connection) {
             return false;
         }
@@ -365,6 +374,7 @@ window.CrowdQR.SignalR = (function () {
             console.warn('Connection health check failed:', error);
             return false;
         }
+        */
     }
 
     // Reconnect to the server
@@ -374,26 +384,16 @@ window.CrowdQR.SignalR = (function () {
             return true;
         }
 
+        // Try to stop the connection first if it's in a strange state
         try {
-            // Try to stop the connection first if it's in a strange state
-            try {
-                await connection.stop();
-            } catch (stopError) {
-                // Ignore errors when stopping
-            }
-
-            // Start the connection
-            await connection.start();
-            isConnected = true;
-            triggerEvent('connectionStatus', { status: 'connected' });
-            return true;
-        } catch (error) {
-            console.error("Reconnection failed:", error);
-            isConnected = false;
-            triggerEvent('connectionStatus', { status: 'error', error });
-            return false;
+            await connection.stop();
+        } catch (stopError) {
+            // Ignore errors when stopping
         }
+
+        return await startConnection();
     }
+
 
     // Measure connection latency
     async function measureLatency() {
@@ -419,17 +419,16 @@ window.CrowdQR.SignalR = (function () {
 
     // Public API
     return {
-        init: initConnection,
-        start: startConnection,
-        joinEvent: joinEvent,
-        leaveEvent: leaveEvent,
-        on: on,
-        getConnection: () => connection,
+        init,
+        start,
+        joinEvent,
+        leaveEvent,
+        on,
         isConnected: () => isConnected,
         getCurrentEventId: () => eventId,
-        reconnect: reconnect,
-        checkHealth: checkHealth,
-        measureLatency: measureLatency,
-        attemptConnectionWithFallback: attemptConnectionWithFallback
+        checkHealth,
+        reconnect,
+        measureLatency
+        //attemptConnectionWithFallback
     };
 })();
