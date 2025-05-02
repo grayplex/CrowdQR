@@ -59,7 +59,6 @@ window.CrowdQR.SignalR = (function () {
                 triggerEvent('connectionStatus', { status: 'disconnected' });
 
                 // Set up a manual reconnect if automatic reconnection fails
-                // startReconnectTimer();
             });
 
             // Register standard event handlers
