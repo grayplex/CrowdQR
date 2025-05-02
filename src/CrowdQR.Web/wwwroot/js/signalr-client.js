@@ -21,13 +21,18 @@ window.CrowdQR.SignalR = (function () {
             return false;
         }
 
+        console.log("Connecting to SignalR hub at:", apiBaseUrl + "/hubs/crowdqr");
+
         try {
             // Build the SignalR connection
             connection = new signalR.HubConnectionBuilder()
-                .withUrl(`${apiBaseUrl}/hubs/crowdqr`)
+                .withUrl(`${apiBaseUrl}/hubs/crowdqr`, {
+                    skipNegotiation: false,
+                    transport: signalR.HttpTransportType.WebSockets
+                })
                 .withAutomaticReconnect([0, 2000, 5000, 10000, 30000]) // Retry policy
                 //.withAutomaticReconnect()
-                .configureLogging(signalR.LogLevel.Information)
+                .configureLogging(signalR.LogLevel.Debug)
                 .build();
 
             // Set up connection event handlers

@@ -134,7 +134,7 @@
     <script>
         window.CrowdQR = window.CrowdQR || {};
         window.CrowdQR.Config = {
-            apiBaseUrl: '@(Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5071")',
+            apiBaseUrl: '@(Configuration["ApiSettings:PublicUrl"] ?? "http://localhost:5000")',
             environmentName: '@HostEnvironment.EnvironmentName'
         };
     </script>
