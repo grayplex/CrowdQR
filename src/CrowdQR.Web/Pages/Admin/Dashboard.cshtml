@@ -492,6 +492,13 @@
                         incrementActiveUsers();
                     }
                 });
+
+                CrowdQR.SignalR.on('userLeftEvent', data => {
+                    if (data.eventId == eventId) {
+                        console.log('User left event:', data);
+                        decrementActiveUsers();
+                    }
+                });
             }
 
             // Fetch request details
@@ -677,6 +684,16 @@
                 const activeUsersElement = $('.card:contains("Active Users") .display-6');
                 const currentCount = parseInt(activeUsersElement.text()) || 0;
                 activeUsersElement.text(currentCount + 1);
+
+                // Highlight the change
+                activeUsersElement.addClass('highlight-change');
+                setTimeout(() => activeUsersElement.removeClass('highlight-change'), 1500);
+            }
+
+            function decrementActiveUsers() {
+                const activeUsersElement = $('.card:contains("Active Users") .display-6');
+                const currentCount = parseInt(activeUsersElement.text()) || 0;
+                activeUsersElement.text(currentCount - 1);
 
                 // Highlight the change
                 activeUsersElement.addClass('highlight-change');

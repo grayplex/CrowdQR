@@ -64,6 +64,7 @@ public class CrowdQRHub(ILogger<CrowdQRHub> logger) : Hub
     public async Task LeaveEvent(int eventId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"event-{eventId}");
+        await Clients.Group($"event-{eventId}").SendAsync("userLeftEvent", new { eventId });
         _logger.LogInformation("Client {ConnectionId} left event {EventId}", Context.ConnectionId, eventId);
     }
 
