@@ -693,7 +693,7 @@
             function decrementActiveUsers() {
                 const activeUsersElement = $('.card:contains("Active Users") .display-6');
                 const currentCount = parseInt(activeUsersElement.text()) || 0;
-                activeUsersElement.text(currentCount - 1);
+                activeUsersElement.text(Math.max(0, currentCount - 1));
 
                 // Highlight the change
                 activeUsersElement.addClass('highlight-change');
