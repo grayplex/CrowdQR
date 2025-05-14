@@ -41,6 +41,15 @@ public class CrowdQRHub(ILogger<CrowdQRHub> logger) : Hub
             Context.ConnectionId,
             exception?.Message ?? "None");
 
+        // Broadcast userLeftEvent if the user was part of an event group
+        var httpContext = Context.GetHttpContext();
+        var eventId = httpContext?.Request.Query["eventId"].ToString();
+        if (int.TryParse(eventId, out var parsedEventId))
+        {
+            var username = Context.User?.Identity?.Name ?? "Anonymous";
+            await Clients.Group($"event-{parsedEventId}").SendAsync("userLeftEvent", new { eventId = parsedEventId, username });
+        }
+
         await base.OnDisconnectedAsync(exception);
     }
 
