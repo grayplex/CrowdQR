@@ -180,9 +180,6 @@ public class DashboardModel(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading dashboard for event {EventId}", EventId);
-
-            // For demo purposes, load demo data on error
-            // LoadDemoData();
             return Page();
         }
     }
