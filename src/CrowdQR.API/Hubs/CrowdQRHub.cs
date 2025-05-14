@@ -52,6 +52,7 @@ public class CrowdQRHub(ILogger<CrowdQRHub> logger) : Hub
     public async Task JoinEvent(int eventId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, $"event-{eventId}");
+        await Clients.Group($"event-{eventId}").SendAsync("userJoinedEvent", new { eventId });
         _logger.LogInformation("Client {ConnectionId} joined event {EventId}", Context.ConnectionId, eventId);
     }
 
