@@ -231,7 +231,7 @@ window.CrowdQR.SignalR = (function () {
         connection.on('userLeftEvent', data => {
             console.log('User left event:', data);
             triggerEvent('userLeftEvent', data);
-        })
+        });
     }
 
     // Register event handlers
