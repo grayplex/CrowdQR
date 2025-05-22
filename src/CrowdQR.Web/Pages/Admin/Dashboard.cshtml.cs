@@ -191,10 +191,12 @@ public class DashboardModel(
     /// <returns>Redirect to the dashboard page.</returns>
     public async Task<IActionResult> OnPostApproveAsync(int requestId)
     {
-        if (!_sessionManager.IsDj())
+
+        if (!User.Identity?.IsAuthenticated == true || !User.IsInRole("DJ"))
         {
-            ErrorMessage = "You do not have permission to approve requests.";
-            return RedirectToPage();
+            _logger.LogWarning("Unauthorized approve attempt by user {UserId} for request {RequestId}",
+                User.FindFirstValue(ClaimTypes.NameIdentifier), requestId);
+            return Challenge();
         }
 
         try
@@ -230,10 +232,11 @@ public class DashboardModel(
     /// <returns>Redirect to the dashboard page.</returns>
     public async Task<IActionResult> OnPostRejectAsync(int requestId)
     {
-        if (!_sessionManager.IsDj())
+        if (!User.Identity?.IsAuthenticated == true || !User.IsInRole("DJ"))
         {
-            ErrorMessage = "You do not have permission to reject requests.";
-            return RedirectToPage();
+            _logger.LogWarning("Unauthorized reject attempt by user {UserId} for request {RequestId}",
+                User.FindFirstValue(ClaimTypes.NameIdentifier), requestId);
+            return Challenge();
         }
 
         try
@@ -269,10 +272,11 @@ public class DashboardModel(
     /// <returns>Redirect to the dashboard page.</returns>
     public async Task<IActionResult> OnPostMoveToPendingAsync(int requestId)
     {
-        if (!_sessionManager.IsDj())
+        if (!User.Identity?.IsAuthenticated == true || !User.IsInRole("DJ"))
         {
-            ErrorMessage = "You do not have permission to modify requests.";
-            return RedirectToPage();
+            _logger.LogWarning("Unauthorized move to pending attempt by user {UserId} for request {RequestId}",
+                User.FindFirstValue(ClaimTypes.NameIdentifier), requestId);
+            return Challenge(); // This will redirect to login page instead of access denied
         }
 
         try
