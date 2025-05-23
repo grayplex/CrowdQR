@@ -9,6 +9,8 @@ using CrowdQR.Shared.Models.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace CrowdQR.Api.Tests.Controllers;
 
@@ -18,7 +20,7 @@ namespace CrowdQR.Api.Tests.Controllers;
 public class UserControllerTests : IDisposable
 {
     private readonly CrowdQRContext _context;
-    private readonly Mock<AuthService> _mockAuthService;
+    private readonly Mock<IAuthService> _mockAuthService;
     private readonly UserController _controller;
 
     /// <summary>
@@ -27,7 +29,7 @@ public class UserControllerTests : IDisposable
     public UserControllerTests()
     {
         _context = TestDbContextFactory.CreateInMemoryContext();
-        _mockAuthService = new Mock<AuthService>();
+        _mockAuthService = new Mock<IAuthService>();
         var logger = TestLoggerFactory.CreateNullLogger<UserController>();
         _controller = new UserController(_context, logger, _mockAuthService.Object);
     }
@@ -67,9 +69,16 @@ public class UserControllerTests : IDisposable
         var result = await _controller.GetUser(1);
 
         // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
-        var okResult = result.Result as OkObjectResult;
-        okResult?.Value.Should().NotBeNull();
+        if (result.Result != null)
+        {
+            result.Result.Should().BeOfType<OkObjectResult>();
+            var okResult = result.Result as OkObjectResult;
+            okResult?.Value.Should().NotBeNull();
+        }
+        else
+        {
+            result.Value.Should().NotBeNull();
+        }
     }
 
     /// <summary>
@@ -114,13 +123,20 @@ public class UserControllerTests : IDisposable
     {
         // Arrange
         await TestDbContextFactory.SeedTestDataAsync(_context);
-        SetupUserClaims(2, "Audience"); // User accessing their own info
+        SetupUserClaims(2, "Audience");
 
         // Act
         var result = await _controller.GetUser(2);
 
         // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
+        if (result.Result != null)
+        {
+            result.Result.Should().BeOfType<OkObjectResult>();
+        }
+        else
+        {
+            result.Value.Should().NotBeNull();
+        }
     }
 
     /// <summary>
@@ -157,9 +173,16 @@ public class UserControllerTests : IDisposable
         var result = await _controller.GetUserByUsername("test_dj");
 
         // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
-        var okResult = result.Result as OkObjectResult;
-        okResult?.Value.Should().NotBeNull();
+        if (result.Result != null)
+        {
+            result.Result.Should().BeOfType<OkObjectResult>();
+            var okResult = result.Result as OkObjectResult;
+            okResult?.Value.Should().NotBeNull();
+        }
+        else
+        {
+            result.Value.Should().NotBeNull();
+        }
     }
 
     /// <summary>

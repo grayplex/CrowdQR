@@ -16,9 +16,9 @@ namespace CrowdQR.Api.Controllers;
 /// <param name="logger">The logger.</param>
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(AuthService authService, ILogger<AuthController> logger) : ControllerBase
+public class AuthController(IAuthService authService, ILogger<AuthController> logger) : ControllerBase
 {
-    private readonly AuthService _authService = authService;
+    private readonly IAuthService _authService = authService;
     private readonly ILogger<AuthController> _logger = logger;
 
     /// <summary>

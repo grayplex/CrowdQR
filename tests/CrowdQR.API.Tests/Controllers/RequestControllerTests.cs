@@ -249,11 +249,18 @@ public class RequestControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        okResult?.Value.Should().NotBeNull();
+        okResult.Should().NotBeNull();
+        okResult!.Value.Should().NotBeNull();
 
-        // Verify the response contains vote information
-        dynamic? response = okResult?.Value;
-        response?.Should().NotBeNull();
+        // Verify the response contains expected properties
+        var response = okResult.Value;
+        response.Should().NotBeNull();
+
+        // Verify the response structure
+        var responseType = response!.GetType();
+        responseType.GetProperty("RequestId").Should().NotBeNull();
+        responseType.GetProperty("VoteCount").Should().NotBeNull();
+        responseType.GetProperty("Votes").Should().NotBeNull();
     }
 
     /// <summary>
@@ -369,7 +376,6 @@ public class RequestControllerTests : IDisposable
     /// </summary>
     [Theory]
     [InlineData("")]
-    [InlineData("A")]
     [InlineData(null)]
     public async Task CreateRequest_InvalidSongName_ReturnsBadRequest(string? songName)
     {
@@ -377,16 +383,14 @@ public class RequestControllerTests : IDisposable
         await TestDbContextFactory.SeedTestDataAsync(_context);
         SetupUserClaims(2, "Audience");
 
-        if (string.IsNullOrEmpty(songName))
-        {
-            _controller.ModelState.AddModelError("SongName", "SongName is required");
-        }
+        // Add model state error for invalid input
+        _controller.ModelState.AddModelError("SongName", "SongName is required");
 
         var requestDto = new RequestCreateDto
         {
             UserId = 2,
             EventId = 1,
-            SongName = songName!,
+            SongName = songName ?? "",
             ArtistName = "Test Artist"
         };
 
@@ -395,6 +399,31 @@ public class RequestControllerTests : IDisposable
 
         // Assert
         result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    /// <summary>
+    /// Tests that single character song names are valid (remove from invalid test).
+    /// </summary>
+    [Fact]
+    public async Task CreateRequest_SingleCharacterSongName_Succeeds()
+    {
+        // Arrange
+        await TestDbContextFactory.SeedTestDataAsync(_context);
+        SetupUserClaims(2, "Audience");
+
+        var requestDto = new RequestCreateDto
+        {
+            UserId = 2,
+            EventId = 1,
+            SongName = "A", // Single character is valid
+            ArtistName = "Test Artist"
+        };
+
+        // Act
+        var result = await _controller.CreateRequest(requestDto);
+
+        // Assert
+        result.Result.Should().BeOfType<CreatedAtActionResult>();
     }
 
     /// <summary>

@@ -12,7 +12,7 @@ public class HubNotificationServiceTests
 {
     private readonly Mock<IHubContext<CrowdQRHub>> _mockHubContext;
     private readonly Mock<IClientProxy> _mockClientProxy;
-    private readonly Mock<IGroupManager> _mockGroupManager;
+    private readonly Mock<IHubCallerClients> _mockClients;
     private readonly HubNotificationService _service;
 
     /// <summary>
@@ -22,13 +22,17 @@ public class HubNotificationServiceTests
     {
         _mockHubContext = new Mock<IHubContext<CrowdQRHub>>();
         _mockClientProxy = new Mock<IClientProxy>();
-        _mockGroupManager = new Mock<IGroupManager>();
+        _mockClients = new Mock<IHubCallerClients>();
 
         var logger = TestLoggerFactory.CreateNullLogger<HubNotificationService>();
 
-        // Setup the hub context mock
-        _mockHubContext.Setup(x => x.Clients.Group(It.IsAny<string>()))
-            .Returns(_mockClientProxy.Object);
+        // Setup the hub context mock properly
+        _mockHubContext.Setup(x => x.Clients).Returns((IHubClients)_mockClients.Object);
+        _mockClients.Setup(x => x.Group(It.IsAny<string>())).Returns(_mockClientProxy.Object);
+
+        // Setup SendAsync to return completed task
+        _mockClientProxy.Setup(x => x.SendAsync(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         _service = new HubNotificationService(_mockHubContext.Object, logger);
     }
@@ -48,7 +52,7 @@ public class HubNotificationServiceTests
         await _service.NotifyRequestAdded(eventId, requestId, requesterName);
 
         // Assert
-        _mockHubContext.Verify(x => x.Clients.Group($"event-{eventId}"), Times.Once);
+        _mockClients.Verify(x => x.Group($"event-{eventId}"), Times.Once);
         _mockClientProxy.Verify(
             x => x.SendAsync("requestAdded", It.IsAny<object>(), default),
             Times.Once);
@@ -69,7 +73,7 @@ public class HubNotificationServiceTests
         await _service.NotifyRequestStatusUpdated(eventId, requestId, newStatus);
 
         // Assert
-        _mockHubContext.Verify(x => x.Clients.Group($"event-{eventId}"), Times.Once);
+        _mockClients.Verify(x => x.Group($"event-{eventId}"), Times.Once);
         _mockClientProxy.Verify(
             x => x.SendAsync("requestStatusUpdated", It.IsAny<object>(), default),
             Times.Once);
@@ -91,7 +95,7 @@ public class HubNotificationServiceTests
         await _service.NotifyVoteAdded(eventId, requestId, voteCount, userId);
 
         // Assert
-        _mockHubContext.Verify(x => x.Clients.Group($"event-{eventId}"), Times.Once);
+        _mockClients.Verify(x => x.Group($"event-{eventId}"), Times.Once);
         _mockClientProxy.Verify(
             x => x.SendAsync("voteAdded", It.IsAny<object>(), default),
             Times.Once);
@@ -112,7 +116,7 @@ public class HubNotificationServiceTests
         await _service.NotifyVoteRemoved(eventId, requestId, voteCount);
 
         // Assert
-        _mockHubContext.Verify(x => x.Clients.Group($"event-{eventId}"), Times.Once);
+        _mockClients.Verify(x => x.Group($"event-{eventId}"), Times.Once);
         _mockClientProxy.Verify(
             x => x.SendAsync("voteRemoved", It.IsAny<object>(), default),
             Times.Once);
@@ -132,7 +136,7 @@ public class HubNotificationServiceTests
         await _service.NotifyUserJoinedEvent(eventId, username);
 
         // Assert
-        _mockHubContext.Verify(x => x.Clients.Group($"event-{eventId}"), Times.Once);
+        _mockClients.Verify(x => x.Group($"event-{eventId}"), Times.Once);
         _mockClientProxy.Verify(
             x => x.SendAsync("userJoinedEvent", It.IsAny<object>(), default),
             Times.Once);
@@ -156,7 +160,7 @@ public class HubNotificationServiceTests
 
         // Assert
         var expectedGroup = $"event-{eventId}";
-        _mockHubContext.Verify(x => x.Clients.Group(expectedGroup), Times.Exactly(5));
+        _mockClients.Verify(x => x.Group(expectedGroup), Times.Exactly(5));
     }
 
     /// <summary>
@@ -172,7 +176,7 @@ public class HubNotificationServiceTests
         await _service.NotifyRequestAdded(1, 123, requesterName!);
 
         // Should still attempt to send the message
-        _mockHubContext.Verify(x => x.Clients.Group("event-1"), Times.Once);
+        _mockClients.Verify(x => x.Group("event-1"), Times.Once);
         _mockClientProxy.Verify(
             x => x.SendAsync("requestAdded", It.IsAny<object>(), default),
             Times.Once);
@@ -196,7 +200,7 @@ public class HubNotificationServiceTests
 
         // Should still attempt to send messages to the group (even if invalid)
         var expectedGroup = $"event-{eventId}";
-        _mockHubContext.Verify(x => x.Clients.Group(expectedGroup), Times.Exactly(5));
+        _mockClients.Verify(x => x.Group(expectedGroup), Times.Exactly(5));
     }
 
     /// <summary>
@@ -212,7 +216,7 @@ public class HubNotificationServiceTests
         await _service.NotifyVoteAdded(1, 123, voteCount, 456);
 
         // Should still send the message
-        _mockHubContext.Verify(x => x.Clients.Group("event-1"), Times.Once);
+        _mockClients.Verify(x => x.Group("event-1"), Times.Once);
         _mockClientProxy.Verify(
             x => x.SendAsync("voteAdded", It.IsAny<object>(), default),
             Times.Once);
@@ -235,7 +239,7 @@ public class HubNotificationServiceTests
         await _service.NotifyRequestStatusUpdated(1, 123, status);
 
         // Assert
-        _mockHubContext.Verify(x => x.Clients.Group("event-1"), Times.Once);
+        _mockClients.Verify(x => x.Group("event-1"), Times.Once);
         _mockClientProxy.Verify(
             x => x.SendAsync("requestStatusUpdated", It.IsAny<object>(), default),
             Times.Once);
@@ -261,7 +265,7 @@ public class HubNotificationServiceTests
         await _service.NotifyUserJoinedEvent(maxEventId, "user");
 
         // Verify all calls were made
-        _mockHubContext.Verify(x => x.Clients.Group($"event-{maxEventId}"), Times.Exactly(5));
+        _mockClients.Verify(x => x.Group($"event-{maxEventId}"), Times.Exactly(5));
     }
 
     /// <summary>
@@ -288,7 +292,7 @@ public class HubNotificationServiceTests
         await Task.WhenAll(tasks);
 
         // Assert - All calls should have been made
-        _mockHubContext.Verify(x => x.Clients.Group(It.IsAny<string>()), Times.Exactly(20));
+        _mockClients.Verify(x => x.Group(It.IsAny<string>()), Times.Exactly(20));
         _mockClientProxy.Verify(x => x.SendAsync(It.IsAny<string>(), It.IsAny<object>(), default), Times.Exactly(20));
     }
 
@@ -386,7 +390,7 @@ public class HubNotificationServiceTests
     public async Task NotificationMethods_HubContextThrowsException_HandlesGracefully()
     {
         // Arrange
-        _mockHubContext.Setup(x => x.Clients.Group(It.IsAny<string>()))
+        _mockClients.Setup(x => x.Group(It.IsAny<string>()))
             .Throws(new InvalidOperationException("Hub context error"));
 
         // Act & Assert - Should not throw exception, should be handled internally

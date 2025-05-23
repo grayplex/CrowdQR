@@ -3,7 +3,9 @@
 	  <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
 	  <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.15" />
 	  <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.15" />
-	  <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.4" />
+	  <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.5" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.5" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.5" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\CrowdQR.Shared\CrowdQR.Shared.csproj" />

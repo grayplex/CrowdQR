@@ -45,7 +45,18 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
 
         var json = JsonSerializer.Serialize(response, _jsonOptions);
 
-        await context.Response.WriteAsync(json);
+        try
+        {
+            await context.Response.WriteAsync(json);
+        }
+        catch
+        {
+            // If we can't write the response (e.g., client disconnected),
+            // we can't do much about it - just ignore the write failure
+            // The original exception has already been logged
+        }
+
+
     }
 }
 

@@ -28,7 +28,7 @@ public class AuthService(
     ILogger<AuthService> logger,
     IPasswordService passwordService,
     ITokenService tokenService,
-    IEmailService emailService)
+    IEmailService emailService) : IAuthService
 {
     private readonly CrowdQRContext _context = context;
     private readonly IConfiguration _configuration = configuration;
@@ -243,7 +243,7 @@ public class AuthService(
         {
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email == verifyEmailDto.Email &&
-                                         u.EmailVerificationToken == verifyEmailDto.Token);
+                                          u.EmailVerificationToken == verifyEmailDto.Token);
 
             if (user == null)
             {

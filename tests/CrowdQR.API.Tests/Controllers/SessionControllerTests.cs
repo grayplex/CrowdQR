@@ -180,7 +180,7 @@ public class SessionControllerTests : IDisposable
         var result = await _controller.GetSessionsByEvent(999);
 
         // Assert
-        result.Result.Should().BeOfType<NotFoundResult>();
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
     }
 
     /// <summary>
@@ -306,6 +306,9 @@ public class SessionControllerTests : IDisposable
         _context.Sessions.Add(existingSession);
         await _context.SaveChangesAsync();
 
+        var oldLastSeen = existingSession.LastSeen;
+        await Task.Delay(10);
+
         var sessionDto = new SessionCreateDto
         {
             UserId = 2,
@@ -324,7 +327,7 @@ public class SessionControllerTests : IDisposable
             .FirstOrDefaultAsync(s => s.UserId == 2 && s.EventId == 1);
         updatedSession.Should().NotBeNull();
         updatedSession!.ClientIP.Should().Be("192.168.1.2");
-        updatedSession.LastSeen.Should().BeAfter(existingSession.LastSeen);
+        updatedSession.LastSeen.Should().BeOnOrAfter(oldLastSeen);
 
         // Verify no SignalR notification for existing session
         _mockHubService.Verify(

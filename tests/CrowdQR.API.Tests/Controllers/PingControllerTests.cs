@@ -32,15 +32,14 @@ public class PingControllerTests
         var okResult = result as OkObjectResult;
         okResult?.Value.Should().NotBeNull();
 
-        // Verify the response structure
-        dynamic? response = okResult?.Value;
-        response?.Should().NotBeNull();
+        // Verify the response structure using reflection
+        var response = okResult!.Value;
+        var responseType = response!.GetType();
 
         // Check that response has expected properties
-        var responseType = response?.GetType();
-        responseType?.GetProperty("status").Should().NotBeNull();
-        responseType?.GetProperty("timestamp").Should().NotBeNull();
-        responseType?.GetProperty("environment").Should().NotBeNull();
+        responseType.GetProperty("status").Should().NotBeNull();
+        responseType.GetProperty("timestamp").Should().NotBeNull();
+        responseType.GetProperty("environment").Should().NotBeNull();
     }
 
     /// <summary>
@@ -54,7 +53,7 @@ public class PingControllerTests
 
         // Assert
         var okResult = result as OkObjectResult;
-        dynamic? response = okResult?.Value;
+        var response = okResult?.Value;
 
         // Use reflection to get the status value
         var statusProperty = response?.GetType().GetProperty("status");
@@ -77,7 +76,7 @@ public class PingControllerTests
         // Assert
         var afterCall = DateTime.UtcNow;
         var okResult = result as OkObjectResult;
-        dynamic? response = okResult?.Value;
+        var response = okResult?.Value;
 
         // Use reflection to get the timestamp value
         var timestampProperty = response?.GetType().GetProperty("timestamp");
@@ -105,17 +104,18 @@ public class PingControllerTests
 
         // Assert
         var okResult = result as OkObjectResult;
-        dynamic? response = okResult?.Value;
+        var response = okResult?.Value;
 
         // Use reflection to get the environment value
         var environmentProperty = response?.GetType().GetProperty("environment");
         var environmentValue = environmentProperty?.GetValue(response);
 
-        environmentValue?.Should().NotBeNull();
-        environmentValue?.ToString().Should().NotBeNullOrEmpty();
+        environmentValue.Should().NotBeNull();
+        var environmentString = environmentValue?.ToString();
+        environmentString.Should().NotBeNullOrEmpty();
 
         // In test environment, it should be "Production" (default) since no env var is set
-        environmentValue?.ToString().Should().Be("Production");
+        environmentString.Should().Be("Production");
     }
 
     /// <summary>
@@ -135,20 +135,25 @@ public class PingControllerTests
         var okResult1 = result1 as OkObjectResult;
         var okResult2 = result2 as OkObjectResult;
 
-        dynamic? response1 = okResult1?.Value;
-        dynamic? response2 = okResult2?.Value;
+        var response1 = okResult1?.Value;
+        var response2 = okResult2?.Value;
 
         // Both responses should have the same structure
-        response1?.GetType().Should().Be(response2?.GetType());
+        response1.Should().NotBeNull();
+        response2.Should().NotBeNull();
+
+        var type1 = response1!.GetType();
+        var type2 = response2!.GetType();
+        type1.Should().Be(type2);
 
         // Status should be the same
-        var status1 = response1?.GetType().GetProperty("status")?.GetValue(response1);
-        var status2 = response2?.GetType().GetProperty("status")?.GetValue(response2);
-        status1?.Should().Be(status2);
+        var status1 = type1.GetProperty("status")?.GetValue(response1);
+        var status2 = type2.GetProperty("status")?.GetValue(response2);
+        status1.Should().Be(status2);
 
         // Environment should be the same
-        var env1 = response1?.GetType().GetProperty("environment")?.GetValue(response1);
-        var env2 = response2?.GetType().GetProperty("environment")?.GetValue(response2);
-        env1?.Should().Be(env2);
+        var env1 = type1.GetProperty("environment")?.GetValue(response1);
+        var env2 = type2.GetProperty("environment")?.GetValue(response2);
+        env1.Should().Be(env2);
     }
 }

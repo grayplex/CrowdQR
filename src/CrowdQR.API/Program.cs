@@ -89,7 +89,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // Register auth service
-builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -192,4 +192,12 @@ static string BuildConnectionString(IConfiguration configuration)
     var password = configuration["DB_PASSWORD"] ?? "postgres";
 
     return $"Host={host};Port={port};Database={database};Username={username};Password={password}";
+}
+
+namespace CrowdQR.Api
+{
+    /// <summary>
+    /// Program class for integration tests.
+    /// </summary>
+    public partial class Program { }
 }

@@ -155,10 +155,12 @@ $testArgs = @(
     '--logger', 'console;verbosity=normal'
 )
 
-# Add parallel execution
+
+<# Add parallel execution
 if ($Parallel) {
     $testArgs += '--parallel'
 }
+#>
 
 # Add test filter if specified
 if ($Filter) {
@@ -175,7 +177,7 @@ if ($Coverage) {
 Write-Header "Running Tests"
 try {
     Write-Info "Executing: dotnet $($testArgs -join ' ')"
-    $testResult = & dotnet @testArgs
+    & dotnet @testArgs
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "All tests passed!"

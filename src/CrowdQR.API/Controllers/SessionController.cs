@@ -91,7 +91,7 @@ public class SessionController(
             session.RequestCount
         };
 
-        return formattedSession;
+        return Ok(formattedSession);
     }
 
     // GET: api/session/event/5
@@ -214,7 +214,7 @@ public class SessionController(
             session.RequestCount
         };
 
-        return formattedSession;
+        return Ok(formattedSession);
     }
 
     // POST: api/session

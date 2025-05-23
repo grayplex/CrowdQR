@@ -21,11 +21,11 @@ namespace CrowdQR.Api.Controllers;
 public class UserController(
     CrowdQRContext context, 
     ILogger<UserController> logger,
-    AuthService authService) : ControllerBase
+    IAuthService authService) : ControllerBase
 {
     private readonly CrowdQRContext _context = context;
     private readonly ILogger<UserController> _logger = logger;
-    private readonly AuthService _authService = authService;
+    private readonly IAuthService _authService = authService;
 
     // GET: api/user
     /// <summary>
@@ -81,7 +81,7 @@ public class UserController(
             user.CreatedAt
         };
 
-        return formattedUser;
+        return Ok(formattedUser);
     }
 
     // GET: api/user/role/{role}
@@ -136,7 +136,7 @@ public class UserController(
             user.CreatedAt
         };
 
-        return formattedUser;
+        return Ok(formattedUser);
     }
 
     // POST: api/user

@@ -445,7 +445,7 @@ public class ExceptionHandlingMiddlewareTests
 
         // Act & Assert - Should not throw, even if response writing fails
         var exception = await Record.ExceptionAsync(() => middleware.InvokeAsync(context));
-        exception.Should().BeOfType<IOException>(); // The write exception will bubble up
+        exception.Should().BeNull("middleware should handle write failures gracefully");
 
         // Original exception should still be logged
         _mockLogger.Verify(

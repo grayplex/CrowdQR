@@ -1,23 +1,30 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using CrowdQR.Api.Data;
 using CrowdQR.Api.Tests.Helpers;
 using CrowdQR.Shared.Models.DTOs;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestPlatform.TestHost;
+using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Internal;
 
 namespace CrowdQR.Api.Tests.Integration;
 
 /// <summary>
 /// Integration tests for authentication-related API endpoints.
 /// </summary>
-public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.Api.Program>>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly WebApplicationFactory<CrowdQR.Api.Program> _factory;
     private readonly HttpClient _client;
 
     private readonly JsonSerializerOptions jsonSerializerOptions = new()
@@ -30,19 +37,33 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     /// Initializes a new instance of the <see cref="AuthIntegrationTests"/> class.
     /// </summary>
     /// <param name="factory">The web application factory.</param>
-    public AuthIntegrationTests(WebApplicationFactory<Program> factory)
+    public AuthIntegrationTests(WebApplicationFactory<CrowdQR.Api.Program> factory)
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
             builder.ConfigureServices(services =>
             {
-                // Remove the existing DbContext registration
-                var descriptor = services.SingleOrDefault(
+                // Remove ALL existing DbContext registrations
+                var dbContextDescriptor = services.SingleOrDefault(
                     d => d.ServiceType == typeof(DbContextOptions<CrowdQRContext>));
-                if (descriptor != null)
+                if (dbContextDescriptor != null)
                 {
-                    services.Remove(descriptor);
+                    services.Remove(dbContextDescriptor);
+                }
+
+                var dbContextServiceDescriptor = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(CrowdQRContext));
+                if (dbContextServiceDescriptor != null)
+                {
+                    services.Remove(dbContextServiceDescriptor);
+                }
+
+                // Remove any other EF Core service registrations that might conflict
+                var efCoreServices = services.Where(s => s.ServiceType.Namespace?.StartsWith("Microsoft.EntityFrameworkCore") == true).ToList();
+                foreach (var service in efCoreServices)
+                {
+                    services.Remove(service);
                 }
 
                 // Add in-memory database for testing

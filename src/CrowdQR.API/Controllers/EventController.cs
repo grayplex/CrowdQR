@@ -94,7 +94,7 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
             }).ToList()
         };
 
-        return formattedEvent;
+        return Ok(formattedEvent);
     }
 
     // GET: api/event/slug/{slug}
@@ -141,7 +141,7 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
             }).ToList()
         };
 
-        return formattedEvent;
+        return Ok(formattedEvent);
     }
 
     // GET: api/event/dj/5

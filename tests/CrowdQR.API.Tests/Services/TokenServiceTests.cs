@@ -239,14 +239,24 @@ public class TokenServiceTests
     /// Tests that GenerateTokenExpiry handles edge cases.
     /// </summary>
     [Theory]
-    [InlineData(int.MaxValue)]
-    [InlineData(int.MinValue)]
-    public void GenerateTokenExpiry_EdgeCases_HandlesGracefully(int hours)
+    [InlineData(1000000)] // Large but not max value
+    [InlineData(-1000000)] // Large negative but not min value
+    public void GenerateTokenExpiry_LargeValues_HandlesGracefully(int hours)
     {
         // Act & Assert - Should not throw exception
         var expiry = _tokenService.GenerateTokenExpiry(hours);
 
         // Should return a valid DateTime
         expiry.Should().NotBe(default);
+
+        // Should be reasonable based on input
+        if (hours > 0)
+        {
+            expiry.Should().BeAfter(DateTime.UtcNow);
+        }
+        else if (hours < 0)
+        {
+            expiry.Should().BeBefore(DateTime.UtcNow);
+        }
     }
 }

@@ -44,15 +44,35 @@ public class DashboardControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        okResult?.Value.Should().NotBeNull();
+        okResult.Should().NotBeNull();
+        okResult!.Value.Should().NotBeNull();
 
-        dynamic? summary = okResult?.Value;
-        summary?.Should().NotBeNull();
-        summary?.EventId.Should().Be(1);
-        summary?.TotalRequests.Should().Be(3);
-        summary?.PendingRequests.Should().Be(2);
-        summary?.ApprovedRequests.Should().Be(1);
-        summary?.RejectedRequests.Should().Be(0);
+        // Verify response structure using JSON serialization
+        var jsonResponse = System.Text.Json.JsonSerializer.Serialize(okResult.Value);
+        jsonResponse.Should().Contain("EventId");
+        jsonResponse.Should().Contain("TotalRequests");
+        jsonResponse.Should().Contain("PendingRequests");
+        jsonResponse.Should().Contain("ApprovedRequests");
+        jsonResponse.Should().Contain("RejectedRequests");
+
+        // Verify specific values using reflection
+        var response = okResult.Value;
+        var responseType = response!.GetType();
+
+        var eventIdProp = responseType.GetProperty("EventId");
+        eventIdProp?.GetValue(response).Should().Be(1);
+
+        var totalRequestsProp = responseType.GetProperty("TotalRequests");
+        totalRequestsProp?.GetValue(response).Should().Be(3);
+
+        var pendingRequestsProp = responseType.GetProperty("PendingRequests");
+        pendingRequestsProp?.GetValue(response).Should().Be(2);
+
+        var approvedRequestsProp = responseType.GetProperty("ApprovedRequests");
+        approvedRequestsProp?.GetValue(response).Should().Be(1);
+
+        var rejectedRequestsProp = responseType.GetProperty("RejectedRequests");
+        rejectedRequestsProp?.GetValue(response).Should().Be(0);
     }
 
     /// <summary>
@@ -246,8 +266,14 @@ public class DashboardControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        dynamic? summary = okResult?.Value;
-        summary?.ActiveUsers.Should().Be(2);
+        okResult.Should().NotBeNull();
+        okResult!.Value.Should().NotBeNull();
+
+        // Use reflection to check active users count
+        var response = okResult.Value;
+        var responseType = response!.GetType();
+        var activeUsersProp = responseType.GetProperty("ActiveUsers");
+        activeUsersProp?.GetValue(response).Should().Be(2);
     }
 
     /// <summary>
@@ -289,8 +315,14 @@ public class DashboardControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        dynamic? summary = okResult?.Value;
-        summary?.ActiveUsers.Should().Be(1); // Only one active user
+        okResult.Should().NotBeNull();
+        okResult!.Value.Should().NotBeNull();
+
+        // Use reflection to check active users count
+        var response = okResult.Value;
+        var responseType = response!.GetType();
+        var activeUsersProp = responseType.GetProperty("ActiveUsers");
+        activeUsersProp?.GetValue(response).Should().Be(1); // Only one active user
     }
 
     /// <summary>
@@ -306,10 +338,10 @@ public class DashboardControllerTests : IDisposable
         // Add votes to create different vote counts
         var votes = new[]
         {
-            new Vote { UserId = 2, RequestId = 1, CreatedAt = DateTime.UtcNow }, // Request 1: 1 vote
-            new Vote { UserId = 3, RequestId = 2, CreatedAt = DateTime.UtcNow }, // Request 2: 2 votes  
-            new Vote { UserId = 2, RequestId = 2, CreatedAt = DateTime.UtcNow }  // Request 2: 2nd vote
-        };
+        new Vote { UserId = 2, RequestId = 1, CreatedAt = DateTime.UtcNow }, // Request 1: 1 vote
+        new Vote { UserId = 3, RequestId = 2, CreatedAt = DateTime.UtcNow }, // Request 2: 2 votes  
+        new Vote { UserId = 2, RequestId = 2, CreatedAt = DateTime.UtcNow }  // Request 2: 2nd vote
+    };
         _context.Votes.AddRange(votes);
         await _context.SaveChangesAsync();
 
@@ -319,17 +351,23 @@ public class DashboardControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var requests = okResult?.Value as IList<object>;
-        requests.Should().NotBeNull();
-        requests!.Count.Should().Be(2);
+        okResult.Should().NotBeNull();
+        okResult!.Value.Should().NotBeNull();
 
-        // First request should have more votes (Request 2 with 2 votes)
-        dynamic? firstRequest = requests[0];
-        firstRequest?.VoteCount.Should().Be(2);
+        var requests = okResult.Value as IEnumerable<object>;
+        requests.Should().NotBeNull();
+        requests!.Should().HaveCount(2);
+
+        // Convert to list and check the first request has more votes
+        var requestsList = requests.ToList();
+        var firstRequest = requestsList[0];
+        var firstRequestType = firstRequest.GetType();
+        var voteCountProp = firstRequestType.GetProperty("VoteCount");
+        voteCountProp?.GetValue(firstRequest).Should().Be(2);
     }
 
     /// <summary>
-    /// Tests that DJ event stats include correct request counts.
+    /// Tests getting DJ event statistics.
     /// </summary>
     [Fact]
     public async Task GetDJEventStats_WithRequests_ReturnsCorrectCounts()
@@ -344,15 +382,38 @@ public class DashboardControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var stats = okResult?.Value as IList<object>;
-        stats.Should().NotBeNull();
-        stats!.Count.Should().Be(1);
+        okResult.Should().NotBeNull();
+        okResult!.Value.Should().NotBeNull();
 
-        dynamic? eventStat = stats[0];
-        eventStat?.RequestCounts.Total.Should().Be(3);
-        eventStat?.RequestCounts.Pending.Should().Be(2);
-        eventStat?.RequestCounts.Approved.Should().Be(1);
-        eventStat?.RequestCounts.Rejected.Should().Be(0);
+        var stats = okResult.Value as IEnumerable<object>;
+        stats.Should().NotBeNull();
+        stats!.Should().HaveCount(1);
+
+        // Verify the first stat item using JSON serialization
+        var firstStat = stats.First();
+        var jsonResponse = System.Text.Json.JsonSerializer.Serialize(firstStat);
+        jsonResponse.Should().Contain("RequestCounts");
+
+        // Use reflection to verify nested properties
+        var statType = firstStat.GetType();
+        var requestCountsProp = statType.GetProperty("RequestCounts");
+        requestCountsProp.Should().NotBeNull();
+
+        var requestCounts = requestCountsProp!.GetValue(firstStat);
+        requestCounts.Should().NotBeNull();
+
+        var requestCountsType = requestCounts!.GetType();
+        var totalProp = requestCountsType.GetProperty("Total");
+        totalProp?.GetValue(requestCounts).Should().Be(3);
+
+        var pendingProp = requestCountsType.GetProperty("Pending");
+        pendingProp?.GetValue(requestCounts).Should().Be(2);
+
+        var approvedProp = requestCountsType.GetProperty("Approved");
+        approvedProp?.GetValue(requestCounts).Should().Be(1);
+
+        var rejectedProp = requestCountsType.GetProperty("Rejected");
+        rejectedProp?.GetValue(requestCounts).Should().Be(0);
     }
 
     /// <summary>
@@ -377,12 +438,27 @@ public class DashboardControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        dynamic? summary = okResult?.Value;
-        summary?.TotalRequests.Should().Be(0);
-        summary?.PendingRequests.Should().Be(0);
-        summary?.ApprovedRequests.Should().Be(0);
-        summary?.RejectedRequests.Should().Be(0);
-        summary?.TotalVotes.Should().Be(0);
+        okResult.Should().NotBeNull();
+        okResult!.Value.Should().NotBeNull();
+
+        // Use reflection to verify zero counts
+        var response = okResult.Value;
+        var responseType = response!.GetType();
+
+        var totalRequestsProp = responseType.GetProperty("TotalRequests");
+        totalRequestsProp?.GetValue(response).Should().Be(0);
+
+        var pendingRequestsProp = responseType.GetProperty("PendingRequests");
+        pendingRequestsProp?.GetValue(response).Should().Be(0);
+
+        var approvedRequestsProp = responseType.GetProperty("ApprovedRequests");
+        approvedRequestsProp?.GetValue(response).Should().Be(0);
+
+        var rejectedRequestsProp = responseType.GetProperty("RejectedRequests");
+        rejectedRequestsProp?.GetValue(response).Should().Be(0);
+
+        var totalVotesProp = responseType.GetProperty("TotalVotes");
+        totalVotesProp?.GetValue(response).Should().Be(0);
     }
 
     /// <summary>

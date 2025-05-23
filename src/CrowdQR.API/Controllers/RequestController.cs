@@ -84,7 +84,7 @@ public class RequestController(
             Votes = request.Votes.Select(v => new { v.VoteId, v.UserId, v.CreatedAt }).ToList()
         };
 
-        return formattedRequest;
+        return Ok(formattedRequest);
     }
 
     // GET: api/request/event/5
@@ -113,7 +113,7 @@ public class RequestController(
             r.CreatedAt,
             VoteCount = r.Votes.Count,
             Votes = r.Votes.Select(v => new { v.VoteId, v.UserId, v.CreatedAt }).ToList()
-        }).ToList(); // Make sure to call ToList() to materialize the query
+        }).ToList(); // Call ToList() to materialize the query
 
         return Ok(formattedRequests);
     }

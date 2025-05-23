@@ -6,6 +6,8 @@ using CrowdQR.Shared.Models.DTOs;
 using CrowdQR.Shared.Models.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace CrowdQR.Api.Tests.Controllers;
 
@@ -14,7 +16,7 @@ namespace CrowdQR.Api.Tests.Controllers;
 /// </summary>
 public class AuthControllerTests : IDisposable
 {
-    private readonly Mock<AuthService> _mockAuthService;
+    private readonly Mock<IAuthService> _mockAuthService;
     private readonly AuthController _controller;
 
     /// <summary>
@@ -22,7 +24,7 @@ public class AuthControllerTests : IDisposable
     /// </summary>
     public AuthControllerTests()
     {
-        _mockAuthService = new Mock<AuthService>();
+        _mockAuthService = new Mock<IAuthService>();
         var logger = TestLoggerFactory.CreateNullLogger<AuthController>();
         _controller = new AuthController(_mockAuthService.Object, logger);
     }

@@ -15,35 +15,48 @@ using System.Text.Json;
 using Microsoft.Extensions.Options;
 using System.Text.Encodings.Web;
 using Microsoft.Extensions.Internal;
-using Microsoft.VisualStudio.TestPlatform.TestHost;
 
 namespace CrowdQR.Api.Tests.Integration;
 
 /// <summary>
 /// Integration tests for vote-related API endpoints.
 /// </summary>
-public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.Api.Program>>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly WebApplicationFactory<CrowdQR.Api.Program> _factory;
     private readonly HttpClient _client;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VoteIntegrationTests"/> class.
     /// </summary>
     /// <param name="factory">The web application factory.</param>
-    public VoteIntegrationTests(WebApplicationFactory<Program> factory)
+    public VoteIntegrationTests(WebApplicationFactory<CrowdQR.Api.Program> factory)
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
             builder.ConfigureServices(services =>
             {
-                // Remove the existing DbContext registration
-                var descriptor = services.SingleOrDefault(
+                // Remove ALL existing DbContext registrations
+                var dbContextDescriptor = services.SingleOrDefault(
                     d => d.ServiceType == typeof(DbContextOptions<CrowdQRContext>));
-                if (descriptor != null)
+                if (dbContextDescriptor != null)
                 {
-                    services.Remove(descriptor);
+                    services.Remove(dbContextDescriptor);
+                }
+
+                var dbContextServiceDescriptor = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(CrowdQRContext));
+                if (dbContextServiceDescriptor != null)
+                {
+                    services.Remove(dbContextServiceDescriptor);
+                }
+
+                // Remove any other EF Core service registrations that might conflict
+                var efCoreServices = services.Where(s => s.ServiceType.Namespace?.StartsWith("Microsoft.EntityFrameworkCore") == true).ToList();
+                foreach (var service in efCoreServices)
+                {
+                    services.Remove(service);
                 }
 
                 // Add in-memory database for testing
@@ -272,10 +285,9 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 /// <param name="logger">The logger.</param>
 /// <param name="encoder">The URL encoder.</param>
 public class TestAuthenticationHandler(
-        IOptionsMonitor<AuthenticationSchemeOptions> options,
-        ILoggerFactory logger, 
-        UrlEncoder encoder
-    ) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    ILoggerFactory logger,
+    UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
 
     /// <summary>
@@ -300,14 +312,18 @@ public class TestAuthenticationHandler(
             case "user-1-dj":
                 claims.Add(new Claim(ClaimTypes.NameIdentifier, "1"));
                 claims.Add(new Claim(ClaimTypes.Role, "DJ"));
+                claims.Add(new Claim(ClaimTypes.Name, "test_dj"));
+                claims.Add(new Claim(ClaimTypes.Email, "dj@test.com"));
                 break;
             case "user-2-audience":
                 claims.Add(new Claim(ClaimTypes.NameIdentifier, "2"));
                 claims.Add(new Claim(ClaimTypes.Role, "Audience"));
+                claims.Add(new Claim(ClaimTypes.Name, "audience1"));
                 break;
             case "user-3-audience":
                 claims.Add(new Claim(ClaimTypes.NameIdentifier, "3"));
                 claims.Add(new Claim(ClaimTypes.Role, "Audience"));
+                claims.Add(new Claim(ClaimTypes.Name, "audience2"));
                 break;
             default:
                 return Task.FromResult(AuthenticateResult.Fail("Invalid test user"));
