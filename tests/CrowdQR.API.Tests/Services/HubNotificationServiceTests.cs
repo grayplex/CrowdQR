@@ -12,7 +12,7 @@ public class HubNotificationServiceTests
 {
     private readonly Mock<IHubContext<CrowdQRHub>> _mockHubContext;
     private readonly Mock<IClientProxy> _mockClientProxy;
-    private readonly Mock<IHubCallerClients> _mockClients;
+    private readonly Mock<IHubClients> _mockClients;
     private readonly HubNotificationService _service;
 
     /// <summary>
@@ -22,16 +22,16 @@ public class HubNotificationServiceTests
     {
         _mockHubContext = new Mock<IHubContext<CrowdQRHub>>();
         _mockClientProxy = new Mock<IClientProxy>();
-        _mockClients = new Mock<IHubCallerClients>();
+        _mockClients = new Mock<IHubClients>();
 
         var logger = TestLoggerFactory.CreateNullLogger<HubNotificationService>();
 
-        // Setup the hub context mock properly
-        _mockHubContext.Setup(x => x.Clients).Returns((IHubClients)_mockClients.Object);
+        // Setup the hub context mock - IHubContext.Clients returns IHubClients
+        _mockHubContext.Setup(x => x.Clients).Returns(_mockClients.Object);
         _mockClients.Setup(x => x.Group(It.IsAny<string>())).Returns(_mockClientProxy.Object);
 
-        // Setup SendAsync to return completed task
-        _mockClientProxy.Setup(x => x.SendAsync(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<CancellationToken>()))
+        // Setup SendCoreAsync to return completed task
+        _mockClientProxy.Setup(x => x.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         _service = new HubNotificationService(_mockHubContext.Object, logger);
@@ -54,7 +54,7 @@ public class HubNotificationServiceTests
         // Assert
         _mockClients.Verify(x => x.Group($"event-{eventId}"), Times.Once);
         _mockClientProxy.Verify(
-            x => x.SendAsync("requestAdded", It.IsAny<object>(), default),
+            x => x.SendCoreAsync("requestAdded", It.IsAny<object[]>(), default),
             Times.Once);
     }
 
@@ -75,7 +75,7 @@ public class HubNotificationServiceTests
         // Assert
         _mockClients.Verify(x => x.Group($"event-{eventId}"), Times.Once);
         _mockClientProxy.Verify(
-            x => x.SendAsync("requestStatusUpdated", It.IsAny<object>(), default),
+            x => x.SendCoreAsync("requestStatusUpdated", It.IsAny<object[]>(), default),
             Times.Once);
     }
 
@@ -97,7 +97,7 @@ public class HubNotificationServiceTests
         // Assert
         _mockClients.Verify(x => x.Group($"event-{eventId}"), Times.Once);
         _mockClientProxy.Verify(
-            x => x.SendAsync("voteAdded", It.IsAny<object>(), default),
+            x => x.SendCoreAsync("voteAdded", It.IsAny<object[]>(), default),
             Times.Once);
     }
 
@@ -118,7 +118,7 @@ public class HubNotificationServiceTests
         // Assert
         _mockClients.Verify(x => x.Group($"event-{eventId}"), Times.Once);
         _mockClientProxy.Verify(
-            x => x.SendAsync("voteRemoved", It.IsAny<object>(), default),
+            x => x.SendCoreAsync("voteRemoved", It.IsAny<object[]>(), default),
             Times.Once);
     }
 
@@ -138,7 +138,7 @@ public class HubNotificationServiceTests
         // Assert
         _mockClients.Verify(x => x.Group($"event-{eventId}"), Times.Once);
         _mockClientProxy.Verify(
-            x => x.SendAsync("userJoinedEvent", It.IsAny<object>(), default),
+            x => x.SendCoreAsync("userJoinedEvent", It.IsAny<object[]>(), default),
             Times.Once);
     }
 
@@ -178,7 +178,7 @@ public class HubNotificationServiceTests
         // Should still attempt to send the message
         _mockClients.Verify(x => x.Group("event-1"), Times.Once);
         _mockClientProxy.Verify(
-            x => x.SendAsync("requestAdded", It.IsAny<object>(), default),
+            x => x.SendCoreAsync("requestAdded", It.IsAny<object[]>(), default),
             Times.Once);
     }
 
@@ -218,7 +218,7 @@ public class HubNotificationServiceTests
         // Should still send the message
         _mockClients.Verify(x => x.Group("event-1"), Times.Once);
         _mockClientProxy.Verify(
-            x => x.SendAsync("voteAdded", It.IsAny<object>(), default),
+            x => x.SendCoreAsync("voteAdded", It.IsAny<object[]>(), default),
             Times.Once);
     }
 
@@ -241,7 +241,7 @@ public class HubNotificationServiceTests
         // Assert
         _mockClients.Verify(x => x.Group("event-1"), Times.Once);
         _mockClientProxy.Verify(
-            x => x.SendAsync("requestStatusUpdated", It.IsAny<object>(), default),
+            x => x.SendCoreAsync("requestStatusUpdated", It.IsAny<object[]>(), default),
             Times.Once);
     }
 
@@ -293,7 +293,7 @@ public class HubNotificationServiceTests
 
         // Assert - All calls should have been made
         _mockClients.Verify(x => x.Group(It.IsAny<string>()), Times.Exactly(20));
-        _mockClientProxy.Verify(x => x.SendAsync(It.IsAny<string>(), It.IsAny<object>(), default), Times.Exactly(20));
+        _mockClientProxy.Verify(x => x.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default), Times.Exactly(20));
     }
 
     /// <summary>
@@ -310,22 +310,22 @@ public class HubNotificationServiceTests
         var requesterName = "TestUser123";
         var status = "Approved";
 
-        object? capturedRequestData = null;
-        object? capturedVoteData = null;
-        object? capturedStatusData = null;
-        object? capturedUserData = null;
+        object[]? capturedRequestData = null;
+        object[]? capturedVoteData = null;
+        object[]? capturedStatusData = null;
+        object[]? capturedUserData = null;
 
-        _mockClientProxy.Setup(x => x.SendAsync("requestAdded", It.IsAny<object>(), default))
-            .Callback<string, object, CancellationToken>((method, data, token) => capturedRequestData = data);
+        _mockClientProxy.Setup(x => x.SendCoreAsync("requestAdded", It.IsAny<object[]>(), default))
+            .Callback<string, object[], CancellationToken>((method, data, token) => capturedRequestData = data);
 
-        _mockClientProxy.Setup(x => x.SendAsync("voteAdded", It.IsAny<object>(), default))
-            .Callback<string, object, CancellationToken>((method, data, token) => capturedVoteData = data);
+        _mockClientProxy.Setup(x => x.SendCoreAsync("voteAdded", It.IsAny<object[]>(), default))
+            .Callback<string, object[], CancellationToken>((method, data, token) => capturedVoteData = data);
 
-        _mockClientProxy.Setup(x => x.SendAsync("requestStatusUpdated", It.IsAny<object>(), default))
-            .Callback<string, object, CancellationToken>((method, data, token) => capturedStatusData = data);
+        _mockClientProxy.Setup(x => x.SendCoreAsync("requestStatusUpdated", It.IsAny<object[]>(), default))
+            .Callback<string, object[], CancellationToken>((method, data, token) => capturedStatusData = data);
 
-        _mockClientProxy.Setup(x => x.SendAsync("userJoinedEvent", It.IsAny<object>(), default))
-            .Callback<string, object, CancellationToken>((method, data, token) => capturedUserData = data);
+        _mockClientProxy.Setup(x => x.SendCoreAsync("userJoinedEvent", It.IsAny<object[]>(), default))
+            .Callback<string, object[], CancellationToken>((method, data, token) => capturedUserData = data);
 
         // Act
         await _service.NotifyRequestAdded(eventId, requestId, requesterName);
@@ -335,51 +335,55 @@ public class HubNotificationServiceTests
 
         // Assert - Verify data integrity using safe null checks
         capturedRequestData.Should().NotBeNull();
-        if (capturedRequestData != null)
+        if (capturedRequestData != null && capturedRequestData.Length > 0)
         {
-            var eventIdProp = capturedRequestData.GetType().GetProperty("eventId");
-            var requestIdProp = capturedRequestData.GetType().GetProperty("requestId");
-            var requesterNameProp = capturedRequestData.GetType().GetProperty("requesterName");
+            var requestDataObj = capturedRequestData[0];
+            var eventIdProp = requestDataObj.GetType().GetProperty("eventId");
+            var requestIdProp = requestDataObj.GetType().GetProperty("requestId");
+            var requesterNameProp = requestDataObj.GetType().GetProperty("requesterName");
 
-            eventIdProp?.GetValue(capturedRequestData).Should().Be(eventId);
-            requestIdProp?.GetValue(capturedRequestData).Should().Be(requestId);
-            requesterNameProp?.GetValue(capturedRequestData).Should().Be(requesterName);
+            eventIdProp?.GetValue(requestDataObj).Should().Be(eventId);
+            requestIdProp?.GetValue(requestDataObj).Should().Be(requestId);
+            requesterNameProp?.GetValue(requestDataObj).Should().Be(requesterName);
         }
 
         capturedVoteData.Should().NotBeNull();
-        if (capturedVoteData != null)
+        if (capturedVoteData != null && capturedVoteData.Length > 0)
         {
-            var eventIdProp = capturedVoteData.GetType().GetProperty("eventId");
-            var requestIdProp = capturedVoteData.GetType().GetProperty("requestId");
-            var voteCountProp = capturedVoteData.GetType().GetProperty("voteCount");
-            var userIdProp = capturedVoteData.GetType().GetProperty("userId");
+            var voteDataObj = capturedVoteData[0];
+            var eventIdProp = voteDataObj.GetType().GetProperty("eventId");
+            var requestIdProp = voteDataObj.GetType().GetProperty("requestId");
+            var voteCountProp = voteDataObj.GetType().GetProperty("voteCount");
+            var userIdProp = voteDataObj.GetType().GetProperty("userId");
 
-            eventIdProp?.GetValue(capturedVoteData).Should().Be(eventId);
-            requestIdProp?.GetValue(capturedVoteData).Should().Be(requestId);
-            voteCountProp?.GetValue(capturedVoteData).Should().Be(voteCount);
-            userIdProp?.GetValue(capturedVoteData).Should().Be(userId);
+            eventIdProp?.GetValue(voteDataObj).Should().Be(eventId);
+            requestIdProp?.GetValue(voteDataObj).Should().Be(requestId);
+            voteCountProp?.GetValue(voteDataObj).Should().Be(voteCount);
+            userIdProp?.GetValue(voteDataObj).Should().Be(userId);
         }
 
         capturedStatusData.Should().NotBeNull();
-        if (capturedStatusData != null)
+        if (capturedStatusData != null && capturedStatusData.Length > 0)
         {
-            var eventIdProp = capturedStatusData.GetType().GetProperty("eventId");
-            var requestIdProp = capturedStatusData.GetType().GetProperty("requestId");
-            var statusProp = capturedStatusData.GetType().GetProperty("status");
+            var statusDataObj = capturedStatusData[0];
+            var eventIdProp = statusDataObj.GetType().GetProperty("eventId");
+            var requestIdProp = statusDataObj.GetType().GetProperty("requestId");
+            var statusProp = statusDataObj.GetType().GetProperty("status");
 
-            eventIdProp?.GetValue(capturedStatusData).Should().Be(eventId);
-            requestIdProp?.GetValue(capturedStatusData).Should().Be(requestId);
-            statusProp?.GetValue(capturedStatusData).Should().Be(status);
+            eventIdProp?.GetValue(statusDataObj).Should().Be(eventId);
+            requestIdProp?.GetValue(statusDataObj).Should().Be(requestId);
+            statusProp?.GetValue(statusDataObj).Should().Be(status);
         }
 
         capturedUserData.Should().NotBeNull();
-        if (capturedUserData != null)
+        if (capturedUserData != null && capturedUserData.Length > 0)
         {
-            var eventIdProp = capturedUserData.GetType().GetProperty("eventId");
-            var usernameProp = capturedUserData.GetType().GetProperty("username");
+            var userDataObj = capturedUserData[0];
+            var eventIdProp = userDataObj.GetType().GetProperty("eventId");
+            var usernameProp = userDataObj.GetType().GetProperty("username");
 
-            eventIdProp?.GetValue(capturedUserData).Should().Be(eventId);
-            usernameProp?.GetValue(capturedUserData).Should().Be(requesterName);
+            eventIdProp?.GetValue(userDataObj).Should().Be(eventId);
+            usernameProp?.GetValue(userDataObj).Should().Be(requesterName);
         }
     }
 
