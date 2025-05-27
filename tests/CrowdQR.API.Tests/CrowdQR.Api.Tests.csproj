@@ -40,7 +40,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\CrowdQR.API\CrowdQR.Api.csproj" />
+		<ProjectReference Include="..\..\src\CrowdQR.Api\CrowdQR.Api.csproj" />
 		<ProjectReference Include="..\..\src\CrowdQR.Shared\CrowdQR.Shared.csproj" />
 	</ItemGroup>
 
