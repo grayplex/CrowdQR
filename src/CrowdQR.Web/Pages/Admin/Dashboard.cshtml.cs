@@ -191,8 +191,7 @@ public class DashboardModel(
     /// <returns>Redirect to the dashboard page.</returns>
     public async Task<IActionResult> OnPostApproveAsync(int requestId)
     {
-
-        if (!User.Identity?.IsAuthenticated == true || !User.IsInRole("DJ"))
+        if (!(User.Identity?.IsAuthenticated == true && User.IsInRole("DJ")))
         {
             _logger.LogWarning("Unauthorized approve attempt by user {UserId} for request {RequestId}",
                 User.FindFirstValue(ClaimTypes.NameIdentifier), requestId);
