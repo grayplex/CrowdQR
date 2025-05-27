@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using CrowdQR.Api.Models;
-using CrowdQR.Shared.Models.Enums;
 
 namespace CrowdQR.Api.Data;
 
@@ -38,16 +37,21 @@ public class CrowdQRContext(DbContextOptions<CrowdQRContext> options) : DbContex
     /// </summary>
     public DbSet<Session> Sessions => Set<Session>();
 
-    /// <summary>
-    /// Gets or sets the track metadata in the database.
-    /// </summary>
-    public DbSet<TrackMetadata> TrackMetadata => Set<TrackMetadata>();
+
+#pragma warning disable TODO // TODO
+    /* TODO: Eventually add Spotify API support.
+        /// <summary>
+        /// Gets or sets the track metadata in the database.
+        /// </summary>
+        public DbSet<TrackMetadata> TrackMetadata => Set<TrackMetadata>();
+        */
 
     /// <summary>
     /// Configures the model that was discovered by convention from the entity types.
     /// </summary>
     /// <param name="modelBuilder">The builder being used to construct the model for this context.</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
+#pragma warning restore TODO // TODO
     {
         base.OnModelCreating(modelBuilder);
 
@@ -140,6 +144,7 @@ public class CrowdQRContext(DbContextOptions<CrowdQRContext> options) : DbContex
         });
 
         // Configure TrackMetadata entity
+        /*
         modelBuilder.Entity<TrackMetadata>(entity =>
         {
             entity.ToTable("TrackMetadata");
@@ -154,5 +159,6 @@ public class CrowdQRContext(DbContextOptions<CrowdQRContext> options) : DbContex
                   .HasForeignKey<TrackMetadata>(t => t.RequestId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
+        */
     }
 }

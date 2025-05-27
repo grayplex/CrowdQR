@@ -137,6 +137,7 @@ public static class DbSeeder
         context.Votes.AddRange(votes);
 
         // Add track metadata
+        /*
         var trackMetadata = new List<TrackMetadata>
         {
             new()
@@ -158,6 +159,7 @@ public static class DbSeeder
         };
 
         context.TrackMetadata.AddRange(trackMetadata);
+        */
 
         // Add sessions
         var sessions = new List<Session>

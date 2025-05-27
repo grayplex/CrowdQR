@@ -26,9 +26,6 @@
 .PARAMETER Filter
     Test filter expression to run specific tests.
 
-.PARAMETER Parallel
-    Whether to run tests in parallel. Default is true.
-
 .EXAMPLE
     ./run-tests.ps1
     Runs all tests with default settings.
@@ -55,9 +52,7 @@ param(
     [ValidateSet('quiet', 'minimal', 'normal', 'detailed', 'diagnostic')]
     [string]$Verbosity = 'normal',
     
-    [string]$Filter = '',
-    
-    [bool]$Parallel = $true
+    [string]$Filter = ''
 )
 
 # Set error action preference
@@ -107,7 +102,6 @@ Write-Info "Coverage Collection: $Coverage"
 Write-Info "Output Directory: $Output"
 Write-Info "Target Framework: $Framework"
 Write-Info "Verbosity: $Verbosity"
-Write-Info "Parallel Execution: $Parallel"
 
 if ($Filter) {
     Write-Info "Test Filter: $Filter"
@@ -154,13 +148,6 @@ $testArgs = @(
     '--logger', 'trx'
     '--logger', 'console;verbosity=normal'
 )
-
-
-<# Add parallel execution
-if ($Parallel) {
-    $testArgs += '--parallel'
-}
-#>
 
 # Add test filter if specified
 if ($Filter) {
@@ -221,10 +208,10 @@ if ($Coverage) {
         # Generate HTML report
         $reportDir = Join-Path $Output "coverage-report"
         $coverageFileArgs = ($coverageFiles | ForEach-Object { $_.FullName }) -join ';'
-        
+
         try {
             Write-Info "Generating HTML coverage report..."
-            reportgenerator -reports:$coverageFileArgs -targetdir:$reportDir -reporttypes:Html
+                reportgenerator -reports:$coverageFileArgs -targetdir:$reportDir -reporttypes:Html
             Write-Success "Coverage report generated at: $reportDir"
             Write-Info "Open $reportDir/index.html to view the coverage report"
         }
@@ -235,7 +222,7 @@ if ($Coverage) {
         # Generate console summary
         try {
             Write-Info "Generating coverage summary..."
-            reportgenerator -reports:$coverageFileArgs -targetdir:$reportDir -reporttypes:TextSummary
+                reportgenerator -reports:$coverageFileArgs -targetdir:$reportDir -reporttypes:TextSummary
             
             $summaryFile = Join-Path $reportDir "Summary.txt"
             if (Test-Path $summaryFile) {
