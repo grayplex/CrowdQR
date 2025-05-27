@@ -1,21 +1,14 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
-using System.Security.Claims;
-using System.Text.Encodings.Web;
-using System.Text.Json;
+using System.Text;
 using CrowdQR.Api.Data;
 using CrowdQR.Api.Tests.Helpers;
 using CrowdQR.Shared.Models.DTOs;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.VisualStudio.TestPlatform.TestHost;
-using System.Text;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Internal;
+using System.Text.Json;
 
 namespace CrowdQR.Api.Tests.Integration;
 
@@ -26,8 +19,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
 {
     private readonly WebApplicationFactory<CrowdQR.Api.Program> _factory;
     private readonly HttpClient _client;
+    private static readonly string DatabaseName = "AuthTestDb_" + Guid.NewGuid();
 
-    private readonly JsonSerializerOptions jsonSerializerOptions = new()
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true
@@ -44,32 +38,31 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
             builder.UseEnvironment("Testing");
             builder.ConfigureServices(services =>
             {
-                // Remove ALL existing DbContext registrations
-                var dbContextDescriptor = services.SingleOrDefault(
-                    d => d.ServiceType == typeof(DbContextOptions<CrowdQRContext>));
-                if (dbContextDescriptor != null)
+                // Remove ALL Entity Framework related services
+                var descriptorsToRemove = new List<ServiceDescriptor>();
+
+                foreach (var service in services)
                 {
-                    services.Remove(dbContextDescriptor);
+                    if (service.ServiceType.Namespace != null &&
+                        (service.ServiceType.Namespace.StartsWith("Microsoft.EntityFrameworkCore") ||
+                         service.ServiceType == typeof(CrowdQRContext) ||
+                         service.ServiceType == typeof(DbContextOptions<CrowdQRContext>) ||
+                         service.ServiceType == typeof(DbContextOptions)))
+                    {
+                        descriptorsToRemove.Add(service);
+                    }
                 }
 
-                var dbContextServiceDescriptor = services.SingleOrDefault(
-                    d => d.ServiceType == typeof(CrowdQRContext));
-                if (dbContextServiceDescriptor != null)
+                foreach (var descriptor in descriptorsToRemove)
                 {
-                    services.Remove(dbContextServiceDescriptor);
+                    services.Remove(descriptor);
                 }
 
-                // Remove any other EF Core service registrations that might conflict
-                var efCoreServices = services.Where(s => s.ServiceType.Namespace?.StartsWith("Microsoft.EntityFrameworkCore") == true).ToList();
-                foreach (var service in efCoreServices)
-                {
-                    services.Remove(service);
-                }
-
-                // Add in-memory database for testing
+                // Add in-memory database for testing with a static database name
                 services.AddDbContext<CrowdQRContext>(options =>
                 {
-                    options.UseInMemoryDatabase("AuthTestDb_" + Guid.NewGuid());
+                    options.UseInMemoryDatabase(DatabaseName);
+                    options.EnableSensitiveDataLogging();
                 });
             });
         });
@@ -84,6 +77,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task Login_NewAudienceUser_CreatesUserAndReturnsToken()
     {
         // Arrange
+        await ClearDatabase();
         var loginDto = new LoginDto
         {
             UsernameOrEmail = "new_audience_user"
@@ -94,9 +88,10 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var response = await _client.PostAsJsonAsync("/api/auth/login", loginDto);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        var authResult = JsonSerializer.Deserialize<AuthResultDto>(content, jsonSerializerOptions);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, $"Login failed. Response: {content}");
+
+        var authResult = JsonSerializer.Deserialize<AuthResultDto>(content, _jsonSerializerOptions);
 
         authResult.Should().NotBeNull();
         authResult!.Success.Should().BeTrue();
@@ -105,11 +100,8 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         authResult.User!.Username.Should().Be("new_audience_user");
         authResult.User.Role.Should().Be(CrowdQR.Shared.Models.Enums.UserRole.Audience);
 
-        // Verify user was created in database
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CrowdQRContext>();
-        var createdUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "new_audience_user");
-        createdUser.Should().NotBeNull();
+        // Verify user was created in database using the same database name
+        await VerifyUserInDatabase("new_audience_user", "User should be created in database");
     }
 
     /// <summary>
@@ -119,6 +111,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task Register_ValidDjData_ReturnsSuccess()
     {
         // Arrange
+        await ClearDatabase();
         var registerDto = new DjRegisterDto
         {
             Username = "test_dj_register",
@@ -131,9 +124,10 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var response = await _client.PostAsJsonAsync("/api/auth/register", registerDto);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
         var content = await response.Content.ReadAsStringAsync();
-        var authResult = JsonSerializer.Deserialize<AuthResultDto>(content, jsonSerializerOptions);
+        response.StatusCode.Should().Be(HttpStatusCode.Created, $"Registration failed. Response: {content}");
+
+        var authResult = JsonSerializer.Deserialize<AuthResultDto>(content, _jsonSerializerOptions);
 
         authResult.Should().NotBeNull();
         authResult!.Success.Should().BeTrue();
@@ -144,9 +138,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         authResult.EmailVerificationRequired.Should().BeTrue();
 
         // Verify user was created in database
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CrowdQRContext>();
-        var createdUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "test_dj_register");
+        var createdUser = await GetUserFromDatabase("test_dj_register");
         createdUser.Should().NotBeNull();
         createdUser!.Role.Should().Be(CrowdQR.Shared.Models.Enums.UserRole.DJ);
         createdUser.IsEmailVerified.Should().BeFalse();
@@ -158,7 +150,10 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     [Fact]
     public async Task Register_DuplicateUsername_ReturnsBadRequest()
     {
-        // Arrange - First registration
+        // Arrange
+        await ClearDatabase();
+
+        // First registration
         var firstRegisterDto = new DjRegisterDto
         {
             Username = "duplicate_dj",
@@ -167,7 +162,8 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
             ConfirmPassword = "TestPassword123!"
         };
 
-        await _client.PostAsJsonAsync("/api/auth/register", firstRegisterDto);
+        var firstResponse = await _client.PostAsJsonAsync("/api/auth/register", firstRegisterDto);
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.Created, "First registration should succeed");
 
         // Second registration with same username
         var secondRegisterDto = new DjRegisterDto
@@ -182,7 +178,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var response = await _client.PostAsJsonAsync("/api/auth/register", secondRegisterDto);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var content = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            $"Expected BadRequest for duplicate username but got {response.StatusCode}. Response: {content}");
     }
 
     /// <summary>
@@ -191,7 +189,10 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     [Fact]
     public async Task Register_DuplicateEmail_ReturnsBadRequest()
     {
-        // Arrange - First registration
+        // Arrange
+        await ClearDatabase();
+
+        // First registration
         var firstRegisterDto = new DjRegisterDto
         {
             Username = "first_dj",
@@ -200,7 +201,8 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
             ConfirmPassword = "TestPassword123!"
         };
 
-        await _client.PostAsJsonAsync("/api/auth/register", firstRegisterDto);
+        var firstResponse = await _client.PostAsJsonAsync("/api/auth/register", firstRegisterDto);
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.Created, "First registration should succeed");
 
         // Second registration with same email
         var secondRegisterDto = new DjRegisterDto
@@ -215,29 +217,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var response = await _client.PostAsJsonAsync("/api/auth/register", secondRegisterDto);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    /// <summary>
-    /// Tests login with invalid credentials.
-    /// </summary>
-    [Fact]
-    public async Task Login_InvalidCredentials_ReturnsUnauthorized()
-    {
-        // Arrange - Create a DJ user first
-        await SeedDjUser();
-
-        var loginDto = new LoginDto
-        {
-            UsernameOrEmail = "test_dj",
-            Password = "WrongPassword123!"
-        };
-
-        // Act
-        var response = await _client.PostAsJsonAsync("/api/auth/login", loginDto);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        var content = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            $"Expected BadRequest for duplicate email but got {response.StatusCode}. Response: {content}");
     }
 
     /// <summary>
@@ -246,7 +228,10 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     [Fact]
     public async Task Login_ValidDjCredentials_ReturnsToken()
     {
-        // Arrange - Create DJ user through registration
+        // Arrange
+        await ClearDatabase();
+
+        // Create DJ user through registration
         var registerDto = new DjRegisterDto
         {
             Username = "login_test_dj",
@@ -255,7 +240,8 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
             ConfirmPassword = "TestPassword123!"
         };
 
-        await _client.PostAsJsonAsync("/api/auth/register", registerDto);
+        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", registerDto);
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.Created, "Registration should succeed");
 
         // Now try to login
         var loginDto = new LoginDto
@@ -268,13 +254,49 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var response = await _client.PostAsJsonAsync("/api/auth/login", loginDto);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        var authResult = JsonSerializer.Deserialize<AuthResultDto>(content, jsonSerializerOptions);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, $"Login failed. Response: {content}");
+
+        var authResult = JsonSerializer.Deserialize<AuthResultDto>(content, _jsonSerializerOptions);
 
         authResult.Should().NotBeNull();
         authResult!.Success.Should().BeTrue();
         authResult.Token.Should().NotBeNullOrEmpty();
+    }
+
+    /// <summary>
+    /// Tests login with invalid credentials.
+    /// </summary>
+    [Fact]
+    public async Task Login_InvalidCredentials_ReturnsUnauthorized()
+    {
+        // Arrange
+        await ClearDatabase();
+
+        // Create a DJ user first
+        var registerDto = new DjRegisterDto
+        {
+            Username = "test_dj_invalid",
+            Email = "invalid@example.com",
+            Password = "TestPassword123!",
+            ConfirmPassword = "TestPassword123!"
+        };
+
+        await _client.PostAsJsonAsync("/api/auth/register", registerDto);
+
+        var loginDto = new LoginDto
+        {
+            UsernameOrEmail = "test_dj_invalid",
+            Password = "WrongPassword123!"
+        };
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/auth/login", loginDto);
+
+        // Assert
+        var content = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+            $"Expected Unauthorized for invalid credentials but got {response.StatusCode}. Response: {content}");
     }
 
     /// <summary>
@@ -283,7 +305,10 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     [Fact]
     public async Task VerifyEmail_ValidToken_ReturnsSuccess()
     {
-        // Arrange - Register DJ user
+        // Arrange
+        await ClearDatabase();
+
+        // Register DJ user
         var registerDto = new DjRegisterDto
         {
             Username = "verify_test_dj",
@@ -295,10 +320,10 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         await _client.PostAsJsonAsync("/api/auth/register", registerDto);
 
         // Get the verification token from database
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CrowdQRContext>();
-        var user = await context.Users.FirstOrDefaultAsync(u => u.Username == "verify_test_dj");
+        var user = await GetUserFromDatabase("verify_test_dj");
+        user.Should().NotBeNull("User should exist after registration");
         var verificationToken = user!.EmailVerificationToken;
+        verificationToken.Should().NotBeNullOrEmpty("Verification token should be generated");
 
         var verifyDto = new VerifyEmailDto
         {
@@ -310,10 +335,11 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var response = await _client.PostAsJsonAsync("/api/auth/verify-email", verifyDto);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.OK, $"Email verification failed. Response: {content}");
 
         // Verify user is now verified in database
-        var verifiedUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "verify_test_dj");
+        var verifiedUser = await GetUserFromDatabase("verify_test_dj");
         verifiedUser!.IsEmailVerified.Should().BeTrue();
         verifiedUser.EmailVerificationToken.Should().BeNull();
     }
@@ -325,6 +351,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task VerifyEmail_InvalidToken_ReturnsBadRequest()
     {
         // Arrange
+        await ClearDatabase();
         var verifyDto = new VerifyEmailDto
         {
             Email = "test@example.com",
@@ -335,7 +362,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var response = await _client.PostAsJsonAsync("/api/auth/verify-email", verifyDto);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var content = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            $"Expected BadRequest for invalid token but got {response.StatusCode}. Response: {content}");
     }
 
     /// <summary>
@@ -345,6 +374,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task Login_MissingUsername_ReturnsBadRequest()
     {
         // Arrange
+        await ClearDatabase();
         var loginDto = new LoginDto
         {
             UsernameOrEmail = "", // Empty username
@@ -355,7 +385,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var response = await _client.PostAsJsonAsync("/api/auth/login", loginDto);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var content = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            $"Expected BadRequest for missing username but got {response.StatusCode}. Response: {content}");
     }
 
     /// <summary>
@@ -365,6 +397,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task Register_InvalidModelData_ReturnsBadRequest()
     {
         // Arrange
+        await ClearDatabase();
         var registerDto = new DjRegisterDto
         {
             Username = "", // Invalid - empty username
@@ -377,26 +410,33 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var response = await _client.PostAsJsonAsync("/api/auth/register", registerDto);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var content = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            $"Expected BadRequest for invalid model data but got {response.StatusCode}. Response: {content}");
     }
 
     /// <summary>
-    /// Tests that JWT token validation works correctly.
+    /// Tests that JWT token validation works correctly when using real JWT.
     /// </summary>
     [Fact]
     public async Task ValidateToken_ValidToken_ReturnsUserInfo()
     {
-        // Arrange - Create and login user
+        // Arrange
+        await ClearDatabase();
+
+        // Create and login user
         var loginDto = new LoginDto
         {
             UsernameOrEmail = "token_test_user"
         };
 
         var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginDto);
-        var loginContent = await loginResponse.Content.ReadAsStringAsync();
-        var authResult = JsonSerializer.Deserialize<AuthResultDto>(loginContent, jsonSerializerOptions);
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK, "Login should succeed");
 
-        // Set authorization header
+        var loginContent = await loginResponse.Content.ReadAsStringAsync();
+        var authResult = JsonSerializer.Deserialize<AuthResultDto>(loginContent, _jsonSerializerOptions);
+
+        // Set authorization header with the real JWT token
         _client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResult!.Token);
 
@@ -404,9 +444,10 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var response = await _client.GetAsync("/api/auth/validate");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        var userDto = JsonSerializer.Deserialize<UserDto>(content, jsonSerializerOptions);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, $"Token validation failed. Response: {content}");
+
+        var userDto = JsonSerializer.Deserialize<UserDto>(content, _jsonSerializerOptions);
 
         userDto.Should().NotBeNull();
         userDto!.Username.Should().Be("token_test_user");
@@ -419,6 +460,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task ValidateToken_InvalidToken_ReturnsUnauthorized()
     {
         // Arrange
+        await ClearDatabase();
         _client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "invalid-token");
 
@@ -426,29 +468,55 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var response = await _client.GetAsync("/api/auth/validate");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        var content = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+            $"Expected Unauthorized for invalid token but got {response.StatusCode}. Response: {content}");
     }
 
     /// <summary>
-    /// Seeds a DJ user for testing.
+    /// Clears the test database.
     /// </summary>
-    private async Task SeedDjUser()
+    private static async Task ClearDatabase()
     {
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CrowdQRContext>();
+        var options = new DbContextOptionsBuilder<CrowdQRContext>()
+            .UseInMemoryDatabase(DatabaseName)
+            .EnableSensitiveDataLogging()
+            .Options;
 
-        var djUser = new CrowdQR.Api.Models.User
-        {
-            Username = "test_dj",
-            Email = "testdj@example.com",
-            Role = CrowdQR.Shared.Models.Enums.UserRole.DJ,
-            PasswordHash = "test-hash",
-            PasswordSalt = "test-salt",
-            IsEmailVerified = true,
-            CreatedAt = DateTime.UtcNow
-        };
+        await using var context = new CrowdQRContext(options);
 
-        context.Users.Add(djUser);
+        // Ensure the database is created
+        await context.Database.EnsureCreatedAsync();
+
+        // Clear existing data
+        if (context.Users.Any()) context.Users.RemoveRange(context.Users);
         await context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Gets a user from the database by username.
+    /// </summary>
+    /// <param name="username">The username to search for.</param>
+    /// <returns>The user if found, null otherwise.</returns>
+    private static async Task<CrowdQR.Api.Models.User?> GetUserFromDatabase(string username)
+    {
+        var options = new DbContextOptionsBuilder<CrowdQRContext>()
+            .UseInMemoryDatabase(DatabaseName)
+            .EnableSensitiveDataLogging()
+            .Options;
+
+        await using var context = new CrowdQRContext(options);
+        return await context.Users.FirstOrDefaultAsync(u => u.Username == username);
+    }
+
+    /// <summary>
+    /// Verifies that a user exists in the database.
+    /// </summary>
+    /// <param name="username">The username to check.</param>
+    /// <param name="because">The reason for the assertion.</param>
+    private static async Task VerifyUserInDatabase(string username, string because)
+    {
+        var user = await GetUserFromDatabase(username);
+        user.Should().NotBeNull(because);
     }
 }
