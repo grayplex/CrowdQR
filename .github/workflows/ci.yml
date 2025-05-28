@@ -60,10 +60,11 @@ jobs:
     - name: Generate coverage report
       run: |
         reportgenerator \
-          -reports:TestResults/**/coverage.cobertura.xml \
+          -reports:TestResults/**/coverage.cobertura.xml;TestResults/**/Summary.txt \
           -targetdir:TestResults/coverage-report \
-          -reporttypes:"Html;Cobertura;Badges" \
+          -reporttypes:"Html;Cobertura;Badges;TextSummary" \
           -verbosity:Info
+
     - name: Extract coverage percentage
       id: coverage
       run: |
