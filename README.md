@@ -1,7 +1,12 @@
-[![CodeFactor](https://www.codefactor.io/repository/github/grayplex/crowdqr/badge)](https://www.codefactor.io/repository/github/grayplex/crowdqr)
-![badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/grayplex/7e97cfa3c85cb0d01de70cf117802536/raw/CrowdQR_Badge.json)
-
 # 🎧 CrowdQR – Real-Time DJ Audience Interaction App
+
+[![CI/CD Pipeline](https://github.com/grayplex/crowdqr/actions/workflows/ci.yml/badge.svg)](https://github.com/grayplex/crowdqr/actions/workflows/ci.yml)
+![Code Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/grayplex/7e97cfa3c85cb0d01de70cf117802536/raw/CrowdQR_Badge.json)
+[![CodeFactor](https://www.codefactor.io/repository/github/grayplex/crowdqr/badge)](https://www.codefactor.io/repository/github/grayplex/crowdqr)
+[![Release](https://img.shields.io/github/v/release/grayplex/crowdqr)](https://github.com/grayplex/crowdqr/releases)
+[![License](https://img.shields.io/github/license/grayplex/crowdqr)](LICENSE)
+[![Docker](https://img.shields.io/badge/docker-ready-blue?logo=docker)](https://github.com/grayplex/crowdqr/pkgs/container/crowdqr)
+[![.NET](https://img.shields.io/badge/.NET-8.0-purple?logo=dotnet)](https://dotnet.microsoft.com/)
 
 CrowdQR is a web-based platform that allows live audiences to engage with DJs during performances by scanning a QR code to submit and vote on song requests in real time. DJs can manage requests through a secure admin interface, allowing them to curate sets dynamically based on audience feedback.
 
@@ -12,9 +17,11 @@ This app is built as part of a Software Engineering Capstone project and is desi
 ## 🎯 Project Vision & Goals
 
 ### ✅ Vision
+
 Empower independent DJs and small venue performers to create more interactive, engaging sets by digitizing audience participation — no shouting requests, no pen-and-paper lists.
 
 ### ✅ Core Goals
+
 - Provide a mobile-friendly interface for users to submit and vote on song requests
 - Equip DJs with a live dashboard to approve/reject requests
 - Enable real-time updates without page refreshes
@@ -45,11 +52,13 @@ Empower independent DJs and small venue performers to create more interactive, e
 | **Caching/Rate Limiting** | Redis (optional) |
 | **Containerization** | Docker + Docker Compose |
 | **CI/CD (optional)** | GitHub Actions (for build/test) |
+
 ---
 
 ## 🗺 Roadmap
 
 ### ✅ MVP Goals (Capstone Completion)
+
 - [ ] Submit & vote on song requests
 - [ ] Admin dashboard with approval queue
 - [ ] Role-based access (DJ vs Audience)
@@ -58,6 +67,7 @@ Empower independent DJs and small venue performers to create more interactive, e
 - [ ] Dockerized full-stack deployment
 
 ### 💡 Planned Enhancements (Post-MVP)
+
 - [ ] Spotify/YouTube metadata enrichment
 - [ ] OAuth login (Google/Spotify)
 - [ ] DJ analytics dashboard (popular songs, request volume)

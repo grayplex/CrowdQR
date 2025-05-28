@@ -1,0 +1,239 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # Job 1: Build and Test
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0 # Shallow clones should be disabled for better analysis
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashfiles('**/.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+      
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore --verbosity normal
+
+    - name: Run tests with coverage
+      run: |
+        dotnet test tests/CrowdQR.Api.Tests/CrowdQR.Api.Tests.csproj \
+          --configuration Release \
+          --no-build \
+          --verbosity normal \
+          --logger trx \
+          --logger "console;verbosity=normal" \
+          --collect:"XPlat Code Coverage" \
+          --settings tests/CrowdQR.Api.Tests/coverlet.runsettings \
+          --results-directory TestResults
+      
+    - name: Install ReportGenerator
+      run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+    - name: Generate coverage report
+      run: |
+        reportgenerator \
+          -reports:TestResults/**/coverage.cobertura.xml \
+          -targetdir:TestResults/coverage-report \
+          -reporttypes:"Html;Cobertura;Badges;TextSummary" \
+          -verbosity:Info
+
+    - name: Extract coverage percentage
+      id: coverage
+      run: |
+        # Extract line coverage percentage from the summary
+        COVERAGE=$(grep -oP 'Line coverage: \K[0-9.]+(?=%)' TestResults/coverage-report/Summary.txt | head -1)
+        echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+        echo "Coverage: $COVERAGE%"
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: TestResults/*.trx
+        retention-days: 30
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report
+        path: TestResults/coverage-report/
+        retention-days: 30
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        files: TestResults/**/coverage.cobertura.xml
+        fail_ci_if_error: false
+        verbose: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+      
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: thollander/actions-comment-pull-request@v1
+      with:
+        message: |
+          ## 📊 Code Coverage Report
+
+          **Line Coverage:** ${{ steps.coverage.outputs.coverage }}%
+
+          📁 [View detailed coverage report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+          > Coverage report generated on ${new Date().toLocaleString()}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    outputs:
+      coverage: ${{ steps.coverage.outputs.coverage }}
+  
+  # Job 2: Security Analysis
+  security:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Run Security Analysis
+        run: |
+          # Check for known vulnerabilities in NuGet packages
+          dotnet list package --vulnerable --include-transitive > security-report.txt 2>&1 || true
+
+          # Check for outdated packages
+          dotnet list package --outdated >> security-report.txt 2>&1 || true
+
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.txt
+          retention-days: 30
+
+  # Job 3: Update Coverage badge
+  update-badge:
+    name: Update Coverage Badge
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create coverage badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: ${{ secrets.GIST_ID }}
+          filename: CrowdQR_Badge.json
+          label: Coverage
+          message: ${{ needs.test.outputs.coverage }}%
+          color: ${{ needs.test.outputs.coverage > 80 && 'brightgreen' || needs.test.outputs.coverage > 60 && 'yellow' || 'red' }}
+  
+  # Job 4: Deployment Preview
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: [ test, security ]
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Build for deployment
+        run: |
+          dotnet publish src/CrowdQR.Api/CrowdQR.Api.csproj -c Release -o ./publish/api
+          dotnet publish src/CrowdQR.Web/CrowdQR.Web.csproj -c Release -o ./publish/web
+
+      - name: Create deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-preview
+          path: ./publish/
+          retention-days: 7
+        
+      - name: Comment deployment info on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## 🚀 Preview Deployment
+
+            **Status:** ✅ Ready for deployment
+            **Build:** ${{ github.run_number }}
+            **Commit:** ${{ github.sha }}
+
+            📦 [Download deployment artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            > Preview deployment prepared on ${new Date().toLocaleString()}`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+        
+  # Job 5: Notification
+  notify:
+    name: Notify Results
+    runs-on: ubuntu-latest
+    needs: [ test, security, update-badge ]
+    if: always()
+
+    steps:
+      - name: Notify success
+        if: needs.test.result == 'success' && needs.security.result == 'success'
+        run: |
+          echo "✅ All checks passed! Coverage: ${{ needs.test.outputs.coverage }}%"
+      
+      - name: Notify failure
+        if: needs.test.result == 'failure' || needs.security.result == 'failure'
+        run: |
+          echo "❌ Some checks failed. Please review the results."
+          exit 1
