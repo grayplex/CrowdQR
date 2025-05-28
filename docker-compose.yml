@@ -2,13 +2,13 @@ services:
   api:
     build:
       context: ./src
-      dockerfile: CrowdQR.API/Dockerfile
+      dockerfile: CrowdQR.Api/Dockerfile
     ports:
       - "5000:5000"
     depends_on:
       - db
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - ASPNETCORE_URLS=http://+:5000
       - DB_HOST=db
       - DB_PORT=5432
@@ -25,7 +25,7 @@ services:
     ports:
       - "8080:80"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - ApiSettings__BaseUrl=http://api:5000
     depends_on:
       - api
