@@ -1,3 +1,5 @@
+[![CodeFactor](https://www.codefactor.io/repository/github/grayplex/crowdqr/badge)](https://www.codefactor.io/repository/github/grayplex/crowdqr)
+
 # 🎧 CrowdQR – Real-Time DJ Audience Interaction App
 
 CrowdQR is a web-based platform that allows live audiences to engage with DJs during performances by scanning a QR code to submit and vote on song requests in real time. DJs can manage requests through a secure admin interface, allowing them to curate sets dynamically based on audience feedback.

@@ -46,11 +46,16 @@ builder.Services.AddAuthentication(options =>
 
 // Add Authorization
 builder.Services.AddAuthorizationBuilder()
-                        // Add Authorization
-                        .AddPolicy("DjOnly", policy =>
-        policy.RequireRole("DJ"))
-                        // Add Authorization
-                        .AddPolicy("AudienceAccess", policy =>
+    .AddPolicy("DjOnly", policy =>
+        policy.RequireAssertion(context =>
+        {
+            if (context.User.Identity?.IsAuthenticated == true)
+            {
+                return context.User.IsInRole("DJ");
+            }
+            return false;
+        }))
+    .AddPolicy("AudienceAccess", policy =>
         policy.RequireAssertion(context =>
             context.User.Identity?.IsAuthenticated == true ||
             (context.Resource is HttpContext httpContext &&

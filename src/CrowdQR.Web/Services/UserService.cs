@@ -105,9 +105,9 @@ public class UserService(ApiService apiService, ILogger<UserService> logger)
     /// </summary>
     /// <param name="changePasswordDto">The change password DTO.</param>
     /// <returns>True if successful, false otherwise.</returns>
-    public async Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto)
+    public async Task<bool> ChangePasswordAsync(UserChangePasswordDto changePasswordDto)
     {
-        var (success, _) = await _apiService.PostAsync<ChangePasswordDto, object>("api/auth/change-password", changePasswordDto);
+        var (success, _) = await _apiService.PostAsync<UserChangePasswordDto, object>("api/auth/change-password", changePasswordDto);
         return success;
     }
 }

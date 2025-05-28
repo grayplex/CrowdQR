@@ -114,7 +114,7 @@ namespace CrowdQR.Web.Pages.Admin
             {
                 if (HttpContext.RequestServices.GetService(typeof(Services.UserService)) is Services.UserService userService)
                 {
-                    var changePasswordDto = new ChangePasswordDto
+                    var changePasswordDto = new UserChangePasswordDto
                     {
                         CurrentPassword = CurrentPassword!,
                         NewPassword = NewPassword!,

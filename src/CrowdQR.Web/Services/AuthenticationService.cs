@@ -53,7 +53,7 @@ public class AuthenticationService
             }
 
             // Prepare login request
-            var loginRequest = new LoginDto
+            var loginRequest = new AuthLoginDto
             {
                 UsernameOrEmail = usernameOrEmail,
                 Password = password
@@ -154,7 +154,7 @@ public class AuthenticationService
             }
 
             // Create or get audience user
-            var loginRequest = new LoginDto
+            var loginRequest = new AuthLoginDto
             {
                 UsernameOrEmail = username
                 // No password for audience users
