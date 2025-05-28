@@ -53,7 +53,7 @@ public class VerifyEmailModel(ApiService apiService, ILogger<VerifyEmailModel> l
 
         try
         {
-            var verifyDto = new VerifyEmailDto
+            var verifyDto = new AuthVerifyEmailDto
             {
                 Email = Email,
                 Token = Token

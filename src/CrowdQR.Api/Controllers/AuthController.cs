@@ -27,7 +27,7 @@ public class AuthController(IAuthService authService, ILogger<AuthController> lo
     /// <param name="request">The login request.</param>
     /// <returns>Authentication result with JWT token if successful.</returns>
     [HttpPost("login")]
-    public async Task<ActionResult<AuthResultDto>> Login([FromBody] LoginDto request)
+    public async Task<ActionResult<AuthResultDto>> Login([FromBody] AuthLoginDto request)
     {
         if (string.IsNullOrEmpty(request.UsernameOrEmail))
         {
@@ -94,7 +94,7 @@ public class AuthController(IAuthService authService, ILogger<AuthController> lo
     /// <param name="request">The registration request.</param>
     /// <returns>Registration result.</returns>
     [HttpPost("register")]
-    public async Task<ActionResult<AuthResultDto>> Register([FromBody] DjRegisterDto request)
+    public async Task<ActionResult<AuthResultDto>> Register([FromBody] AuthDjRegisterDto request)
     {
         if (!ModelState.IsValid)
         {
@@ -118,7 +118,7 @@ public class AuthController(IAuthService authService, ILogger<AuthController> lo
     /// <param name="request">The email verification request.</param>
     /// <returns>Success or failure response.</returns>
     [HttpPost("verify-email")]
-    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto request)
+    public async Task<IActionResult> VerifyEmail([FromBody] AuthVerifyEmailDto request)
     {
         if (!ModelState.IsValid)
         {

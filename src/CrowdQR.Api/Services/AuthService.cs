@@ -152,7 +152,7 @@ public class AuthService(
     /// </summary>
     /// <param name="registerDto">The registration data.</param>
     /// <returns>Registration result.</returns>
-    public async Task<AuthResultDto> RegisterDj(DjRegisterDto registerDto)
+    public async Task<AuthResultDto> RegisterDj(AuthDjRegisterDto registerDto)
     {
         try
         {
@@ -237,7 +237,7 @@ public class AuthService(
     /// </summary>
     /// <param name="verifyEmailDto">The email verification data.</param>
     /// <returns>True if verification was successful, false otherwise.</returns>
-    public async Task<bool> VerifyEmail(VerifyEmailDto verifyEmailDto)
+    public async Task<bool> VerifyEmail(AuthVerifyEmailDto verifyEmailDto)
     {
         try
         {

@@ -78,7 +78,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     {
         // Arrange
         await ClearDatabase();
-        var loginDto = new LoginDto
+        var loginDto = new AuthLoginDto
         {
             UsernameOrEmail = "new_audience_user"
             // No password for audience users
@@ -112,7 +112,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     {
         // Arrange
         await ClearDatabase();
-        var registerDto = new DjRegisterDto
+        var registerDto = new AuthDjRegisterDto
         {
             Username = "test_dj_register",
             Email = "testdj@example.com",
@@ -154,7 +154,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         await ClearDatabase();
 
         // First registration
-        var firstRegisterDto = new DjRegisterDto
+        var firstRegisterDto = new AuthDjRegisterDto
         {
             Username = "duplicate_dj",
             Email = "first@example.com",
@@ -166,7 +166,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         firstResponse.StatusCode.Should().Be(HttpStatusCode.Created, "First registration should succeed");
 
         // Second registration with same username
-        var secondRegisterDto = new DjRegisterDto
+        var secondRegisterDto = new AuthDjRegisterDto
         {
             Username = "duplicate_dj", // Same username
             Email = "second@example.com",
@@ -193,7 +193,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         await ClearDatabase();
 
         // First registration
-        var firstRegisterDto = new DjRegisterDto
+        var firstRegisterDto = new AuthDjRegisterDto
         {
             Username = "first_dj",
             Email = "duplicate@example.com",
@@ -205,7 +205,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         firstResponse.StatusCode.Should().Be(HttpStatusCode.Created, "First registration should succeed");
 
         // Second registration with same email
-        var secondRegisterDto = new DjRegisterDto
+        var secondRegisterDto = new AuthDjRegisterDto
         {
             Username = "second_dj",
             Email = "duplicate@example.com", // Same email
@@ -232,7 +232,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         await ClearDatabase();
 
         // Create DJ user through registration
-        var registerDto = new DjRegisterDto
+        var registerDto = new AuthDjRegisterDto
         {
             Username = "login_test_dj",
             Email = "logintest@example.com",
@@ -244,7 +244,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         registerResponse.StatusCode.Should().Be(HttpStatusCode.Created, "Registration should succeed");
 
         // Now try to login
-        var loginDto = new LoginDto
+        var loginDto = new AuthLoginDto
         {
             UsernameOrEmail = "login_test_dj",
             Password = "TestPassword123!"
@@ -274,7 +274,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         await ClearDatabase();
 
         // Create a DJ user first
-        var registerDto = new DjRegisterDto
+        var registerDto = new AuthDjRegisterDto
         {
             Username = "test_dj_invalid",
             Email = "invalid@example.com",
@@ -284,7 +284,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
 
         await _client.PostAsJsonAsync("/api/auth/register", registerDto);
 
-        var loginDto = new LoginDto
+        var loginDto = new AuthLoginDto
         {
             UsernameOrEmail = "test_dj_invalid",
             Password = "WrongPassword123!"
@@ -309,7 +309,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         await ClearDatabase();
 
         // Register DJ user
-        var registerDto = new DjRegisterDto
+        var registerDto = new AuthDjRegisterDto
         {
             Username = "verify_test_dj",
             Email = "verify@example.com",
@@ -325,7 +325,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         var verificationToken = user!.EmailVerificationToken;
         verificationToken.Should().NotBeNullOrEmpty("Verification token should be generated");
 
-        var verifyDto = new VerifyEmailDto
+        var verifyDto = new AuthVerifyEmailDto
         {
             Email = "verify@example.com",
             Token = verificationToken!
@@ -352,7 +352,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     {
         // Arrange
         await ClearDatabase();
-        var verifyDto = new VerifyEmailDto
+        var verifyDto = new AuthVerifyEmailDto
         {
             Email = "test@example.com",
             Token = "invalid-token"
@@ -375,7 +375,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     {
         // Arrange
         await ClearDatabase();
-        var loginDto = new LoginDto
+        var loginDto = new AuthLoginDto
         {
             UsernameOrEmail = "", // Empty username
             Password = "password"
@@ -398,7 +398,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     {
         // Arrange
         await ClearDatabase();
-        var registerDto = new DjRegisterDto
+        var registerDto = new AuthDjRegisterDto
         {
             Username = "", // Invalid - empty username
             Email = "invalid-email", // Invalid email format
@@ -425,7 +425,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         await ClearDatabase();
 
         // Create and login user
-        var loginDto = new LoginDto
+        var loginDto = new AuthLoginDto
         {
             UsernameOrEmail = "token_test_user"
         };

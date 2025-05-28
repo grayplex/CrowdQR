@@ -36,7 +36,7 @@ public class AuthControllerTests : IDisposable
     public async Task Login_ValidCredentials_ReturnsOkWithToken()
     {
         // Arrange
-        var loginDto = new LoginDto
+        var loginDto = new AuthLoginDto
         {
             UsernameOrEmail = "test_dj",
             Password = "password123"
@@ -73,7 +73,7 @@ public class AuthControllerTests : IDisposable
     public async Task Login_InvalidCredentials_ReturnsUnauthorized()
     {
         // Arrange
-        var loginDto = new LoginDto
+        var loginDto = new AuthLoginDto
         {
             UsernameOrEmail = "test_user",
             Password = "wrong_password"
@@ -102,7 +102,7 @@ public class AuthControllerTests : IDisposable
     public async Task Login_UnverifiedEmail_ReturnsBadRequest()
     {
         // Arrange
-        var loginDto = new LoginDto
+        var loginDto = new AuthLoginDto
         {
             UsernameOrEmail = "unverified@test.com",
             Password = "password123"
@@ -132,7 +132,7 @@ public class AuthControllerTests : IDisposable
     public async Task Login_MissingUsernameOrEmail_ReturnsBadRequest()
     {
         // Arrange
-        var loginDto = new LoginDto
+        var loginDto = new AuthLoginDto
         {
             UsernameOrEmail = "",
             Password = "password123"
@@ -156,7 +156,7 @@ public class AuthControllerTests : IDisposable
     public async Task Register_ValidDjData_ReturnsCreated()
     {
         // Arrange
-        var registerDto = new DjRegisterDto
+        var registerDto = new AuthDjRegisterDto
         {
             Username = "new_dj",
             Email = "newdj@test.com",
@@ -194,7 +194,7 @@ public class AuthControllerTests : IDisposable
     public async Task Register_DuplicateUsername_ReturnsBadRequest()
     {
         // Arrange
-        var registerDto = new DjRegisterDto
+        var registerDto = new AuthDjRegisterDto
         {
             Username = "existing_dj",
             Email = "newdj@test.com",
@@ -225,7 +225,7 @@ public class AuthControllerTests : IDisposable
     public async Task VerifyEmail_ValidToken_ReturnsOk()
     {
         // Arrange
-        var verifyDto = new VerifyEmailDto
+        var verifyDto = new AuthVerifyEmailDto
         {
             Email = "test@example.com",
             Token = "valid-token"
@@ -248,7 +248,7 @@ public class AuthControllerTests : IDisposable
     public async Task VerifyEmail_InvalidToken_ReturnsBadRequest()
     {
         // Arrange
-        var verifyDto = new VerifyEmailDto
+        var verifyDto = new AuthVerifyEmailDto
         {
             Email = "test@example.com",
             Token = "invalid-token"
@@ -325,7 +325,7 @@ public class AuthControllerTests : IDisposable
         // Arrange
         _controller.ModelState.AddModelError("Email", "Email is required");
 
-        var registerDto = new DjRegisterDto
+        var registerDto = new AuthDjRegisterDto
         {
             Username = "new_dj",
             Email = "", // Invalid email

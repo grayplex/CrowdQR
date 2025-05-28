@@ -21,14 +21,14 @@ public interface IAuthService
     /// </summary>
     /// <param name="registerDto">The registration data.</param>
     /// <returns>Registration result.</returns>
-    Task<AuthResultDto> RegisterDj(DjRegisterDto registerDto);
+    Task<AuthResultDto> RegisterDj(AuthDjRegisterDto registerDto);
 
     /// <summary>
     /// Verifies a user's email.
     /// </summary>
     /// <param name="verifyEmailDto">The email verification data.</param>
     /// <returns>True if verification was successful, false otherwise.</returns>
-    Task<bool> VerifyEmail(VerifyEmailDto verifyEmailDto);
+    Task<bool> VerifyEmail(AuthVerifyEmailDto verifyEmailDto);
 
     /// <summary>
     /// Resends an email verification token.

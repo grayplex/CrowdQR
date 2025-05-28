@@ -197,7 +197,7 @@ public class AuthServiceTests : IDisposable
         _mockEmailService.Setup(x => x.SendVerificationEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        var registerDto = new DjRegisterDto
+        var registerDto = new AuthDjRegisterDto
         {
             Username = "new_dj",
             Email = "newdj@test.com",
@@ -240,7 +240,7 @@ public class AuthServiceTests : IDisposable
         // Arrange
         await TestDbContextFactory.SeedTestDataAsync(_context);
 
-        var registerDto = new DjRegisterDto
+        var registerDto = new AuthDjRegisterDto
         {
             Username = "test_dj", // Already exists
             Email = "duplicate@test.com",
@@ -266,7 +266,7 @@ public class AuthServiceTests : IDisposable
         // Arrange
         await TestDbContextFactory.SeedTestDataAsync(_context);
 
-        var registerDto = new DjRegisterDto
+        var registerDto = new AuthDjRegisterDto
         {
             Username = "new_unique_dj",
             Email = "dj@test.com", // Already exists
@@ -298,7 +298,7 @@ public class AuthServiceTests : IDisposable
         djUser.IsEmailVerified = false;
         await _context.SaveChangesAsync();
 
-        var verifyDto = new VerifyEmailDto
+        var verifyDto = new AuthVerifyEmailDto
         {
             Email = "dj@test.com",
             Token = "valid-token"
@@ -332,7 +332,7 @@ public class AuthServiceTests : IDisposable
         djUser.IsEmailVerified = false;
         await _context.SaveChangesAsync();
 
-        var verifyDto = new VerifyEmailDto
+        var verifyDto = new AuthVerifyEmailDto
         {
             Email = "dj@test.com",
             Token = "expired-token"
@@ -358,7 +358,7 @@ public class AuthServiceTests : IDisposable
         // Arrange
         await TestDbContextFactory.SeedTestDataAsync(_context);
 
-        var verifyDto = new VerifyEmailDto
+        var verifyDto = new AuthVerifyEmailDto
         {
             Email = "dj@test.com",
             Token = "invalid-token"
