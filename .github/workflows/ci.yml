@@ -193,7 +193,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Build for deployment
-        run: 
+        run: |
           dotnet publish src/CrowdQR.Api/CrowdQR.Api.csproj -c Release -o ./publish/api
           dotnet publish src/CrowdQR.Web/CrowdQR.Web.csproj -c Release -o ./publish/web
 
