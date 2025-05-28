@@ -99,25 +99,18 @@ jobs:
       
     - name: Comment coverage on PR
       if: github.event_name == 'pull_request'
-      uses: actions/github-script@v7
+      uses: thollander/actions-comment-pull-request@v1
       with:
-        script: |
-          const coverage = '${{ steps.coverage.outputs.coverage }}';
-          const comment = `## 📊 Code Coverage Report
+        message: |
+          ## 📊 Code Coverage Report
 
-          **Line Coverage:** ${coverage}%
+          **Line Coverage:** ${{ steps.coverage.outputs.coverage }}%
 
           📁 [View detailed coverage report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
-          > Coverage report generated on ${new Date().toLocaleString()}`;
-
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
-    
+          > Coverage report generated on ${new Date().toLocaleString()}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
     outputs:
       coverage: ${{ steps.coverage.outputs.coverage }}
   
