@@ -1,11 +1,69 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
 version: 2
 updates:
+  # Enable version updates for NuGet
   - package-ecosystem: "nuget" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "14:00" # Time in UTC
+    target-branch: "dev"
+    reviewers:
+      - "grayplex"
+    assignees:
+      - "grayplex"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct" # Update direct dependencies
+      - dependency-type: "indirect" # Update transitive dependencies
+    ignore:
+      # Ignore major version updates for stable packages
+      - dependency-name: "Microsoft.*"
+        update-types: ["version-update:semver-major"]
+  
+  # Github Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    target-branch: "develop"
+    reviewers:
+      - "grayplex"  # Replace with your GitHub username
+    assignees:
+      - "grayplex"  # Replace with your GitHub username
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "github-actions"
+      - "automated"
+    open-pull-requests-limit: 3
+
+  # Enable version updates for Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    target-branch: "develop"
+    reviewers:
+      - "grayplex"  # Replace with your GitHub username
+    assignees:
+      - "grayplex"  # Replace with your GitHub username
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    labels:
+      - "docker"
+      - "automated"
+    open-pull-requests-limit: 2
