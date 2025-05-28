@@ -1,4 +1,5 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/grayplex/crowdqr/badge)](https://www.codefactor.io/repository/github/grayplex/crowdqr)
+![badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/grayplex/7e97cfa3c85cb0d01de70cf117802536/raw/CrowdQR_Badge.json)
 
 # 🎧 CrowdQR – Real-Time DJ Audience Interaction App
 
