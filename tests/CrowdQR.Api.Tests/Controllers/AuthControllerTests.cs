@@ -273,7 +273,7 @@ public class AuthControllerTests : IDisposable
         // Arrange
         SetupUserClaims(1, "DJ");
 
-        var changePasswordDto = new ChangePasswordDto
+        var changePasswordDto = new UserChangePasswordDto
         {
             CurrentPassword = "oldpassword",
             NewPassword = "newpassword123",
@@ -299,7 +299,7 @@ public class AuthControllerTests : IDisposable
         // Arrange
         SetupUserClaims(1, "DJ");
 
-        var changePasswordDto = new ChangePasswordDto
+        var changePasswordDto = new UserChangePasswordDto
         {
             CurrentPassword = "wrongpassword",
             NewPassword = "newpassword123",

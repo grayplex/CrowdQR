@@ -165,7 +165,7 @@ public class AuthController(IAuthService authService, ILogger<AuthController> lo
     /// <returns>Success or failure response.</returns>
     [HttpPost("change-password")]
     [Authorize]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
+    public async Task<IActionResult> ChangePassword([FromBody] UserChangePasswordDto request)
     {
         if (!ModelState.IsValid)
         {
