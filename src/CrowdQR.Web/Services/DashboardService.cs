@@ -21,9 +21,9 @@ public class DashboardService(ApiService apiService, ILogger<DashboardService> l
     /// </summary>
     /// <param name="eventId">The event ID.</param>
     /// <returns>The event summary, or null if not found.</returns>
-    public async Task<EventSummaryDto?> GetEventSummaryAsync(int eventId)
+    public async Task<DashboardEventSummaryDto?> GetEventSummaryAsync(int eventId)
     {
-        return await _apiService.GetAsync<EventSummaryDto>($"{BaseEndpoint}/event/{eventId}/summary");
+        return await _apiService.GetAsync<DashboardEventSummaryDto>($"{BaseEndpoint}/event/{eventId}/summary");
     }
 
     /// <summary>
@@ -33,9 +33,9 @@ public class DashboardService(ApiService apiService, ILogger<DashboardService> l
     /// <param name="status">The request status (0 = Pending, 1 = Approved, 2 = Rejected).</param>
     /// <param name="count">The number of requests to return.</param>
     /// <returns>A list of the top requests.</returns>
-    public async Task<List<TopRequestDto>> GetTopRequestsAsync(int eventId, int status = 0, int count = 10)
+    public async Task<List<DashboardTopRequestDto>> GetTopRequestsAsync(int eventId, int status = 0, int count = 10)
     {
-        var requests = await _apiService.GetAsync<List<TopRequestDto>>(
+        var requests = await _apiService.GetAsync<List<DashboardTopRequestDto>>(
             $"{BaseEndpoint}/event/{eventId}/top-requests?status={status}&count={count}");
         return requests ?? [];
     }
@@ -45,9 +45,9 @@ public class DashboardService(ApiService apiService, ILogger<DashboardService> l
     /// </summary>
     /// <param name="djUserId">The DJ user ID.</param>
     /// <returns>A list of event statistics.</returns>
-    public async Task<List<DjEventStatDto>> GetDjEventStatsAsync(int djUserId)
+    public async Task<List<DashboardDjEventStatDto>> GetDjEventStatsAsync(int djUserId)
     {
-        var stats = await _apiService.GetAsync<List<DjEventStatDto>>($"{BaseEndpoint}/dj/{djUserId}/event-stats");
+        var stats = await _apiService.GetAsync<List<DashboardDjEventStatDto>>($"{BaseEndpoint}/dj/{djUserId}/event-stats");
         return stats ?? [];
     }
 }

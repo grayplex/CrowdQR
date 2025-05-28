@@ -380,7 +380,7 @@ public class DashboardModel(
         ApplySearch();
     }
 
-    private void MapRequestsFromSummary(EventSummaryDto summary)
+    private void MapRequestsFromSummary(DashboardEventSummaryDto summary)
     {
         // Map pending requests
 #pragma warning disable IDE0305 // Simplify collection initialization
