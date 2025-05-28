@@ -1,7 +1,7 @@
 # 🎧 CrowdQR – Real-Time DJ Audience Interaction App
 
 [![CI/CD Pipeline](https://github.com/grayplex/crowdqr/actions/workflows/ci.yml/badge.svg)](https://github.com/grayplex/crowdqr/actions/workflows/ci.yml)
-![Code Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/grayplex/7e97cfa3c85cb0d01de70cf117802536/raw/CrowdQR_Badge.json)
+![Code Coverage](https://img.shields.io/codecov/c/github/grayplex/CrowdQR)
 [![CodeFactor](https://www.codefactor.io/repository/github/grayplex/crowdqr/badge)](https://www.codefactor.io/repository/github/grayplex/crowdqr)
 [![Release](https://img.shields.io/github/v/release/grayplex/crowdqr)](https://github.com/grayplex/crowdqr/releases)
 [![License](https://img.shields.io/github/license/grayplex/crowdqr)](LICENSE)
