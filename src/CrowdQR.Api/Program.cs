@@ -6,6 +6,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,6 +93,15 @@ builder.Services.AddAuthorization();
 
 // Register auth service
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Add health checks
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        connectionString: builder.Configuration.GetConnectionString("Default") ??
+            BuildConnectionString(builder.Configuration),
+        name: "postgresql",
+        tags: ["database", "postgresql"])
+    .AddCheck("self", () => HealthCheckResult.Healthy("Api is running"));
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -179,6 +191,30 @@ app.UseDjRoleValidation(); // Custom middleware for DJ role validation
 // app.UseHttpsRedirection(); // Redirect HTTP to HTTPS // Disabled while in development mode
 app.MapHub<CrowdQRHub>("/hubs/crowdqr"); // Map SignalR hub
 app.MapControllers(); // Map controllers to routes
+
+// Map health check endpoints
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse,
+    ResultStatusCodes =
+    {
+        [HealthStatus.Healthy] = StatusCodes.Status200OK,
+        [HealthStatus.Degraded] = StatusCodes.Status200OK,
+        [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+    }
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false,
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
 
 app.Run(); 
 
