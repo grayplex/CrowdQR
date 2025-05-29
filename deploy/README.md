@@ -85,7 +85,7 @@ This directory contains scripts and documentation for deploying CrowdQR in produ
 ### Performance
 
 - Allocate sufficient resources (2GB+ RAM)
-- Consder using external PostgreSQL database for scalability
+- Consider using external PostgreSQL database for scalability
 - Monitor container resource usage
 - Set up log rotation
 
