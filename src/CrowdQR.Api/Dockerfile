@@ -34,15 +34,15 @@ RUN apk add --no-cache curl
 WORKDIR /app
 
 # Copy the published output
-COPY --from=build --chown=appuser:appgroup /app/out .
+COPY --from=build --chown=crowdqr:crowdqr /app/out .
 
 # Copy and set up the entrypoint script
-COPY --chown=appuser:appgroup CrowdQR.Api/docker-entrypoint.sh /app/entrypoint.sh
+COPY --chown=crowdqr:crowdqr CrowdQR.Api/docker-entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh && \
     dos2unix /app/entrypoint.sh 2>/dev/null || true
 
 # Switch to non-root user
-USER appuser
+USER crowdqr
 
 # Configure ASP.NET Core
 ENV ASPNETCORE_URLS=http://+:5000

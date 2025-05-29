@@ -77,9 +77,9 @@ This directory contains scripts and documentation for deploying CrowdQR in produ
 
 ### Security
 
-- Change default PostgreSQL passowrd
+- Change default PostgreSQL password
 - Use environment variables for secrets
-- Consder reverse proxy (Nginx, Traefik) for SSL termination
+- Consider reverse proxy (Nginx, Traefik) for SSL termination
 - Enable firewall rules for required ports only
 
 ### Performance

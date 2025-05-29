@@ -251,7 +251,7 @@ show_summary() {
     echo "Service URLs:"
     echo "  🌐 Web Application: http://localhost:8080"
     echo "  🔧 API: http://localhost:5000"
-    echo "  💾 Database: localhost:5433"
+    echo "  💾 Database: localhost:5432"
     
     echo ""
     echo "Health Check URLs:"
