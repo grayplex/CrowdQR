@@ -118,8 +118,6 @@ builder.Services.AddHealthChecks()
         new Uri($"{builder.Configuration["ApiSettings:BaseUrl"]}/health"),
         name: "api-health",
         tags: ["api", "external"]);
-builder.Services.AddHealthChecksUI()
-                .AddInMemoryStorage();
 
 
 // Add services to the container
@@ -170,7 +168,6 @@ app.MapHealthChecks("/health", new HealthCheckOptions
         [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
     }
 });
-app.MapHealthChecksUI();
 
 // Theme endpoint
 app.MapPost("/api/theme", (HttpContext context, JsonDocument body) =>
