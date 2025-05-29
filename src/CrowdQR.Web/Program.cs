@@ -9,6 +9,11 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using HealthChecks.UI.Core;
+using HealthChecks.UI;
+using HealthChecks.UI.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -106,6 +111,14 @@ builder.Services.AddSession(options =>
 // Add session manager for audience members
 builder.Services.AddScoped<SessionManager>();
 
+// Add health checks
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy("Web app is running"))
+    .AddUrlGroup(
+        new Uri($"{builder.Configuration["ApiSettings:BaseUrl"]}/health"),
+        name: "api-health",
+        tags: ["api", "external"]);
+
 
 // Add services to the container
 builder.Services.AddRazorPages(options =>
@@ -143,6 +156,18 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseStatusCodePagesWithRedirects("/AccessDenied?code={0}");
 app.MapRazorPages();
+
+// Map health check endpoints
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse,
+    ResultStatusCodes =
+    {
+        [HealthStatus.Healthy] = StatusCodes.Status200OK,
+        [HealthStatus.Degraded] = StatusCodes.Status200OK,
+        [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+    }
+});
 
 // Theme endpoint
 app.MapPost("/api/theme", (HttpContext context, JsonDocument body) =>

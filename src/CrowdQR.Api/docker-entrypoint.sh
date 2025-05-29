@@ -1,18 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 # Wait for the database to be ready
 echo "Waiting for PostgreSQL..."
-
-# Check for the correct DLL file name
-if [ -f "CrowdQR.Api.dll" ]; then
-    DLL_NAME="CrowdQR.Api.dll"
-elif [ -f "CrowdQR.API.dll" ]; then
-    DLL_NAME="CrowdQR.API.dll"
-else
-    echo "Error: Could not find the application DLL"
-    exit 1
-fi
 
 until dotnet exec $DLL_NAME -- --wait-for-db; do
     echo "PostgreSQL is unavailable - sleeping"

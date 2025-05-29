@@ -1,8 +1,8 @@
 # Stage 1: Build
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 WORKDIR /app
 
-# Copy solution and project files
+# Copy solution and project files first for better layer caching
 COPY CrowdQR.Shared/CrowdQR.Shared.csproj ./CrowdQR.Shared/
 COPY CrowdQR.Web/CrowdQR.Web.csproj ./CrowdQR.Web/
 
@@ -13,16 +13,42 @@ RUN dotnet restore ./CrowdQR.Web/CrowdQR.Web.csproj
 COPY CrowdQR.Shared/ ./CrowdQR.Shared/
 COPY CrowdQR.Web/ ./CrowdQR.Web/
 
-# Build and publish
+# Build and publish in release mode with optimizations
 WORKDIR /app/CrowdQR.Web
-RUN dotnet publish -c Release -o /app/out
+RUN dotnet publish -c Release -o /app/out --no-restore \
+    --self-contained false \
+    --verbosity minimal \
+    /p:PublishTrimmed=false \
+    /p:PublishSingleFile=false
 
-# Stage 2: Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+# Stage 2: Runtime (minimal)
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
+
+# Install curl for healthchecks
+RUN apk add --no-cache curl
+
 WORKDIR /app
-COPY --from=build /app/out .
 
+# Copy the published output with correct ownership
+COPY --from=build --chown=appuser:appgroup /app/out .
+
+# Switch to non-root user
+USER appuser
+
+# Configure ASP.NET Core
 ENV ASPNETCORE_URLS=http://+:80
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+
 EXPOSE 80
 
-ENTRYPOINT ["dotnet", "CrowdQR.Web.dll"] 
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:80/health || exit 1
+
+ENTRYPOINT ["dotnet", "CrowdQR.Web.dll"]
