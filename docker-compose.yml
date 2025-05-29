@@ -3,6 +3,7 @@ services:
     build:
       context: ./src
       dockerfile: CrowdQR.Api/Dockerfile
+    image: ${REGISTRY:-ghcr.io}/${REPOSITORY:-grayplex/crowdqr}-api:${CROWDQR_VERSION:-latest}
     ports:
       - "5000:5000"
     depends_on:
@@ -30,6 +31,7 @@ services:
     build:
       context: ./src
       dockerfile: CrowdQR.Web/Dockerfile
+    image: ${REGISTRY:-ghcr.io}/${REPOSITORY:-grayplex/crowdqr}-web:${CROWDQR_VERSION:-latest}
     ports:
       - "8080:80"
     environment:
