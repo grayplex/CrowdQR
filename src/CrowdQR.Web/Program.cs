@@ -11,6 +11,8 @@ using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using HealthChecks.UI.Core;
+using HealthChecks.UI;
 using HealthChecks.UI.Client;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -116,6 +118,8 @@ builder.Services.AddHealthChecks()
         new Uri($"{builder.Configuration["ApiSettings:BaseUrl"]}/health"),
         name: "api-health",
         tags: ["api", "external"]);
+builder.Services.AddHealthChecksUI()
+                .AddInMemoryStorage();
 
 
 // Add services to the container
@@ -166,6 +170,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
         [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
     }
 });
+app.MapHealthChecksUI();
 
 // Theme endpoint
 app.MapPost("/api/theme", (HttpContext context, JsonDocument body) =>
