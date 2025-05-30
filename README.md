@@ -79,6 +79,14 @@ curl http://localhost:8080/health
 - **[CI/CD Pipeline](.github/workflows/ci.yml)** - Automated testing and deployment
 - **[Project Structure](#project-structure)** - Codebase organization and conventions
 
+### 📋 Usage Guides
+
+- **[How to Use CrowdQR](#-how-to-use-crowdqr)** - Complete user guide for DJs and audience
+- **[Troubleshooting](#-troubleshooting)** - Common issues and solutions
+- **[Best Practices](#-tips-for-best-results)** - Recommendations for optimal experience
+
+---
+
 ## 🎯 Project Vision & Goal
 
 ### ✅ Vision
