@@ -16,6 +16,62 @@ This app is built as part of a Software Engineering Capstone project and is desi
 
 ---
 
+## 📋 Quick Start
+
+### Prerequisites
+
+- Docker 20.10+ and Docker Compose 2.0+
+- 2GB+ RAM available  
+- Ports 5000, 8080, 5433 available
+
+### 1-Minute Deployment
+
+```bash
+# Clone the repository
+git clone https://github.com/grayplex/crowdqr.git
+cd crowdqr
+
+# Copy and configure environment
+cp .env.example .env
+# Edit .env file - CHANGE the default passwords!
+
+# Deploy with Docker Compose
+docker-compose up -d
+
+# Verify deployment
+curl http://localhost:5000/health
+curl http://localhost:8080/health
+```
+
+### 🌐 Access the Application
+
+- Web App: <http://localhost:8080>
+- API: <http://localhost:5000>
+- Database: localhost:5433
+
+---
+
+## 📖 Documentation
+
+### 🚀 Deployment & Operations
+
+- [Deployment Guide](deploy/README.md) - Complete production deployment instructions
+- [Environment Variables](docs/ENVIRONMENT_VARIABLES.md) - Configuration reference
+- [Command Reference](docs/DEPLOYMENT_COMMANDS.md) - Build, run, and troubleshoot commands
+- [Automated Testing](deploy/production-test.sh) - Production deployment testing script
+
+### 🧪 Testing & Quality Assurance
+
+- [E2E Test Workflow](tests/EndToEndTestWorkflow.md) - Step-by-step testing guide
+- [Testing Checklist](tests/TestingChecklist.md) - Comprehensive testing scenarios
+- [Test Coverage](tests/CrowdQR.Api.Tests/README.md) - Unit and integration test documentation
+
+### 🏗️ Development
+
+- [API Documentation](src/CrowdQR.Api) - Backend API reference
+- [Web Application](src/CrowdQR.Web) - Frontend application
+- [Shared Components](src/CrowdQR.Shared/) - Shared models and DTOs
+
 ## 🎯 Project Vision & Goals
 
 ### ✅ Vision

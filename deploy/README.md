@@ -27,6 +27,103 @@ This directory contains scripts and documentation for deploying CrowdQR in produ
     - API: <http://localhost:5000>
     - Health Checks: <http://localhost:8080/health>
 
+## Alternative: Plain Docker Deployment
+
+If you prefer not to use Docker Compose, you can run the services individually:
+
+### Step 1: Create Docker Network
+
+```bash
+docker network create crowdqr-network
+```
+
+### Step 2: Run PostgreSQL Database
+
+```bash
+docker run -d \
+  --name crowdqr-db \
+  --network crowdqr-network \
+  -e POSTGRES_USER=crowdqr_prod \
+  -e POSTGRES_PASSWORD=your_secure_password \
+  -e POSTGRES_DB=crowdqr_production \
+  -p 5433:5432 \
+  -v crowdqr_db_data:/var/lib/postgresql/data \
+  --restart unless-stopped \
+  postgres:17
+```
+
+### Step 3: Wait for Database to be ready
+
+```bash
+# Wait for database to be ready
+until docker exec crowdqr-db pg_isready -U crowdqr_prod -d crowdqr_production; do
+    echo "Waiting for database..."
+    sleep 2
+done
+```
+
+### Step 4: Run API Service
+
+```bash
+docker run -d \
+  --name crowdqr-api \
+  --network crowdqr-network \
+  -e ASPNETCORE_ENVIRONMENT=Production \
+  -e ASPNETCORE_URLS=http://+:5000 \
+  -e DB_HOST=crowdqr-db \
+  -e DB_PORT=5432 \
+  -e DB_NAME=crowdqr_production \
+  -e DB_USER=crowdqr_prod \
+  -e DB_PASSWORD=your_secure_password \
+  -p 5000:5000 \
+  --restart unless-stopped \
+  ghcr.io/grayplex/crowdqr-api:latest
+```
+
+### Step 5: Run Web Service
+
+```bash
+docker run -d \
+  --name crowdqr-web \
+  --network crowdqr-network \
+  -e ASPNETCORE_ENVIRONMENT=Production \
+  -e ApiSettings__BaseUrl=http://crowdqr-api:5000 \
+  -p 8080:80 \
+  --restart unless-stopped \
+  ghcr.io/grayplex/crowdqr-web:latest
+```
+
+### Verify Plain Docker Deployment
+
+```bash
+# Check all containers are running
+docker ps
+
+# Test health endpoints
+curl http://localhost:5000/health
+curl http://localhost:8080/health
+```
+
+### Plain Docker Management
+
+```bash
+# View logs
+docker logs crowdqr-api
+docker logs crowdqr-web
+docker logs crowdqr-db
+
+# Stop services
+docker stop crowdqr-web crowdqr-api crowdqr-db
+
+# Start services
+docker start crowdqr-db crowdqr-api crowdqr-web
+
+# Remove services (WARNING: This will delete data)
+docker rm -f crowdqr-web crowdqr-api crowdqr-db
+docker volume rm crowdqr_db_data
+docker network rm crowdqr-network
+```
+
 ## Manual Deployment Steps
 
 ### Prerequisites

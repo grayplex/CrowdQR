@@ -25,8 +25,8 @@ RUN dotnet publish -c Release -o /app/out --no-restore \
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
 
 # Create non-root user for security
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -S appuser -u 1001 -G appgroup
+RUN addgroup -g 1001 -S crowdqr && \
+    adduser -S crowdqr -u 1001 -G crowdqr
 
 # Install curl for healthchecks
 RUN apk add --no-cache curl
@@ -34,10 +34,10 @@ RUN apk add --no-cache curl
 WORKDIR /app
 
 # Copy the published output with correct ownership
-COPY --from=build --chown=appuser:appgroup /app/out .
+COPY --from=build --chown=crowdqr:crowdqr /app/out .
 
 # Switch to non-root user
-USER appuser
+USER crowdqr
 
 # Configure ASP.NET Core
 ENV ASPNETCORE_URLS=http://+:80

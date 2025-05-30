@@ -16,7 +16,7 @@ function Log-Error { Write-Host "❌ $args" -ForegroundColor Red }
 
 function Show-Usage {
     Write-Host @"
-Usage: .\tag-docker.ps1 -Version <semver> [OPTIONS]
+Usage: .\tag-release.ps1 -Version <semver> [OPTIONS]
 
 VERSION:
   Semantic version (e.g., 1.0.0, 1.2.3-beta.1)
