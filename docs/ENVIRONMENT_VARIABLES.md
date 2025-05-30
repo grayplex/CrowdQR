@@ -49,7 +49,7 @@ This document provides a comprehensive reference for all environment variables u
 | `JWT_AUDIENCE` | JWT token audience | `CrowdQR.Api` | ✅ |
 | `JWT_EXPIRY_HOURS` | JWT token expiry in hours | `24` | ❌ |
 
-## OptionalVariables
+## Optional Variables
 
 ### Email Configuration
 
@@ -173,7 +173,7 @@ These variables **MUST** be changed before production deployment:
 1. **Database Connection Errors**: 
 
     - Verify `DB_HOST`, `DB_PORT`, `DB_USER`, and `DB_PASSWORD`
-    - Ensure database contianer is running
+    - Ensure database container is running
     - Check network connectivity
 
 2. **Authentication Failures**:
@@ -203,4 +203,4 @@ Use this command to validate your environment variables:
 docker-compose config
 ```
 
-For detailed troubleshooting, see the [main deployment documentation](../deploy/README.md).
+For detailed troubleshooting, see the [main deployment documentation](../deploy/README.md). 

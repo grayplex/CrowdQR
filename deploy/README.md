@@ -34,7 +34,7 @@ If you prefer not to use Docker Compose, you can run the services individually:
 ### Step 1: Create Docker Network
 
 ```bash
-docker network create crowdqr_network
+docker network create crowdqr-network
 ```
 
 ### Step 2: Run PostgreSQL Database
