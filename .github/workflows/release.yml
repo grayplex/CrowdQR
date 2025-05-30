@@ -75,29 +75,13 @@ jobs:
     strategy:
       matrix:
         project: [
-          { name: 'api', path: 'src/CrowdQR.Api/CrowdQR.Api.csproj', dockerfile: 'src/CrowdQR.Api/Dockerfile' },
-          { name: 'web', path: 'src/CrowdQR.Web/CrowdQR.Web.csproj', dockerfile: 'src/CrowdQR.Web/Dockerfile' }
+          { name: 'api', dockerfile: 'src/CrowdQR.Api/Dockerfile' },
+          { name: 'web', dockerfile: 'src/CrowdQR.Web/Dockerfile' }
         ]
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-
-    - name: Restore dependencies
-      run: dotnet restore
-
-    - name: Publish application
-      run: |
-        dotnet publish ${{ matrix.project.path }} \
-          --configuration Release \
-          --no-restore \
-          --output ./publish/${{ matrix.project.name }} \
-          /p:Version=${{ needs.validate.outputs.version }}
 
     - name: Setup Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -112,7 +96,7 @@ jobs:
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
-      with:
+      with: 
         images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.project.name }}
         tags: |
           type=ref,event=tag
@@ -120,7 +104,6 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=semver,pattern={{major}}
           type=sha
-
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -132,11 +115,19 @@ jobs:
         platforms: linux/amd64,linux/arm64
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        build-args: |
+          VERSION=${{ needs.validate.outputs.version }}
 
-    - name: Create release artifact
+    - name: Create release artifact (published app)
       run: |
-        cd ./publish/${{ matrix.project.name }}
-        tar -czf ../../${{ matrix.project.name }}-${{ needs.validate.outputs.version }}.tar.gz .
+        # Create a temporary container to extract the published app
+        TEMP_CONTAINER=$(docker create ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.project.name }}:${{ needs.validate.outputs.version }})
+        docker cp $TEMP_CONTAINER:/app ./publish-${{ matrix.project.name }}
+        docker rm $TEMP_CONTAINER
+
+        # Create tar.gz artifact
+        cd ./publish-${{ matrix.project.name }}
+        tar -czf ../${{ matrix.project.name }}-${{ needs.validate.outputs.version }}.tar.gz .
 
     - name: Upload release artifact
       uses: actions/upload-artifact@v4
@@ -177,6 +168,7 @@ jobs:
         echo "changelog<<EOF" >> $GITHUB_OUTPUT
         echo "$CHANGELOG" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
+        echo "last-tag=$LAST_TAG" >> $GITHUB_OUTPUT
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
@@ -200,6 +192,7 @@ jobs:
           docker pull ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}-web:${{ needs.validate.outputs.version }}
           
           # Run with docker-compose
+          export CROWDQR_VERSION=${{ needs.validate.outputs.version }}
           docker-compose up -d
           ```
           
