@@ -1,19 +1,22 @@
 # Stage 1: Build
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+
+# Build argument to handle different project structures
+ARG PROJECT_ROOT=.
 WORKDIR /app
 
-# Copy solution and project files first for better layer caching
-COPY CrowdQR.Shared/CrowdQR.Shared.csproj ./CrowdQR.Shared/
-COPY CrowdQR.Web/CrowdQR.Web.csproj ./CrowdQR.Web/
+# Copy solution and project files with dynamic paths
+COPY ${PROJECT_ROOT}/CrowdQR.Shared/CrowdQR.Shared.csproj ./CrowdQR.Shared/
+COPY ${PROJECT_ROOT}/CrowdQR.Web/CrowdQR.Web.csproj ./CrowdQR.Web/
 
 # Restore dependencies
 RUN dotnet restore ./CrowdQR.Web/CrowdQR.Web.csproj
 
-# Copy source code
-COPY CrowdQR.Shared/ ./CrowdQR.Shared/
-COPY CrowdQR.Web/ ./CrowdQR.Web/
+# Copy source code with dynamic paths
+COPY ${PROJECT_ROOT}/CrowdQR.Shared/ ./CrowdQR.Shared/
+COPY ${PROJECT_ROOT}/CrowdQR.Web/ ./CrowdQR.Web/
 
-# Build and publish in release mode with optimizations
+# Build and publish
 WORKDIR /app/CrowdQR.Web
 RUN dotnet publish -c Release -o /app/out --no-restore \
     --self-contained false \
@@ -21,7 +24,7 @@ RUN dotnet publish -c Release -o /app/out --no-restore \
     /p:PublishTrimmed=false \
     /p:PublishSingleFile=false
 
-# Stage 2: Runtime (minimal)
+# Stage 2: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
 
 # Create non-root user for security
@@ -33,7 +36,7 @@ RUN apk add --no-cache curl
 
 WORKDIR /app
 
-# Copy the published output with correct ownership
+# Copy the published output
 COPY --from=build --chown=crowdqr:crowdqr /app/out .
 
 # Switch to non-root user
