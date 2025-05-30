@@ -53,6 +53,13 @@ curl http://localhost:8080/health
 
 ## 📖 Documentation
 
+### 🏗️ Architecture & Design
+
+- [System Architecture](docs/ARCHITECTURE.md) - Complete architecture diagrams and data flow
+- [API Documentation](src/CrowdQR.Api) - Backend API reference
+- [Web Application](src/CrowdQR.Web) - Frontend application
+- [Shared Components](src/CrowdQR.Shared/) - Shared models and DTOs
+
 ### 🚀 Deployment & Operations
 
 - [Deployment Guide](deploy/README.md) - Complete production deployment instructions
@@ -66,13 +73,21 @@ curl http://localhost:8080/health
 - [Testing Checklist](tests/TestingChecklist.md) - Comprehensive testing scenarios
 - [Test Coverage](tests/CrowdQR.Api.Tests/README.md) - Unit and integration test documentation
 
-### 🏗️ Development
+### 🔧 Development & Contributing
 
-- [API Documentation](src/CrowdQR.Api) - Backend API reference
-- [Web Application](src/CrowdQR.Web) - Frontend application
-- [Shared Components](src/CrowdQR.Shared/) - Shared models and DTOs
+- **[Release Scripts](scripts/README.md)** - Docker image tagging and release automation
+- **[CI/CD Pipeline](.github/workflows/ci.yml)** - Automated testing and deployment
+- **[Project Structure](#project-structure)** - Codebase organization and conventions
 
-## 🎯 Project Vision & Goals
+### 📋 Usage Guides
+
+- **[How to Use CrowdQR](#-how-to-use-crowdqr)** - Complete user guide for DJs and audience
+- **[Troubleshooting](#-troubleshooting)** - Common issues and solutions
+- **[Best Practices](#-tips-for-best-results)** - Recommendations for optimal experience
+
+---
+
+## 🎯 Project Vision & Goal
 
 ### ✅ Vision
 
@@ -95,6 +110,96 @@ Empower independent DJs and small venue performers to create more interactive, e
 - 👥 **Audience Member** scans a QR code, types a song name, and votes on others' requests
 - 🔄 Requests are approved/rejected by the DJ and synced in real time
 - 🔒 Voting is limited per user/session to prevent abuse
+
+---
+
+## 📖 How to Use CrowdQR
+
+### 🎧 For DJs
+
+1. **Register as a DJ**
+   - Visit the web application at `http://localhost:8080`
+   - Click "Register" and check "Register as a DJ"
+   - Complete registration with username, email, and password
+   - Verify your email (check console logs in development mode)
+
+2. **Create an Event**
+   - Log in to your DJ account
+   - Navigate to Admin → Events
+   - Click "Create New Event"
+   - Enter event name and URL-friendly slug (e.g., "saturday-night-fever")
+   - Set event as active
+
+3. **Generate QR Code**
+   - From the Events page, click the QR Code button for your event
+   - Display the QR code on screens or print it for your venue
+   - The QR code contains the URL: `http://localhost:8080/event/your-event-slug`
+
+4. **Manage Requests**
+   - Go to Admin → Dashboard and select your event
+   - View pending requests sorted by vote count
+   - Approve ✅ or reject ❌ requests in real-time
+   - See live updates as audience members vote
+   - Switch between Pending, Approved, and Rejected tabs
+
+5. **Monitor Activity**
+   - View active user count and total requests
+   - Search requests by song, artist, or requester name
+   - Track request statistics and popular songs
+
+### 👥 For Audience Members
+
+1. **Join an Event**
+   - Scan the QR code displayed at the venue, OR
+   - Visit the web app and enter the event code
+   - A temporary username will be created automatically
+
+2. **Request Songs**
+   - Enter the song name (required)
+   - Add artist name (optional but recommended)
+   - Click "Submit Request"
+   - Your request appears in the live list immediately
+
+3. **Vote on Requests**
+   - Browse all pending song requests
+   - Click the 👍 button to vote for songs you want to hear
+   - Click again to remove your vote
+   - Requests are sorted by vote count (highest first)
+
+4. **Real-Time Updates**
+   - Watch the list update automatically as others vote
+   - See when DJs approve ✅ or reject ❌ requests
+   - Connection status indicator shows if you're connected to live updates
+
+### 🔄 Real-Time Features
+
+- **Live Voting**: Vote counts update instantly across all devices
+- **Status Updates**: See approvals/rejections in real-time
+- **Active Users**: DJs can see how many audience members are connected
+- **Auto-Refresh**: No need to refresh the page - everything updates automatically
+
+### 🎯 Tips for Best Results
+
+**For DJs:**
+
+- Keep events active during your set for audience engagement
+- Regularly check the dashboard during performances
+- Use the search feature to find specific requests quickly
+- Consider approving popular requests to keep the audience engaged
+
+**For Audience:**
+
+- Be specific with song names and artists for better recognition
+- Vote for requests you genuinely want to hear
+- Check back periodically to see if your requests were approved
+- Respect the DJ's musical direction and choices
+
+### 🚨 Troubleshooting
+
+- **Can't connect?** Check that ports 5000 and 8080 are accessible
+- **QR code not working?** Ensure the event slug is correct and the event is active
+- **Requests not appearing?** Verify your internet connection and refresh the page
+- **Vote not counting?** You may have already voted for that request
 
 ---
 
@@ -135,29 +240,69 @@ Empower independent DJs and small venue performers to create more interactive, e
 
 ---
 
-## 📂 Project Structure (WIP)
+## Project Structure
 
-```
+```plaintext
 CrowdQR/
-├── Backend/
-│   ├── Controllers/
-│   ├── Models/
-│   ├── Services/
-│   ├── Hubs/
-│   └── Program.cs
-├── Frontend/
-│   ├── Pages/
-│   ├── Shared/
-│   └── wwwroot/
+├── .github/
+│   └── workflows/
+├── deploy/
 ├── docs/
-│   ├── wireframes/
-│   └── erd/
-│       └── redis-schema.md
-├── docker-compose.yml
-├── Dockerfile
-├── README.md
+│   ├── api/
+│   ├── erd/
+│   └── wireframes/
+├── scripts/
+│   ├── README.md
+│   ├── run-tests.ps1
+│   ├── tag-release.ps1
+│   └── tag-release.sh
+├── src/
+│   ├── CrowdQR.Api/
+|   │   ├── Controllers/
+|   │   ├── Data/
+|   │   ├── Hubs/
+|   │   ├── Middleware/
+|   │   ├── Migrations/
+|   │   ├── Models
+|   │   ├── Properties/
+|   │   ├── Services/
+|   │   ├── appsettings.json
+|   │   ├── CrowdQR.Api.csproj
+|   │   ├── Dockerfile
+|   │   └── Program.cs
+│   ├── CrowdQR.Shared/
+|   │   ├── Models/
+|   |   │   ├── DTOs/
+|   │   │   └── Enums/
+|   │   └── CrowdQR.Shared.csproj
+│   └── CrowdQR.Web/
+|       ├── Extensions/
+|       ├── Pages/
+|       |   ├── Admin/
+|       |   └── Shared/
+|       ├── Properties/
+|       ├── Services/
+|       ├── Utilities/
+|       ├── wwwroot/
+|       ├── appsettings.json
+|       ├── CrowdQR.Web.csproj
+|       ├── Dockerfile
+|       └── Program.cs
+├── tests/
+│   └── CrowdQR.Api.Tests/
+|       ├── Controllers/
+|       ├── Helpers/
+|       ├── Integration/
+|       ├── Middleware/
+|       ├── Services/
+│       └── Validation/
+├── .env.example
 ├── .gitignore
-└── LICENSE
+├── CrowdQR.sln
+├── Directory.Build.props
+├── docker-compose.yml
+├── LICENSE
+└── README.md
 ```
 
 ---
