@@ -15,7 +15,7 @@ on:
 env:
   DOTNET_VERSION: '8.0.x'
   DOCKER_REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ${{ github.repository_owner }}/crowdqr
 
 jobs:
   validate:
@@ -96,7 +96,7 @@ jobs:
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
-      with: 
+      with:
         images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.project.name }}
         tags: |
           type=ref,event=tag
@@ -104,6 +104,7 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=semver,pattern={{major}}
           type=sha
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -120,11 +121,15 @@ jobs:
 
     - name: Create release artifact (published app)
       run: |
+        # Use the first tag from metadata (should be the version tag)
+        IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+        echo "Using image tag: $IMAGE_TAG"
+        
         # Create a temporary container to extract the published app
-        TEMP_CONTAINER=$(docker create ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.project.name }}:${{ needs.validate.outputs.version }})
+        TEMP_CONTAINER=$(docker create $IMAGE_TAG)
         docker cp $TEMP_CONTAINER:/app ./publish-${{ matrix.project.name }}
         docker rm $TEMP_CONTAINER
-
+        
         # Create tar.gz artifact
         cd ./publish-${{ matrix.project.name }}
         tar -czf ../${{ matrix.project.name }}-${{ needs.validate.outputs.version }}.tar.gz .
@@ -191,7 +196,7 @@ jobs:
           docker pull ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}-api:${{ needs.validate.outputs.version }}
           docker pull ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}-web:${{ needs.validate.outputs.version }}
           
-          # Run with docker-compose
+          # Set version and run with docker-compose
           export CROWDQR_VERSION=${{ needs.validate.outputs.version }}
           docker-compose up -d
           ```
