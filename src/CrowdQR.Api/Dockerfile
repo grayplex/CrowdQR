@@ -2,7 +2,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 
 # Build argument to handle different project structures
-ARG PROJECT_ROOT=.
+ARG PROJECT_ROOT=..
 WORKDIR /app
 
 # Copy solution and project files with dynamic paths
@@ -27,8 +27,8 @@ RUN dotnet publish -c Release -o /app/out --no-restore \
 # Stage 2: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
 
-# Build argument needed in runtime stage for entrypoint script
-ARG PROJECT_ROOT=.
+# Build argument needed in runtime stage too for entrypoint script
+ARG PROJECT_ROOT=..
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S crowdqr && \

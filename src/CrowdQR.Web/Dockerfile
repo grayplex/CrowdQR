@@ -2,7 +2,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 
 # Build argument to handle different project structures
-ARG PROJECT_ROOT=.
+ARG PROJECT_ROOT=..
 WORKDIR /app
 
 # Copy solution and project files with dynamic paths
