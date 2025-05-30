@@ -53,6 +53,13 @@ curl http://localhost:8080/health
 
 ## 📖 Documentation
 
+### 🏗️ Architecture & Design
+
+- [System Architecture](docs/ARCHITECTURE.md) - Complete architecture diagrams and data flow
+- [API Documentation](src/CrowdQR.Api) - Backend API reference
+- [Web Application](src/CrowdQR.Web) - Frontend application
+- [Shared Components](src/CrowdQR.Shared/) - Shared models and DTOs
+
 ### 🚀 Deployment & Operations
 
 - [Deployment Guide](deploy/README.md) - Complete production deployment instructions
@@ -66,13 +73,13 @@ curl http://localhost:8080/health
 - [Testing Checklist](tests/TestingChecklist.md) - Comprehensive testing scenarios
 - [Test Coverage](tests/CrowdQR.Api.Tests/README.md) - Unit and integration test documentation
 
-### 🏗️ Development
+### 🔧 Development & Contributing
 
-- [API Documentation](src/CrowdQR.Api) - Backend API reference
-- [Web Application](src/CrowdQR.Web) - Frontend application
-- [Shared Components](src/CrowdQR.Shared/) - Shared models and DTOs
+- **[Release Scripts](scripts/README.md)** - Docker image tagging and release automation
+- **[CI/CD Pipeline](.github/workflows/ci.yml)** - Automated testing and deployment
+- **[Project Structure](#project-structure)** - Codebase organization and conventions
 
-## 🎯 Project Vision & Goals
+## 🎯 Project Vision & Goal
 
 ### ✅ Vision
 
@@ -225,29 +232,69 @@ Empower independent DJs and small venue performers to create more interactive, e
 
 ---
 
-## 📂 Project Structure (WIP)
+## Project Structure
 
-```
+```plaintext
 CrowdQR/
-├── Backend/
-│   ├── Controllers/
-│   ├── Models/
-│   ├── Services/
-│   ├── Hubs/
-│   └── Program.cs
-├── Frontend/
-│   ├── Pages/
-│   ├── Shared/
-│   └── wwwroot/
+├── .github/
+│   └── workflows/
+├── deploy/
 ├── docs/
-│   ├── wireframes/
-│   └── erd/
-│       └── redis-schema.md
-├── docker-compose.yml
-├── Dockerfile
-├── README.md
+│   ├── api/
+│   ├── erd/
+│   └── wireframes/
+├── scripts/
+│   ├── README.md
+│   ├── run-tests.ps1
+│   ├── tag-release.ps1
+│   └── tag-release.sh
+├── src/
+│   ├── CrowdQR.Api/
+|   │   ├── Controllers/
+|   │   ├── Data/
+|   │   ├── Hubs/
+|   │   ├── Middleware/
+|   │   ├── Migrations/
+|   │   ├── Models
+|   │   ├── Properties/
+|   │   ├── Services/
+|   │   ├── appsettings.json
+|   │   ├── CrowdQR.Api.csproj
+|   │   ├── Dockerfile
+|   │   └── Program.cs
+│   ├── CrowdQR.Shared/
+|   │   ├── Models/
+|   |   │   ├── DTOs/
+|   │   │   └── Enums/
+|   │   └── CrowdQR.Shared.csproj
+│   └── CrowdQR.Web/
+|       ├── Extensions/
+|       ├── Pages/
+|       |   ├── Admin/
+|       |   └── Shared/
+|       ├── Properties/
+|       ├── Services/
+|       ├── Utilities/
+|       ├── wwwroot/
+|       ├── appsettings.json
+|       ├── CrowdQR.Web.csproj
+|       ├── Dockerfile
+|       └── Program.cs
+├── tests/
+│   └── CrowdQR.Api.Tests/
+|       ├── Controllers/
+|       ├── Helpers/
+|       ├── Integration/
+|       ├── Middleware/
+|       ├── Services/
+│       └── Validation/
+├── .env.example
 ├── .gitignore
-└── LICENSE
+├── CrowdQR.sln
+├── Directory.Build.props
+├── docker-compose.yml
+├── LICENSE
+└── README.md
 ```
 
 ---
