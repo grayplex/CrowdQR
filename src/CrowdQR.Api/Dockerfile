@@ -1,20 +1,17 @@
 # Stage 1: Build
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
-
-# Build argument to handle different project structures
-ARG PROJECT_ROOT=..
 WORKDIR /app
 
-# Copy solution and project files with dynamic paths
-COPY ${PROJECT_ROOT}/CrowdQR.Shared/CrowdQR.Shared.csproj ./CrowdQR.Shared/
-COPY ${PROJECT_ROOT}/CrowdQR.Api/CrowdQR.Api.csproj ./CrowdQR.Api/
+# Copy solution and project files
+COPY CrowdQR.Shared/CrowdQR.Shared.csproj ./CrowdQR.Shared/
+COPY CrowdQR.Api/CrowdQR.Api.csproj ./CrowdQR.Api/
 
 # Restore dependencies
 RUN dotnet restore ./CrowdQR.Api/CrowdQR.Api.csproj
 
-# Copy source code with dynamic paths
-COPY ${PROJECT_ROOT}/CrowdQR.Shared/ ./CrowdQR.Shared/
-COPY ${PROJECT_ROOT}/CrowdQR.Api/ ./CrowdQR.Api/
+# Copy source code
+COPY CrowdQR.Shared/ ./CrowdQR.Shared/
+COPY CrowdQR.Api/ ./CrowdQR.Api/
 
 # Build and publish
 WORKDIR /app/CrowdQR.Api
@@ -26,9 +23,6 @@ RUN dotnet publish -c Release -o /app/out --no-restore \
 
 # Stage 2: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
-
-# Build argument needed in runtime stage too for entrypoint script
-ARG PROJECT_ROOT=..
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S crowdqr && \
@@ -42,8 +36,8 @@ WORKDIR /app
 # Copy the published output
 COPY --from=build --chown=crowdqr:crowdqr /app/out .
 
-# Copy and set up the entrypoint script with dynamic path
-COPY --chown=crowdqr:crowdqr ${PROJECT_ROOT}/CrowdQR.Api/docker-entrypoint.sh /app/entrypoint.sh
+# Copy and set up the entrypoint script
+COPY --chown=crowdqr:crowdqr CrowdQR.Api/docker-entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh && \
     dos2unix /app/entrypoint.sh 2>/dev/null || true
 
