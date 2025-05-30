@@ -98,6 +98,96 @@ Empower independent DJs and small venue performers to create more interactive, e
 
 ---
 
+## 📖 How to Use CrowdQR
+
+### 🎧 For DJs
+
+1. **Register as a DJ**
+   - Visit the web application at `http://localhost:8080`
+   - Click "Register" and check "Register as a DJ"
+   - Complete registration with username, email, and password
+   - Verify your email (check console logs in development mode)
+
+2. **Create an Event**
+   - Log in to your DJ account
+   - Navigate to Admin → Events
+   - Click "Create New Event"
+   - Enter event name and URL-friendly slug (e.g., "saturday-night-fever")
+   - Set event as active
+
+3. **Generate QR Code**
+   - From the Events page, click the QR Code button for your event
+   - Display the QR code on screens or print it for your venue
+   - The QR code contains the URL: `http://localhost:8080/event/your-event-slug`
+
+4. **Manage Requests**
+   - Go to Admin → Dashboard and select your event
+   - View pending requests sorted by vote count
+   - Approve ✅ or reject ❌ requests in real-time
+   - See live updates as audience members vote
+   - Switch between Pending, Approved, and Rejected tabs
+
+5. **Monitor Activity**
+   - View active user count and total requests
+   - Search requests by song, artist, or requester name
+   - Track request statistics and popular songs
+
+### 👥 For Audience Members
+
+1. **Join an Event**
+   - Scan the QR code displayed at the venue, OR
+   - Visit the web app and enter the event code
+   - A temporary username will be created automatically
+
+2. **Request Songs**
+   - Enter the song name (required)
+   - Add artist name (optional but recommended)
+   - Click "Submit Request"
+   - Your request appears in the live list immediately
+
+3. **Vote on Requests**
+   - Browse all pending song requests
+   - Click the 👍 button to vote for songs you want to hear
+   - Click again to remove your vote
+   - Requests are sorted by vote count (highest first)
+
+4. **Real-Time Updates**
+   - Watch the list update automatically as others vote
+   - See when DJs approve ✅ or reject ❌ requests
+   - Connection status indicator shows if you're connected to live updates
+
+### 🔄 Real-Time Features
+
+- **Live Voting**: Vote counts update instantly across all devices
+- **Status Updates**: See approvals/rejections in real-time
+- **Active Users**: DJs can see how many audience members are connected
+- **Auto-Refresh**: No need to refresh the page - everything updates automatically
+
+### 🎯 Tips for Best Results
+
+**For DJs:**
+
+- Keep events active during your set for audience engagement
+- Regularly check the dashboard during performances
+- Use the search feature to find specific requests quickly
+- Consider approving popular requests to keep the audience engaged
+
+**For Audience:**
+
+- Be specific with song names and artists for better recognition
+- Vote for requests you genuinely want to hear
+- Check back periodically to see if your requests were approved
+- Respect the DJ's musical direction and choices
+
+### 🚨 Troubleshooting
+
+- **Can't connect?** Check that ports 5000 and 8080 are accessible
+- **QR code not working?** Ensure the event slug is correct and the event is active
+- **Requests not appearing?** Verify your internet connection and refresh the page
+- **Vote not counting?** You may have already voted for that request
+
+---
+
 ## 🧱 Tech Stack
 
 | Layer | Technology |
