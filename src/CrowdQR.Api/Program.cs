@@ -52,7 +52,7 @@ builder.Services.AddAuthentication(options =>
 {
     var jwtSecret = builder.Configuration["JWT_SECRET"] ??
                    builder.Configuration["Jwt:Secret"] ??
-                   "temporaryCrowdQRSecretKeyThatIsLongEnoughForSecurityRequirements123456789";
+                   "test_jwt_secret_key_that_is_long_enough_for_testing_requirements_12345";
 
     // Ensure the secret is at least 32 characters (256 bits)
     if (jwtSecret.Length < 32)
@@ -173,14 +173,15 @@ if (app.Environment.IsDevelopment())
 }
 
 // Apply migrations and seed data in development environment
-using (var migrationScope = app.Services.CreateScope())
+if (!app.Environment.IsEnvironment("Testing"))
 {
+    using var migrationScope = app.Services.CreateScope();
     var services = migrationScope.ServiceProvider;
     try
     {
         var context = services.GetRequiredService<CrowdQRContext>();
         var logger = services.GetRequiredService<ILogger<Program>>();
-        
+
         logger.LogInformation("Checking database connection and applying migrations...");
         context.Database.Migrate(); // Apply migrations
         logger.LogInformation("Database migrations applied successfully");
@@ -192,6 +193,28 @@ using (var migrationScope = app.Services.CreateScope())
         throw; // Re-throw to prevent startup with broken database
     }
 }
+else
+{
+    // For testing environment, just ensure the database is created
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<CrowdQRContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    logger.LogInformation("Testing environment detected - ensuring in-memory database is created");
+    await context.Database.EnsureCreatedAsync();
+}
+
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    var jwtSecret = builder.Configuration["JWT_SECRET"] ??
+                    builder.Configuration["Jwt:Secret"] ??
+                    "test_jwt_secret_key_that_is_long_enough_for_testing_requirements_12345";
+    logger.LogInformation("Program JWT Config - Secret: {SecretLength} chars, Issuer: {Issuer}, Audience: {Audience}",
+        jwtSecret.Length,
+        builder.Configuration["JWT_ISSUER"] ?? builder.Configuration["Jwt:Issuer"] ?? "CrowdQR.Api",
+        builder.Configuration["JWT_AUDIENCE"] ?? builder.Configuration["Jwt:Audience"] ?? "CrowdQR.Web");
+}
+
 
 app.UseExceptionHandling(); // Custom middleware for global exception handling
 app.UseCors("AllowWebApp"); // Enable CORS for the web app

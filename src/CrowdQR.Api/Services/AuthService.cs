@@ -317,28 +317,44 @@ public class AuthService(
         try
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Secret"] ?? "temporaryCrowdQRSecretKey12345!@#$%");
+
+            // Use the EXACT same configuration as Program.cs JWT Bearer setup
+            var jwtSecret = _configuration["JWT_SECRET"] ??
+                           _configuration["Jwt:Secret"] ??
+                           "test_jwt_secret_key_that_is_long_enough_for_testing_requirements_12345";
+
+
+            var key = Encoding.UTF8.GetBytes(jwtSecret);
 
             var validationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
                 ValidateIssuer = true,
-                ValidIssuer = _configuration["Jwt:Issuer"] ?? "CrowdQR.Api",
+                ValidIssuer = _configuration["JWT_ISSUER"] ?? _configuration["Jwt:Issuer"] ?? "CrowdQR.Api",
                 ValidateAudience = true,
-                ValidAudience = _configuration["Jwt:Audience"] ?? "CrowdQR.Web",
+                ValidAudience = _configuration["JWT_AUDIENCE"] ?? _configuration["Jwt:Audience"] ?? "CrowdQR.Web",
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };
+
+            // Debug logging to verify configuration matches
+            _logger.LogInformation("ValidateToken JWT Config - Secret: {SecretLength} chars, Issuer: {Issuer}, Audience: {Audience}",
+                jwtSecret.Length,
+                validationParameters.ValidIssuer,
+                validationParameters.ValidAudience);
 
             var principal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
             var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
             {
-                return await _context.Users.FindAsync(userId);
+                var user = await _context.Users.FindAsync(userId);
+                _logger.LogInformation("Token validation successful for user ID: {UserId}", userId);
+                return user;
             }
 
+            _logger.LogWarning("Token validation failed: No valid user ID claim found");
             return null;
         }
         catch (Exception ex)
@@ -392,7 +408,7 @@ public class AuthService(
         var tokenHandler = new JwtSecurityTokenHandler();
         var jwtSecret = _configuration["JWT_SECRET"] ??
                    _configuration["Jwt:Secret"] ??
-                   "temporaryCrowdQRSecretKeyThatIsLongEnoughForSecurityRequirements123456789";
+                   "test_jwt_secret_key_that_is_long_enough_for_testing_requirements_12345";
 
         // Ensure the secret is at least 32 characters
         if (jwtSecret.Length < 32)
@@ -427,6 +443,13 @@ public class AuthService(
                 new SymmetricSecurityKey(key),
                 SecurityAlgorithms.HmacSha256Signature)
         };
+
+        // Debug logging
+        var logger = _logger;
+        logger.LogInformation("AuthService JWT Config - Secret: {SecretLength} chars, Issuer: {Issuer}, Audience: {Audience}",
+            jwtSecret.Length,
+            _configuration["JWT_ISSUER"] ?? _configuration["Jwt:Issuer"] ?? "CrowdQR.Api",
+            _configuration["JWT_AUDIENCE"] ?? _configuration["Jwt:Audience"] ?? "CrowdQR.Web");
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);

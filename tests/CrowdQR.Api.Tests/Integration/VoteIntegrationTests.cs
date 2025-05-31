@@ -1,16 +1,18 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using CrowdQR.Shared.Models.DTOs;
+using FluentAssertions;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 using System.Security.Claims;
 using CrowdQR.Api.Data;
 using CrowdQR.Api.Tests.Helpers;
-using CrowdQR.Shared.Models.DTOs;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 using Microsoft.Extensions.Options;
 using System.Text.Encodings.Web;
 
@@ -19,82 +21,36 @@ namespace CrowdQR.Api.Tests.Integration;
 /// <summary>
 /// Integration tests for vote-related API endpoints.
 /// </summary>
-public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.Api.Program>>
+public class VoteIntegrationTests : BaseIntegrationTest
 {
-    private readonly WebApplicationFactory<CrowdQR.Api.Program> _factory;
-    private readonly HttpClient _client;
-    private static readonly string DatabaseName = "VoteTestDb_" + Guid.NewGuid();
-
-    private readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="VoteIntegrationTests"/> class.
+    /// Configures test authentication for vote tests.
     /// </summary>
-    /// <param name="factory">The web application factory.</param>
-    public VoteIntegrationTests(WebApplicationFactory<CrowdQR.Api.Program> factory)
+    /// <param name="services">The service collection.</param>
+    protected override void ConfigureTestAuthentication(IServiceCollection services)
     {
-        _factory = factory.WithWebHostBuilder(builder =>
+        // Remove existing authentication services
+        var authDescriptors = services.Where(d =>
+            d.ServiceType.Namespace != null &&
+            d.ServiceType.Namespace.StartsWith("Microsoft.AspNetCore.Authentication")).ToList();
+
+        foreach (var descriptor in authDescriptors)
         {
-            builder.UseEnvironment("Testing");
-            builder.ConfigureServices(services =>
-            {
-                // Remove ALL Entity Framework related services
-                var descriptorsToRemove = new List<ServiceDescriptor>();
+            services.Remove(descriptor);
+        }
 
-                foreach (var service in services)
-                {
-                    if (service.ServiceType.Namespace != null &&
-                        (service.ServiceType.Namespace.StartsWith("Microsoft.EntityFrameworkCore") ||
-                         service.ServiceType == typeof(CrowdQRContext) ||
-                         service.ServiceType == typeof(DbContextOptions<CrowdQRContext>) ||
-                         service.ServiceType == typeof(DbContextOptions)))
-                    {
-                        descriptorsToRemove.Add(service);
-                    }
-                }
+        // Add test authentication
+        services.AddAuthentication("Test")
+            .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                "Test", options => { });
 
-                foreach (var descriptor in descriptorsToRemove)
-                {
-                    services.Remove(descriptor);
-                }
-
-                // Add in-memory database for testing with a static database name
-                services.AddDbContext<CrowdQRContext>(options =>
-                {
-                    options.UseInMemoryDatabase(DatabaseName);
-                    options.EnableSensitiveDataLogging();
-                });
-
-                // Remove existing authentication and add test authentication
-                var authDescriptors = services.Where(d =>
-                    d.ServiceType.Namespace != null &&
-                    d.ServiceType.Namespace.StartsWith("Microsoft.AspNetCore.Authentication")).ToList();
-
-                foreach (var descriptor in authDescriptors)
-                {
-                    services.Remove(descriptor);
-                }
-
-                // Add test authentication
-                services.AddAuthentication("Test")
-                    .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
-                        "Test", options => { });
-
-                // Override the default authentication scheme
-                services.Configure<AuthenticationOptions>(options =>
-                {
-                    options.DefaultAuthenticateScheme = "Test";
-                    options.DefaultChallengeScheme = "Test";
-                    options.DefaultScheme = "Test";
-                });
-            });
+        // Override the default authentication scheme
+        services.Configure<AuthenticationOptions>(options =>
+        {
+            options.DefaultAuthenticateScheme = "Test";
+            options.DefaultChallengeScheme = "Test";
+            options.DefaultScheme = "Test";
         });
-
-        _client = _factory.CreateClient();
     }
 
     /// <summary>
@@ -104,8 +60,8 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task CreateVote_EndToEndFlow_Success()
     {
         // Arrange
-        await SeedDatabase();
-        await VerifyDatabaseState("CreateVote_EndToEndFlow_Success");
+        await ClearDatabaseAsync();
+        await SeedStandardTestDataAsync();
         SetAuthenticationHeader("user-2-audience");
 
         var voteDto = new VoteCreateDto
@@ -115,19 +71,27 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/api/vote", voteDto);
+        var response = await Client.PostAsJsonAsync("/api/vote", voteDto);
 
         // Assert
         var content = await response.Content.ReadAsStringAsync();
-
         response.StatusCode.Should().Be(HttpStatusCode.Created,
             $"Expected Created but got {response.StatusCode}. Response: {content}");
 
         // Verify vote was created in database
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CrowdQRContext>();
+        using var context = GetDbContext();
         var createdVote = await context.Votes.FirstOrDefaultAsync(v => v.UserId == 2 && v.RequestId == 1);
         createdVote.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Sets the authentication header for the HTTP client.
+    /// </summary>
+    /// <param name="authValue">The authentication value.</param>
+    private void SetAuthenticationHeader(string authValue)
+    {
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Test", authValue);
     }
 
     /// <summary>
@@ -137,8 +101,8 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task CreateVote_DuplicateVote_ReturnsConflict()
     {
         // Arrange
-        await SeedDatabase();
-        await VerifyDatabaseState("CreateVote_DuplicateVote_ReturnsConflict");
+        await ClearDatabaseAsync();
+        await SeedStandardTestDataAsync();
         SetAuthenticationHeader("user-2-audience");
 
         var voteDto = new VoteCreateDto
@@ -148,14 +112,14 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         };
 
         // Create first vote
-        var firstResponse = await _client.PostAsJsonAsync("/api/vote", voteDto);
+        var firstResponse = await Client.PostAsJsonAsync("/api/vote", voteDto);
         var firstContent = await firstResponse.Content.ReadAsStringAsync();
 
         firstResponse.StatusCode.Should().Be(HttpStatusCode.Created,
             $"Expected Created for first vote but got {firstResponse.StatusCode}. Response: {firstContent}");
 
         // Act - Try to create duplicate vote
-        var secondResponse = await _client.PostAsJsonAsync("/api/vote", voteDto);
+        var secondResponse = await Client.PostAsJsonAsync("/api/vote", voteDto);
 
         // Assert
         secondResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -168,9 +132,9 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task CreateVote_Unauthorized_ReturnsUnauthorizedOrForbidden()
     {
         // Arrange
-        await SeedDatabase();
+        await ClearDatabaseAsync();
         // Clear any existing authorization header to ensure no authentication
-        _client.DefaultRequestHeaders.Authorization = null;
+        Client.DefaultRequestHeaders.Authorization = null;
 
         var voteDto = new VoteCreateDto
         {
@@ -179,7 +143,7 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/api/vote", voteDto);
+        var response = await Client.PostAsJsonAsync("/api/vote", voteDto);
 
         // Assert
         var content = await response.Content.ReadAsStringAsync();
@@ -198,7 +162,7 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task CreateVote_UserVotingForAnother_ReturnsForbid()
     {
         // Arrange
-        await SeedDatabase();
+        await ClearDatabaseAsync();
         SetAuthenticationHeader("user-2-audience");
 
         var voteDto = new VoteCreateDto
@@ -208,7 +172,7 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/api/vote", voteDto);
+        var response = await Client.PostAsJsonAsync("/api/vote", voteDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -221,8 +185,8 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task CreateVote_DjVotingForAnother_Success()
     {
         // Arrange
-        await SeedDatabase();
-        await VerifyDatabaseState("CreateVote_DjVotingForAnother_Success");
+        await ClearDatabaseAsync();
+        await SeedStandardTestDataAsync();
         SetAuthenticationHeader("user-1-dj");
 
         var voteDto = new VoteCreateDto
@@ -232,7 +196,7 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/api/vote", voteDto);
+        var response = await Client.PostAsJsonAsync("/api/vote", voteDto);
 
         // Assert
         var content = await response.Content.ReadAsStringAsync();
@@ -247,26 +211,27 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task GetVotesByRequest_WithExistingVotes_ReturnsVotes()
     {
         // Arrange
-        await SeedDatabase();
+        await ClearDatabaseAsync();
+        await SeedStandardTestDataAsync(); // Add this line!
 
         // Create some votes first
         SetAuthenticationHeader("user-2-audience");
-        var vote1Response = await _client.PostAsJsonAsync("/api/vote", new VoteCreateDto { UserId = 2, RequestId = 1 });
+        var vote1Response = await Client.PostAsJsonAsync("/api/vote", new VoteCreateDto { UserId = 2, RequestId = 1 });
         vote1Response.StatusCode.Should().Be(HttpStatusCode.Created, "First vote should be created");
 
         SetAuthenticationHeader("user-3-audience");
-        var vote2Response = await _client.PostAsJsonAsync("/api/vote", new VoteCreateDto { UserId = 3, RequestId = 1 });
+        var vote2Response = await Client.PostAsJsonAsync("/api/vote", new VoteCreateDto { UserId = 3, RequestId = 1 });
         vote2Response.StatusCode.Should().Be(HttpStatusCode.Created, "Second vote should be created");
 
         // Act
         SetAuthenticationHeader("user-2-audience"); // Reset auth for GET request
-        var response = await _client.GetAsync("/api/vote/request/1");
+        var response = await Client.GetAsync("/api/vote/request/1");
 
         // Assert
         var content = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"GET request failed. Response: {content}");
 
-        var votes = JsonSerializer.Deserialize<JsonElement[]>(content, _jsonOptions);
+        var votes = JsonSerializer.Deserialize<JsonElement[]>(content, JsonOptions);
         votes.Should().HaveCount(2, $"Expected 2 votes but got response: {content}");
     }
 
@@ -277,16 +242,17 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task DeleteVote_ValidRequest_ReturnsNoContent()
     {
         // Arrange
-        await SeedDatabase();
+        await ClearDatabaseAsync();
+        await SeedStandardTestDataAsync(); // Add this line!
         SetAuthenticationHeader("user-2-audience");
 
         // Create vote first
         var voteDto = new VoteCreateDto { UserId = 2, RequestId = 1 };
-        var createResponse = await _client.PostAsJsonAsync("/api/vote", voteDto);
+        var createResponse = await Client.PostAsJsonAsync("/api/vote", voteDto);
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created, "Vote should be created before deletion");
 
         // Act
-        var response = await _client.DeleteAsync("/api/vote/user/2/request/1");
+        var response = await Client.DeleteAsync("/api/vote/user/2/request/1");
 
         // Assert
         var content = await response.Content.ReadAsStringAsync();
@@ -294,8 +260,7 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
             $"Expected NoContent but got {response.StatusCode}. Response: {content}");
 
         // Verify vote was deleted
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CrowdQRContext>();
+        using var context = GetDbContext();
         var deletedVote = await context.Votes.FirstOrDefaultAsync(v => v.UserId == 2 && v.RequestId == 1);
         deletedVote.Should().BeNull();
     }
@@ -307,7 +272,7 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task CreateVote_NonExistentRequest_ReturnsBadRequest()
     {
         // Arrange
-        await SeedDatabase();
+        await ClearDatabaseAsync();
         SetAuthenticationHeader("user-2-audience");
 
         var invalidVoteDto = new VoteCreateDto
@@ -317,7 +282,7 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/api/vote", invalidVoteDto);
+        var response = await Client.PostAsJsonAsync("/api/vote", invalidVoteDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -330,7 +295,7 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task CreateVote_NonExistentUser_ReturnsBadRequest()
     {
         // Arrange
-        await SeedDatabase();
+        await ClearDatabaseAsync();
         SetAuthenticationHeader("user-999-audience"); // This user won't exist in DB
 
         var invalidVoteDto = new VoteCreateDto
@@ -340,7 +305,7 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/api/vote", invalidVoteDto);
+        var response = await Client.PostAsJsonAsync("/api/vote", invalidVoteDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -353,26 +318,27 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task GetVotes_AsDj_ReturnsAllVotes()
     {
         // Arrange
-        await SeedDatabase();
+        await ClearDatabaseAsync();
+        await SeedStandardTestDataAsync(); // Add this line!
 
         // Create some votes
         SetAuthenticationHeader("user-2-audience");
-        var vote1Response = await _client.PostAsJsonAsync("/api/vote", new VoteCreateDto { UserId = 2, RequestId = 1 });
+        var vote1Response = await Client.PostAsJsonAsync("/api/vote", new VoteCreateDto { UserId = 2, RequestId = 1 });
         vote1Response.StatusCode.Should().Be(HttpStatusCode.Created, "First vote should be created");
 
         SetAuthenticationHeader("user-3-audience");
-        var vote2Response = await _client.PostAsJsonAsync("/api/vote", new VoteCreateDto { UserId = 3, RequestId = 1 });
+        var vote2Response = await Client.PostAsJsonAsync("/api/vote", new VoteCreateDto { UserId = 3, RequestId = 1 });
         vote2Response.StatusCode.Should().Be(HttpStatusCode.Created, "Second vote should be created");
 
         // Act as DJ
         SetAuthenticationHeader("user-1-dj");
-        var response = await _client.GetAsync("/api/vote");
+        var response = await Client.GetAsync("/api/vote");
 
         // Assert
         var content = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"GET all votes failed. Response: {content}");
 
-        var votes = JsonSerializer.Deserialize<JsonElement[]>(content, _jsonOptions);
+        var votes = JsonSerializer.Deserialize<JsonElement[]>(content, JsonOptions);
         votes.Should().HaveCount(2, $"Expected 2 votes but got response: {content}");
     }
 
@@ -383,89 +349,13 @@ public class VoteIntegrationTests : IClassFixture<WebApplicationFactory<CrowdQR.
     public async Task GetVotes_AsAudience_ReturnsForbidden()
     {
         // Arrange
-        await SeedDatabase();
+        await ClearDatabaseAsync();
         SetAuthenticationHeader("user-2-audience");
 
         // Act
-        var response = await _client.GetAsync("/api/vote");
+        var response = await Client.GetAsync("/api/vote");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-    }
-
-    /// <summary>
-    /// Sets the authentication header for the HTTP client.
-    /// </summary>
-    /// <param name="authValue">The authentication value.</param>
-    private void SetAuthenticationHeader(string authValue)
-    {
-        _client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Test", authValue);
-    }
-
-    /// <summary>
-    /// Seeds the test database with initial data using a fresh context.
-    /// </summary>
-    private static async Task SeedDatabase()
-    {
-        // Create a fresh context with the same database name to seed data
-        var options = new DbContextOptionsBuilder<CrowdQRContext>()
-            .UseInMemoryDatabase(DatabaseName)
-            .EnableSensitiveDataLogging()
-            .Options;
-
-        await using var context = new CrowdQRContext(options);
-
-        // Ensure the database is created
-        await context.Database.EnsureCreatedAsync();
-
-        // Clear existing data
-        if (context.Votes.Any()) context.Votes.RemoveRange(context.Votes);
-        if (context.Requests.Any()) context.Requests.RemoveRange(context.Requests);
-        if (context.Sessions.Any()) context.Sessions.RemoveRange(context.Sessions);
-        if (context.Events.Any()) context.Events.RemoveRange(context.Events);
-        if (context.Users.Any()) context.Users.RemoveRange(context.Users);
-        await context.SaveChangesAsync();
-
-        // Seed fresh test data
-        await TestDbContextFactory.SeedTestDataAsync(context);
-
-        Console.WriteLine("Database seeding completed successfully.");
-    }
-
-    /// <summary>
-    /// Verifies the database state for debugging purposes using a fresh context.
-    /// </summary>
-    /// <param name="testName">The name of the test for debugging.</param>
-    private static async Task VerifyDatabaseState(string testName)
-    {
-        // Create a fresh context with the same database name to verify data
-        var options = new DbContextOptionsBuilder<CrowdQRContext>()
-            .UseInMemoryDatabase(DatabaseName)
-            .EnableSensitiveDataLogging()
-            .Options;
-
-        await using var context = new CrowdQRContext(options);
-
-        var userCount = await context.Users.CountAsync();
-        var eventCount = await context.Events.CountAsync();
-        var requestCount = await context.Requests.CountAsync();
-
-        // Log counts for debugging
-        Console.WriteLine($"[{testName}] Database state - Users: {userCount}, Events: {eventCount}, Requests: {requestCount}");
-
-        if (requestCount > 0)
-        {
-            var requests = await context.Requests.ToListAsync();
-            foreach (var req in requests)
-            {
-                Console.WriteLine($"[{testName}] Request ID: {req.RequestId}, UserId: {req.UserId}, EventId: {req.EventId}, Song: {req.SongName}");
-            }
-        }
-
-        // Basic assertion to ensure data exists
-        userCount.Should().BeGreaterThan(0, "Users should exist in database");
-        eventCount.Should().BeGreaterThan(0, "Events should exist in database");
-        requestCount.Should().BeGreaterThan(0, "Requests should exist in database");
     }
 }
