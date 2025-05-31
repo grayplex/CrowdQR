@@ -159,6 +159,7 @@ services:
 
 networks:
   crowdqr-network:
+    name: crowdqr-network
     driver: bridge
 
 volumes:
