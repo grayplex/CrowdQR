@@ -21,7 +21,7 @@ RUN dotnet publish -c Release -o /app/out --no-restore \
     /p:PublishTrimmed=false \
     /p:PublishSingleFile=false
 
-# Stage 2: Runtime (minimal)
+# Stage 2: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
 
 # Create non-root user for security

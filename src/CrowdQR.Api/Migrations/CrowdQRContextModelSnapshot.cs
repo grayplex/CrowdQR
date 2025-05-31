@@ -17,7 +17,7 @@ namespace CrowdQR.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.4")
+                .HasAnnotation("ProductVersion", "9.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -147,39 +147,34 @@ namespace CrowdQR.Api.Migrations
                 {
                     b.Property<int>("TrackId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("TrackID");
+                        .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TrackId"));
 
                     b.Property<string>("AlbumArtUrl")
                         .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("AlbumArtURL");
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<int?>("Duration")
                         .HasColumnType("integer");
 
                     b.Property<int>("RequestId")
-                        .HasColumnType("integer")
-                        .HasColumnName("RequestID");
+                        .HasColumnType("integer");
 
                     b.Property<string>("SpotifyId")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("SpotifyID");
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("YoutubeId")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("YoutubeID");
+                        .HasColumnType("character varying(50)");
 
                     b.HasKey("TrackId");
 
                     b.HasIndex("RequestId")
                         .IsUnique();
 
-                    b.ToTable("TrackMetadata", (string)null);
+                    b.ToTable("TrackMetadata");
                 });
 
             modelBuilder.Entity("CrowdQR.Api.Models.User", b =>

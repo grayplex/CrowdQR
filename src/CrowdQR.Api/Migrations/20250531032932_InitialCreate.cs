@@ -19,6 +19,12 @@ namespace CrowdQR.Api.Migrations
                     UserID = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Username = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    PasswordHash = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    PasswordSalt = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    IsEmailVerified = table.Column<bool>(type: "boolean", nullable: false),
+                    EmailVerificationToken = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    EmailTokenExpiry = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Role = table.Column<string>(type: "text", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -113,20 +119,20 @@ namespace CrowdQR.Api.Migrations
                 name: "TrackMetadata",
                 columns: table => new
                 {
-                    TrackID = table.Column<int>(type: "integer", nullable: false)
+                    TrackId = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    RequestID = table.Column<int>(type: "integer", nullable: false),
-                    SpotifyID = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    YoutubeID = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    RequestId = table.Column<int>(type: "integer", nullable: false),
+                    SpotifyId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    YoutubeId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     Duration = table.Column<int>(type: "integer", nullable: true),
-                    AlbumArtURL = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true)
+                    AlbumArtUrl = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_TrackMetadata", x => x.TrackID);
+                    table.PrimaryKey("PK_TrackMetadata", x => x.TrackId);
                     table.ForeignKey(
-                        name: "FK_TrackMetadata_Request_RequestID",
-                        column: x => x.RequestID,
+                        name: "FK_TrackMetadata_Request_RequestId",
+                        column: x => x.RequestId,
                         principalTable: "Request",
                         principalColumn: "RequestID",
                         onDelete: ReferentialAction.Cascade);
@@ -197,9 +203,9 @@ namespace CrowdQR.Api.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_TrackMetadata_RequestID",
+                name: "IX_TrackMetadata_RequestId",
                 table: "TrackMetadata",
-                column: "RequestID",
+                column: "RequestId",
                 unique: true);
 
             migrationBuilder.CreateIndex(

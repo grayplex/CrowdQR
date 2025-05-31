@@ -50,11 +50,20 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    var jwtSecret = builder.Configuration["JWT_SECRET"] ??
+                   builder.Configuration["Jwt:Secret"] ??
+                   "test_jwt_secret_key_that_is_long_enough_for_testing_requirements_12345";
+
+    // Ensure the secret is at least 32 characters (256 bits)
+    if (jwtSecret.Length < 32)
+    {
+        throw new InvalidOperationException($"JWT secret must be at least 32 characters long. Current length: {jwtSecret.Length}");
+    }
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Secret"] ?? "temporaryCrowdQRSecretKey12345!@#$%")),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
         ValidateIssuer = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "CrowdQR.Api",
         ValidateAudience = true,
@@ -161,22 +170,51 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
 
-    // Apply migrations and seed data in development environment
-    using var scope = app.Services.CreateScope();
-    var services = scope.ServiceProvider;
+// Apply migrations and seed data in development environment
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    using var migrationScope = app.Services.CreateScope();
+    var services = migrationScope.ServiceProvider;
     try
     {
         var context = services.GetRequiredService<CrowdQRContext>();
-        // DbSeeder.SeedAsync(context).Wait();
+        var logger = services.GetRequiredService<ILogger<Program>>();
+
+        logger.LogInformation("Checking database connection and applying migrations...");
         context.Database.Migrate(); // Apply migrations
+        logger.LogInformation("Database migrations applied successfully");
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        logger.LogError(ex, "An error occurred while migrating the database.");
+        throw; // Re-throw to prevent startup with broken database
     }
 }
+else
+{
+    // For testing environment, just ensure the database is created
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<CrowdQRContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    logger.LogInformation("Testing environment detected - ensuring in-memory database is created");
+    await context.Database.EnsureCreatedAsync();
+}
+
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    var jwtSecret = builder.Configuration["JWT_SECRET"] ??
+                    builder.Configuration["Jwt:Secret"] ??
+                    "test_jwt_secret_key_that_is_long_enough_for_testing_requirements_12345";
+    logger.LogInformation("Program JWT Config - Secret: {SecretLength} chars, Issuer: {Issuer}, Audience: {Audience}",
+        jwtSecret.Length,
+        builder.Configuration["JWT_ISSUER"] ?? builder.Configuration["Jwt:Issuer"] ?? "CrowdQR.Api",
+        builder.Configuration["JWT_AUDIENCE"] ?? builder.Configuration["Jwt:Audience"] ?? "CrowdQR.Web");
+}
+
 
 app.UseExceptionHandling(); // Custom middleware for global exception handling
 app.UseCors("AllowWebApp"); // Enable CORS for the web app

@@ -11,14 +11,16 @@ namespace CrowdQR.Api.Tests.Helpers;
 public static class TestDbContextFactory
 {
     /// <summary>
-    /// Creates a new in-memory database context for testing.
+    /// Creates an in-memory database context for testing.
     /// </summary>
-    /// <param name="databaseName">Optional database name. If null, a unique name is generated.</param>
-    /// <returns>A configured test database context.</returns>
+    /// <param name="databaseName">The name of the in-memory database.</param>
+    /// <returns>A configured CrowdQRContext using in-memory database.</returns>
     public static CrowdQRContext CreateInMemoryContext(string? databaseName = null)
     {
+        var dbName = databaseName ?? $"TestDb_{Guid.NewGuid()}";
+
         var options = new DbContextOptionsBuilder<CrowdQRContext>()
-            .UseInMemoryDatabase(databaseName ?? Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(dbName)
             .EnableSensitiveDataLogging()
             .Options;
 
@@ -26,19 +28,34 @@ public static class TestDbContextFactory
     }
 
     /// <summary>
+    /// Creates an in-memory database context with seeded test data.
+    /// </summary>
+    /// <param name="databaseName">The name of the in-memory database.</param>
+    /// <returns>A configured CrowdQRContext with test data.</returns>
+    public static CrowdQRContext CreateInMemoryContextWithData(string? databaseName = null)
+    {
+        var context = CreateInMemoryContext(databaseName);
+        SeedTestData(context);
+        return context;
+    }
+
+    /// <summary>
     /// Seeds the database with test data.
     /// </summary>
     /// <param name="context">The database context to seed.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public static async Task SeedTestDataAsync(CrowdQRContext context)
+    public static void SeedTestData(CrowdQRContext context)
     {
-        // Clear existing data
-        context.RemoveRange(context.Votes);
-        context.RemoveRange(context.Requests);
-        context.RemoveRange(context.Sessions);
-        context.RemoveRange(context.Events);
-        context.RemoveRange(context.Users);
-        await context.SaveChangesAsync();
+        // Ensure the database is created
+        context.Database.EnsureCreated();
+
+        // Clear existing data first (for in-memory database, check if any exists)
+        if (context.Votes.Any()) context.RemoveRange(context.Votes);
+        if (context.Requests.Any()) context.RemoveRange(context.Requests);
+        if (context.Sessions.Any()) context.RemoveRange(context.Sessions);
+        if (context.Events.Any()) context.RemoveRange(context.Events);
+        if (context.Users.Any()) context.RemoveRange(context.Users);
+
+        context.SaveChanges();
 
         // Add test users
         var djUser = new User
@@ -107,18 +124,28 @@ public static class TestDbContextFactory
 
         context.Requests.AddRange(request1, request2);
 
-        await context.SaveChangesAsync();
+        context.SaveChanges();
     }
 
     /// <summary>
-    /// Creates a context with seeded test data.
+    /// Async version for backward compatibility.
     /// </summary>
-    /// <param name="databaseName">Optional database name.</param>
-    /// <returns>A seeded test database context.</returns>
-    public static async Task<CrowdQRContext> CreateSeededContextAsync(string? databaseName = null)
+    /// <param name="context">The database context to seed.</param>
+    public static async Task SeedTestDataAsync(CrowdQRContext context)
+    {
+        SeedTestData(context);
+        await Task.CompletedTask; // For async compatibility
+    }
+
+    /// <summary>
+    /// Creates a fresh in-memory context and seeds it with test data.
+    /// </summary>
+    /// <param name="databaseName">Optional database name for the in-memory database.</param>
+    /// <returns>A seeded database context.</returns>
+    public static CrowdQRContext CreateSeededContext(string? databaseName = null)
     {
         var context = CreateInMemoryContext(databaseName);
-        await SeedTestDataAsync(context);
+        SeedTestData(context);
         return context;
     }
 }
