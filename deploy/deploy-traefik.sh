@@ -18,19 +18,19 @@ fi
 # Validate required variables
 REQUIRED_VARS=(
     "DOMAIN"
-    "EMAIL"
+    "CLOUDFLARE_EMAIL"
     "POSTGRES_PASSWORD"
     "JWT_SECRET"
 )
 
 # Check for Cloudflare credentials
-if [ -n "$CLOUDFLARE_DNS_API_TOKEN" ]; then
-    echo "✅ Using Cloudflare DNS API Token"
-elif [ -n "$CLOUDFLARE_API_KEY" ] && [ -n "$CLOUDFLARE_EMAIL" ]; then
+if [ -n "$CLOUDFLARE_ZONE_API_TOKEN" ]; then
+    echo "✅ Using Cloudflare Zone API Token"
+elif [ -n "$CLOUDFLARE_DNS_API_TOKEN" ] && [ -n "$CLOUDFLARE_EMAIL" ]; then
     echo "✅ Using Cloudflare Global API Key"
 else
     echo "❌ Missing Cloudflare credentials"
-    echo "Set either CLOUDFLARE_DNS_API_TOKEN or both CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL"
+    echo "Set either CLOUDFLARE_ZONE_API_TOKEN or both CLOUDFLARE_DNS_API_TOKEN and CLOUDFLARE_EMAIL"
     exit 1
 fi
 
