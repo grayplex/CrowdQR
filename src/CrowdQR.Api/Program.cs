@@ -161,21 +161,25 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
 
-    // Apply migrations and seed data in development environment
-    using var scope = app.Services.CreateScope();
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<CrowdQRContext>();
-        // DbSeeder.SeedAsync(context).Wait();
-        context.Database.Migrate(); // Apply migrations
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
-    }
+// Apply migrations and seed data in development environment
+using var scope = app.Services.CreateScope();
+var services = scope.ServiceProvider;
+try
+{
+    var context = services.GetRequiredService<CrowdQRContext>();
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    // DbSeeder.SeedAsync(context).Wait();
+    logger.LogInformation("Checking database connection and applying migrations...");
+    context.Database.Migrate(); // Apply migrations
+    logger.LogInformation("Database migrations applied successfully");
+}
+catch (Exception ex)
+{
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "An error occurred while migrating the database.");
+    throw; // Re-throw to prevent startup with broken database
 }
 
 app.UseExceptionHandling(); // Custom middleware for global exception handling
