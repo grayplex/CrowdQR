@@ -126,7 +126,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - crowdqr-internal
+      - crowdqr-network
     labels:
       - "traefik.enable=false"
 
