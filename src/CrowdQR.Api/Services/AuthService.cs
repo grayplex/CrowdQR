@@ -390,16 +390,26 @@ public class AuthService(
     private string GenerateJwtToken(User user)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Secret"] ?? "temporaryCrowdQRSecretKey12345!@#$%");
+        var jwtSecret = _configuration["JWT_SECRET"] ??
+                   _configuration["Jwt:Secret"] ??
+                   "temporaryCrowdQRSecretKeyThatIsLongEnoughForSecurityRequirements123456789";
+
+        // Ensure the secret is at least 32 characters
+        if (jwtSecret.Length < 32)
+        {
+            throw new InvalidOperationException($"JWT secret must be at least 32 characters long. Current length: {jwtSecret.Length}");
+        }
+
+        var key = Encoding.UTF8.GetBytes(jwtSecret);
 
         var claims = new List<Claim>
-    {
-        new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-        new(ClaimTypes.Name, user.Username),
-        new(ClaimTypes.Role, user.Role.ToString()),
-        new("account_created", user.CreatedAt.ToString("O")),
-        new("email_verified", user.IsEmailVerified.ToString().ToLower())
-    };
+        {
+            new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+            new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.Role, user.Role.ToString()),
+            new("account_created", user.CreatedAt.ToString("O")),
+            new("email_verified", user.IsEmailVerified.ToString().ToLower())
+        };
 
         // Add email claim if available
         if (!string.IsNullOrEmpty(user.Email))

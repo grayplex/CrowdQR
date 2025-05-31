@@ -50,11 +50,20 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    var jwtSecret = builder.Configuration["JWT_SECRET"] ??
+                   builder.Configuration["Jwt:Secret"] ??
+                   "temporaryCrowdQRSecretKeyThatIsLongEnoughForSecurityRequirements123456789";
+
+    // Ensure the secret is at least 32 characters (256 bits)
+    if (jwtSecret.Length < 32)
+    {
+        throw new InvalidOperationException($"JWT secret must be at least 32 characters long. Current length: {jwtSecret.Length}");
+    }
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Secret"] ?? "temporaryCrowdQRSecretKey12345!@#$%")),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
         ValidateIssuer = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "CrowdQR.Api",
         ValidateAudience = true,
