@@ -1,81 +1,43 @@
-# deploy/traefik/traefik.yml
-global:
-  checkNewVersion: false
-  sendAnonymousUsage: false
+tls:
+  options:
+    securetls:
+      minVersion: VersionTLS12
+      sniStrict: true
+      cipherSuites:
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
 
-api:
-  dashboard: false
-  insecure: false
-
-entryPoints:
-  web:
-    address: ":80"
-    http:
-      redirections:
-        entryPoint:
-          to: websecure
-          scheme: https
-          permanent: true
-
-  websecure:
-    address: ":443"
-    http:
-      tls:
-        options: default
-
-providers:
-  docker:
-    endpoint: "unix:///var/run/docker.sock"
-    exposedByDefault: false
-    network: crowdqr-network
-
-certificatesResolvers:
-  cloudflare:
-    acme:
-      email: ${CLOUDFLARE_EMAIL}
-      storage: /letsencrypt/acme.json
-      dnsChallenge:
-        provider: cloudflare
-        resolvers:
-          - "1.1.1.1:53"
-          - "1.0.0.1:53"
-        delayBeforeCheck: "30"
-
-# Security headers
 http:
   middlewares:
-    security-headers:
+    globalHeaders:
       headers:
-        accessControlAllowMethods:
-          - GET
-          - OPTIONS
-          - PUT
-          - POST
-          - DELETE
-        accessControlMaxAge: 100
         hostsProxyHeaders:
           - "X-Forwarded-Host"
-        referrerPolicy: "same-origin"
+        customResponseHeaders:
+          server: ""
+          x-xss-protection: ""
+        frameDeny: false
+        contentTypeNosniff: true
+
+    secureHeaders:
+      headers:
+        sslProxyHeaders:
+          X-Forwarded-Proto: https
         customRequestHeaders:
           X-Forwarded-Proto: "https"
-        customResponseHeaders:
-          X-Robots-Tag: "none,noarchive,nosnippet,notranslate,noimageindex"
-          server: ""
-        sslRedirect: true
-        stsSeconds: 31536000
-        stsIncludeSubdomains: true
-        stsPreload: true
-        forceSTSHeader: true
-        frameDeny: true
-        contentTypeNosniff: true
-        browserXssFilter: true
+
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
 
     cors-headers:
       headers:
         accessControlAllowOriginList:
-          - "https://${DOMAIN}"
-          - "https://www.${DOMAIN}"
-        accessControlAllowHeaders:
           - "*"
         accessControlAllowMethods:
           - "GET"
@@ -83,16 +45,11 @@ http:
           - "PUT"
           - "DELETE"
           - "OPTIONS"
-        accessControlMaxAge: 86400
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 100
 
-# TLS configuration
-tls:
-  options:
-    default:
-      sslVersions:
-        - "VersionTLS12"
-        - "VersionTLS13"
-      cipherSuites:
-        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
-        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
-        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+  serversTransports:
+    skipverify:
+      insecureSkipVerify: true

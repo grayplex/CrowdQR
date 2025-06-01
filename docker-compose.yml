@@ -8,25 +8,26 @@ services:
       - "443:443"
     environment:
       - CF_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
+      - CF_API_EMAIL=${CLOUDFLARE_EMAIL}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt
+      - ./deploy/traefik:/etc/traefik:ro
     command:
       - --global.checkNewVersion=false
       - --global.sendAnonymousUsage=false
       - --api.dashboard=false
+      - --providers.file.directory=/etc/traefik
+      - --providers.file.watch=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=crowdqr-network
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
-      - --entrypoints.web.http.redirections.entrypoint.to=websecure
-      - --entrypoints.web.http.redirections.entrypoint.scheme=https
-      - --entrypoints.web.http.redirections.entrypoint.permanent=true
       - --entrypoints.web.forwardedheaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32 # Cloudflare IPs
       - --entrypoints.web.proxyprotocol.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32 # Cloudflare IPs
       - --entrypoints.websecure.forwardedheaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32 # Cloudflare IPs
       - --entrypoints.websecure.proxyprotocol.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32  
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=crowdqr-network
       - --certificatesresolvers.cloudflare.acme.email=${CLOUDFLARE_EMAIL}
       - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
       - --certificatesresolvers.cloudflare.acme.dnschallenge=true
@@ -68,16 +69,25 @@ services:
     labels:
       - "traefik.enable=true"
       
-      # HTTPS Web Routes
-      - "traefik.http.routers.web.rule=Host(`${DOMAIN}`) || Host(`www.${DOMAIN}`)"
-      - "traefik.http.routers.web.entrypoints=websecure"
-      - "traefik.http.routers.web.tls.certresolver=cloudflare"
-      - "traefik.http.routers.web.tls.domains[0].main=${DOMAIN}"
-      - "traefik.http.routers.web.tls.domains[0].sans=www.${DOMAIN}"
-      - "traefik.http.routers.web.service=web"
+      # HTTP Router (for redirect)
+      - "traefik.http.routers.crowdqr-web-http.entrypoints=web"
+      - "traefik.http.routers.crowdqr-web-http.rule=Host(`${DOMAIN}`) || Host(`www.${DOMAIN}`)"
+      - "traefik.http.routers.crowdqr-web-http.middlewares=globalHeaders@file,redirect-to-https@file"
+      - "traefik.http.routers.crowdqr-web-http.service=crowdqr-web-http"
+      - "traefik.http.routers.crowdqr-web-http.priority=20"
       
-      # Service Definition
-      - "traefik.http.services.web-service.loadbalancer.server.port=80"
+      # HTTPS Router
+      - "traefik.http.routers.crowdqr-web.entrypoints=websecure"
+      - "traefik.http.routers.crowdqr-web.rule=Host(`${DOMAIN}`) || Host(`www.${DOMAIN}`)"
+      - "traefik.http.routers.crowdqr-web.middlewares=globalHeaders@file,secureHeaders@file"
+      - "traefik.http.routers.crowdqr-web.service=crowdqr-web"
+      - "traefik.http.routers.crowdqr-web.priority=20"
+      - "traefik.http.routers.crowdqr-web.tls.certresolver=cloudflare"
+      - "traefik.http.routers.crowdqr-web.tls.options=securetls@file"
+      
+      # Services
+      - "traefik.http.services.crowdqr-web-http.loadbalancer.server.port=80"
+      - "traefik.http.services.crowdqr-web.loadbalancer.server.port=80"
 
   api:
     build:
@@ -114,14 +124,25 @@ services:
     labels:
       - "traefik.enable=true"
       
-      # HTTPS API Routes
-      - "traefik.http.routers.api.rule=Host(`api.${DOMAIN}`)"
-      - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls.certresolver=cloudflare"
-      - "traefik.http.routers.api.service=api"
+      # HTTP Router (for redirect)
+      - "traefik.http.routers.crowdqr-api-http.entrypoints=web"
+      - "traefik.http.routers.crowdqr-api-http.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.http.routers.crowdqr-api-http.middlewares=globalHeaders@file,redirect-to-https@file"
+      - "traefik.http.routers.crowdqr-api-http.service=crowdqr-api-http"
+      - "traefik.http.routers.crowdqr-api-http.priority=20"
       
-      # Service Definition
-      - "traefik.http.services.api-service.loadbalancer.server.port=5000"
+      # HTTPS Router
+      - "traefik.http.routers.crowdqr-api.entrypoints=websecure"
+      - "traefik.http.routers.crowdqr-api.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.http.routers.crowdqr-api.middlewares=globalHeaders@file,secureHeaders@file"
+      - "traefik.http.routers.crowdqr-api.service=crowdqr-api"
+      - "traefik.http.routers.crowdqr-api.priority=20"
+      - "traefik.http.routers.crowdqr-api.tls.certresolver=cloudflare"
+      - "traefik.http.routers.crowdqr-api.tls.options=securetls@file"
+      
+      # Services
+      - "traefik.http.services.crowdqr-api-http.loadbalancer.server.port=5000"
+      - "traefik.http.services.crowdqr-api.loadbalancer.server.port=5000"
 
   db:
     image: postgres:17
