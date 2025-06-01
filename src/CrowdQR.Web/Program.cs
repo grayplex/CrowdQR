@@ -14,16 +14,20 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using HealthChecks.UI.Core;
 using HealthChecks.UI;
 using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure for reverse proxy (Traefik)
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | 
-                                Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | 
+                              ForwardedHeaders.XForwardedProto | 
+                              ForwardedHeaders.XForwardedHost;
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
+    options.RequireHeaderSymmetry = false;
+    options.ForwardLimit = null;
 });
 
 // Add API client configuration with detailed logging
@@ -52,14 +56,14 @@ builder.Services.AddAuthentication(options =>
     options.ExpireTimeSpan = TimeSpan.FromHours(1);
     options.SlidingExpiration = true;
     // Configure for reverse proxy
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.None; // Let proxy handle security
     options.Cookie.SameSite = SameSiteMode.Lax;
 })
 .AddCookie("AudienceCookie", options =>
 {
     options.ExpireTimeSpan = TimeSpan.FromDays(1);
     options.SlidingExpiration = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.None; // Let proxy handle security
     options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
@@ -119,7 +123,7 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromHours(1);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.None; // Let proxy handle security
     options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
@@ -150,12 +154,13 @@ builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    // app.UseHsts(); // Disable HSTS for reverse proxy
 }
 else
 {

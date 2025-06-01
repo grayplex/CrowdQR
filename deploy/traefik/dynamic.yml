@@ -1,0 +1,55 @@
+tls:
+  options:
+    securetls:
+      minVersion: VersionTLS12
+      sniStrict: true
+      cipherSuites:
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+
+http:
+  middlewares:
+    globalHeaders:
+      headers:
+        hostsProxyHeaders:
+          - "X-Forwarded-Host"
+        customResponseHeaders:
+          server: ""
+          x-xss-protection: ""
+        frameDeny: false
+        contentTypeNosniff: true
+
+    secureHeaders:
+      headers:
+        sslProxyHeaders:
+          X-Forwarded-Proto: https
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    cors-headers:
+      headers:
+        accessControlAllowOriginList:
+          - "*"
+        accessControlAllowMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "DELETE"
+          - "OPTIONS"
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 100
+
+  serversTransports:
+    skipverify:
+      insecureSkipVerify: true
