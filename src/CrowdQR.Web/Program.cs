@@ -102,6 +102,7 @@ builder.Services.AddScoped<VoteService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<AuthenticationService>(sp =>
 {
     var clientFactory = sp.GetRequiredService<IHttpClientFactory>();
