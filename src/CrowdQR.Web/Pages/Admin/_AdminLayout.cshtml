@@ -20,6 +20,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["page"]?.ToString() == "/Admin/Reports" ? "active" : "")"
+                           asp-page="/Admin/Reports">
+                            <i class="bi bi-bar-chart me-2"></i> Reports
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link @(ViewContext.RouteData.Values["page"]?.ToString() == "/Admin/Settings" ? "active" : "")"
                            asp-page="/Admin/Settings">
                             <i class="bi bi-gear me-2"></i> Settings

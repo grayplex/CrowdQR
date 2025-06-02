@@ -173,7 +173,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // Apply migrations and seed data in development environment
-if (!app.Environment.IsEnvironment("Testing"))
+if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsEnvironment("Development"))
 {
     using var migrationScope = app.Services.CreateScope();
     var services = migrationScope.ServiceProvider;

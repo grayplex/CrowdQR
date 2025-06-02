@@ -1,0 +1,265 @@
+﻿@page
+@model CrowdQR.Web.Pages.Admin.ReportsModel
+@{
+    ViewData["Title"] = "Reports";
+    Layout = "_AdminLayout";
+}
+
+<div class="container-fluid mt-4">
+    <h1 class="h3">Reports</h1>
+
+    <!-- Report Generation Forms -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Event Performance Report</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="eventSelect" class="form-label">Select Event</label>
+                        <select id="eventSelect" class="form-select" required>
+                            <option value="">Choose an event...</option>
+                            @foreach (var evt in Model.UserEvents)
+                            {
+                                <option value="@evt.EventId">@evt.Name (@evt.Slug)</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="button" id="generateEventReport" class="btn btn-primary" disabled>Generate Event Report</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">DJ Analytics Report</div>
+                <div class="card-body">
+                    <p>Generate a comprehensive analytics report across all your events.</p>
+                    <a href="?handler=DjAnalytics" class="btn btn-primary">Generate DJ Analytics</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Display -->
+    @if (Model.EventReport != null)
+    {
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="h5 mb-0">@Model.EventReport.Title</h3>
+                <small class="text-muted">Generated: @Model.EventReport.GeneratedAt.ToString("yyyy-MM-dd HH:mm:ss")</small>
+            </div>
+            <div class="card-body">
+                <!-- Summary Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-primary">@Model.EventReport.Summary.TotalRequests</h4>
+                                <p class="card-text">Total Requests</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-success">@Model.EventReport.Summary.ApprovedRequests</h4>
+                                <p class="card-text">Approved</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-info">@Model.EventReport.Summary.TotalVotes</h4>
+                                <p class="card-text">Total Votes</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-warning">@Model.EventReport.Summary.UniqueParticipants</h4>
+                                <p class="card-text">Participants</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Report Table -->
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Song Name</th>
+                                <th>Artist</th>
+                                <th>Requester</th>
+                                <th>Votes</th>
+                                <th>Status</th>
+                                <th>Requested At</th>
+                                <th>Status Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.EventReport.Rows)
+                            {
+                                <tr>
+                                    <td class="fw-bold">@row.SongName</td>
+                                    <td>@(row.ArtistName ?? "-")</td>
+                                    <td>@row.Requester</td>
+                                    <td><span class="badge bg-primary">@row.VoteCount</span></td>
+                                    <td>
+                                        @if (row.Status == "Approved")
+                                        {
+                                            <span class="badge bg-success">Approved</span>
+                                        }
+                                        else if (row.Status == "Rejected")
+                                        {
+                                            <span class="badge bg-danger">Rejected</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning">Pending</span>
+                                        }
+                                    </td>
+                                    <td>@row.RequestedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                                    <td>@(row.StatusUpdatedAt?.ToString("MM/dd/yyyy HH:mm") ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    @if (Model.DjReport != null)
+    {
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="h5 mb-0">@Model.DjReport.Title</h3>
+                <small class="text-muted">Generated: @Model.DjReport.GeneratedAt.ToString("yyyy-MM-dd HH:mm:ss")</small>
+            </div>
+            <div class="card-body">
+                <!-- Summary Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-2">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-primary">@Model.DjReport.Summary.TotalEvents</h4>
+                                <p class="card-text">Total Events</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-success">@Model.DjReport.Summary.ActiveEvents</h4>
+                                <p class="card-text">Active Events</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-info">@Model.DjReport.Summary.TotalRequests</h4>
+                                <p class="card-text">Total Requests</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-warning">@Model.DjReport.Summary.TotalVotes</h4>
+                                <p class="card-text">Total Votes</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-secondary">@Model.DjReport.Summary.AverageRequestsPerEvent.ToString("F1")</h4>
+                                <p class="card-text">Avg Requests</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-dark">@Model.DjReport.Summary.AverageVotesPerEvent.ToString("F1")</h4>
+                                <p class="card-text">Avg Votes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Event Analytics Table -->
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Event Name</th>
+                                <th>Slug</th>
+                                <th>Created Date</th>
+                                <th>Status</th>
+                                <th>Requests</th>
+                                <th>Approved</th>
+                                <th>Votes</th>
+                                <th>Participants</th>
+                                <th>Approval Rate</th>
+                                <th>Avg Votes/Request</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.DjReport.Rows)
+                            {
+                                <tr>
+                                    <td class="fw-bold">@row.EventName</td>
+                                    <td><span class="badge bg-light text-dark">@row.EventSlug</span></td>
+                                    <td>@row.EventDate.ToString("MM/dd/yyyy")</td>
+                                    <td>
+                                        @if (row.IsActive)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        }
+                                    </td>
+                                    <td><span class="badge bg-primary">@row.TotalRequests</span></td>
+                                    <td><span class="badge bg-success">@row.ApprovedRequests</span></td>
+                                    <td><span class="badge bg-info">@row.TotalVotes</span></td>
+                                    <td><span class="badge bg-warning">@row.UniqueParticipants</span></td>
+                                    <td>@row.ApprovalRate.ToString("F1")%</td>
+                                    <td>@row.AverageVotesPerRequest.ToString("F1")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    @section Scripts {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const eventSelect = document.getElementById('eventSelect');
+                const generateButton = document.getElementById('generateEventReport');
+
+                // Enable/disable button based on selection
+                eventSelect.addEventListener('change', function() {
+                    generateButton.disabled = !this.value;
+                });
+
+                // Handle button click
+                generateButton.addEventListener('click', function() {
+                    const selectedEventId = eventSelect.value;
+                    if (selectedEventId) {
+                        // Navigate to the event performance handler with the selected event ID
+                        window.location.href = `?handler=EventPerformance&eventId=${selectedEventId}`;
+                    }
+                });
+            });
+        </script>
+    }
+</div>
