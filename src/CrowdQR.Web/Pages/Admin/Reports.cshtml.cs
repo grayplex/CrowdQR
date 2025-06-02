@@ -13,7 +13,6 @@ namespace CrowdQR.Web.Pages.Admin;
 [Authorize(Policy = "DjOnly")]
 public class ReportsModel(EventService eventService, ILogger<ReportsModel> logger, ReportService? reportService = null) : PageModel
 {
-
     /// <summary>
     /// List of events owned by the current DJ.
     /// </summary>
