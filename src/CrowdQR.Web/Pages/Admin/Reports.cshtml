@@ -14,19 +14,17 @@
             <div class="card">
                 <div class="card-header">Event Performance Report</div>
                 <div class="card-body">
-                    <form method="get" asp-page-handler="EventPerformance">
-                        <div class="mb-3">
-                            <label for="eventId" class="form-label">Select Event</label>
-                            <select name="eventId" class="form-select" required>
-                                <option value="">Choose an event...</option>
-                                @foreach (var evt in Model.UserEvents)
-                                {
-                                    <option value="@evt.EventId">@evt.Name (@evt.Slug)</option>
-                                }
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Generate Report</button>
-                    </form>
+                    <div class="mb-3">
+                        <label for="eventSelect" class="form-label">Select Event</label>
+                        <select id="eventSelect" class="form-select" required>
+                            <option value="">Choose an event...</option>
+                            @foreach (var evt in Model.UserEvents)
+                            {
+                                <option value="@evt.EventId">@evt.Name (@evt.Slug)</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="button" id="generateEventReport" class="btn btn-primary" disabled>Generate Event Report</button>
                 </div>
             </div>
         </div>
@@ -240,5 +238,28 @@
                 </div>
             </div>
         </div>
+    }
+
+    @section Scripts {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const eventSelect = document.getElementById('eventSelect');
+                const generateButton = document.getElementById('generateEventReport');
+
+                // Enable/disable button based on selection
+                eventSelect.addEventListener('change', function() {
+                    generateButton.disabled = !this.value;
+                });
+
+                // Handle button click
+                generateButton.addEventListener('click', function() {
+                    const selectedEventId = eventSelect.value;
+                    if (selectedEventId) {
+                        // Navigate to the event performance handler with the selected event ID
+                        window.location.href = `?handler=EventPerformance&eventId=${selectedEventId}`;
+                    }
+                });
+            });
+        </script>
     }
 </div>
