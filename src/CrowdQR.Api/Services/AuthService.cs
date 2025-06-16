@@ -138,7 +138,8 @@ public class AuthService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error authenticating user {UsernameOrEmail}", usernameOrEmail);
+            var sanitizedUsernameOrEmail = usernameOrEmail.Replace("\n", "").Replace("\r", "");
+            _logger.LogError(ex, "Error authenticating user {UsernameOrEmail}", sanitizedUsernameOrEmail);
             return new AuthResultDto
             {
                 Success = false,
