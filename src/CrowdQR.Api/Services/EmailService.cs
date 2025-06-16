@@ -28,7 +28,8 @@ public class EmailService(ILogger<EmailService> logger, IConfiguration configura
         var sanitizedVerificationUrl = verificationUrl.Replace(Environment.NewLine, "").Replace("\n", "").Replace("\r", "");
 
         _logger.LogInformation("----- VERIFICATION EMAIL -----");
-        _logger.LogInformation("To: {Email}", sanitizedEmail);
+        var maskedEmail = sanitizedEmail.Substring(0, Math.Min(3, sanitizedEmail.Length)) + "***";
+        _logger.LogInformation("To: {Email}", maskedEmail);
         _logger.LogInformation("Subject: Verify your CrowdQR DJ account");
         _logger.LogInformation("Body:");
         _logger.LogInformation("Hello {Username},", sanitizedUsername);
