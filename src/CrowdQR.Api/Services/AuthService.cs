@@ -266,7 +266,7 @@ public class AuthService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error verifying email {Email}", verifyEmailDto.Email);
+            _logger.LogError(ex, "Error verifying email during the verification process.");
             return false;
         }
     }
