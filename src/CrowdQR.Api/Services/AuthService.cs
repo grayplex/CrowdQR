@@ -223,7 +223,8 @@ public class AuthService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error registering DJ user {Username}", registerDto.Username);
+            var sanitizedUsername = registerDto.Username.Replace(Environment.NewLine, "").Replace("\n", "").Replace("\r", "");
+            _logger.LogError(ex, "Error registering DJ user {Username}", sanitizedUsername);
             return new AuthResultDto
             {
                 Success = false,
