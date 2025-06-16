@@ -302,7 +302,8 @@ public class AuthService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error resending verification email to {Email}", email);
+            var sanitizedEmail = email.Replace("\n", "").Replace("\r", "");
+            _logger.LogError(ex, "Error resending verification email to {Email}", sanitizedEmail);
             return false;
         }
     }
