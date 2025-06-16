@@ -74,7 +74,7 @@ public class AuthService(
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Created new user {Username} with Audience role", usernameOrEmail);
+                _logger.LogInformation("Created a new user with Audience role.");
             }
             else
             {
