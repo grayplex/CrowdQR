@@ -34,7 +34,7 @@ public class AuthorizationLoggingMiddleware(RequestDelegate next, ILogger<Author
         {
             var user = context.User?.Identity?.Name ?? "Anonymous";
             var userId = context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown";
-            var path = context.Request.Path;
+            var path = context.Request.Path.ToString().Replace("\n", "").Replace("\r", "");
             var method = context.Request.Method;
             var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
