@@ -266,7 +266,8 @@ public class AuthService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error verifying email {Email}", verifyEmailDto.Email);
+            var sanitizedEmail = verifyEmailDto.Email.Replace(Environment.NewLine, "").Replace("\n", "").Replace("\r", "");
+            _logger.LogError(ex, "Error verifying email {Email}", sanitizedEmail);
             return false;
         }
     }
