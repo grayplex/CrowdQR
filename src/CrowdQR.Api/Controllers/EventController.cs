@@ -241,7 +241,7 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
         var @event = new Event
         {
             DjUserId = eventDto.DjUserId,
-            Name = eventDto.Name,
+            Name = eventDto.Name?.Replace("\r", "").Replace("\n", ""),
             Slug = eventDto.Slug,
             IsActive = eventDto.IsActive ?? true
         };
@@ -250,7 +250,7 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
         await _context.SaveChangesAsync();
         
         _logger.LogInformation("Event created successfully: {EventId}, {EventName}, by DJ {DjUserId}", 
-            @event.EventId, @event.Name, @event.DjUserId);
+            @event.EventId, @event.Name?.Replace("\r", "").Replace("\n", ""), @event.DjUserId);
 
         return CreatedAtAction(nameof(GetEvent), new { id = @event.EventId }, @event);
     }
