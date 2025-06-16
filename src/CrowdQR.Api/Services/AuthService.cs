@@ -302,8 +302,8 @@ public class AuthService(
         }
         catch (Exception ex)
         {
-            var sanitizedEmail = email.Replace("\n", "").Replace("\r", "");
-            _logger.LogError(ex, "Error resending verification email to {Email}", sanitizedEmail);
+            var hashedEmail = Convert.ToBase64String(Encoding.UTF8.GetBytes(email));
+            _logger.LogError(ex, "Error resending verification email to a user with hashed email: {HashedEmail}", hashedEmail);
             return false;
         }
     }
