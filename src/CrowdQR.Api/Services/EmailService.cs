@@ -25,7 +25,8 @@ public class EmailService(ILogger<EmailService> logger, IConfiguration configura
         _logger.LogInformation("To: {Email}", email);
         _logger.LogInformation("Subject: Verify your CrowdQR DJ account");
         _logger.LogInformation("Body:");
-        _logger.LogInformation("Hello {Username},", username);
+        var sanitizedUsername = username.Replace(Environment.NewLine, "").Replace("\n", "").Replace("\r", "");
+        _logger.LogInformation("Hello {Username},", sanitizedUsername);
         _logger.LogInformation("Thank you for registering as a DJ on CrowdQR.");
         _logger.LogInformation("Please verify your email by clicking the link below:");
         _logger.LogInformation("{Url}", verificationUrl);
