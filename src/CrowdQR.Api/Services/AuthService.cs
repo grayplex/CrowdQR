@@ -1,6 +1,7 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Security.Cryptography;
 using CrowdQR.Api.Data;
 using CrowdQR.Api.Models;
 using CrowdQR.Shared.Models.DTOs;
@@ -139,7 +140,8 @@ public class AuthService(
         catch (Exception ex)
         {
             var sanitizedUsernameOrEmail = usernameOrEmail.Replace("\n", "").Replace("\r", "");
-            _logger.LogError(ex, "Error authenticating user {UsernameOrEmail}", sanitizedUsernameOrEmail);
+            var hashedUsernameOrEmail = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(sanitizedUsernameOrEmail)));
+            _logger.LogError(ex, "Error authenticating user {HashedUsernameOrEmail}", hashedUsernameOrEmail);
             return new AuthResultDto
             {
                 Success = false,
