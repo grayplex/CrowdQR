@@ -47,8 +47,9 @@ public class DjRoleValidationMiddleware(RequestDelegate next, ILogger<DjRoleVali
         var roleClaim = context.User.FindFirst(ClaimTypes.Role);
         if (roleClaim == null || roleClaim.Value != UserRole.DJ.ToString())
         {
+            var sanitizedPath = context.Request.Path.Value?.Replace("\n", "").Replace("\r", "");
             _logger.LogWarning("User {UserId} attempted to access DJ-only endpoint {Path} without DJ role",
-                context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, context.Request.Path);
+                context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, sanitizedPath);
 
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             context.Response.ContentType = "application/json";
