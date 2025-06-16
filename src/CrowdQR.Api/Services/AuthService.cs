@@ -267,7 +267,8 @@ public class AuthService(
         catch (Exception ex)
         {
             var sanitizedEmail = verifyEmailDto.Email.Replace(Environment.NewLine, "").Replace("\n", "").Replace("\r", "");
-            _logger.LogError(ex, "Error verifying email {Email}", sanitizedEmail);
+            var hashedEmail = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(sanitizedEmail)));
+            _logger.LogError(ex, "Error verifying email for hashed email {HashedEmail}", hashedEmail);
             return false;
         }
     }
