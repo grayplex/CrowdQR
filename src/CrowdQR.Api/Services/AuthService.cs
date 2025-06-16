@@ -74,8 +74,7 @@ public class AuthService(
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                var sanitizedUsernameOrEmail = usernameOrEmail.Replace(Environment.NewLine, "").Replace("\n", "").Replace("\r", "");
-                _logger.LogInformation("Created new user {Username} with Audience role", sanitizedUsernameOrEmail);
+                _logger.LogInformation("Created a new user with Audience role.");
             }
             else
             {
