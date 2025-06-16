@@ -21,15 +21,20 @@ public class EmailService(ILogger<EmailService> logger, IConfiguration configura
         var baseUrl = _configuration["AppSettings:BaseUrl"] ?? "https://localhost:5000";
         var verificationUrl = $"{baseUrl}/verify-email?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
 
+        // Sanitize user-provided inputs
+        var sanitizedEmail = email.Replace("\r", "").Replace("\n", "");
+        var sanitizedUsername = username.Replace("\r", "").Replace("\n", "");
+        var sanitizedToken = token.Replace("\r", "").Replace("\n", "");
+
         _logger.LogInformation("----- VERIFICATION EMAIL -----");
-        _logger.LogInformation("To: {Email}", email);
+        _logger.LogInformation("To: {Email}", sanitizedEmail);
         _logger.LogInformation("Subject: Verify your CrowdQR DJ account");
         _logger.LogInformation("Body:");
-        _logger.LogInformation("Hello {Username},", username);
+        _logger.LogInformation("Hello {Username},", sanitizedUsername);
         _logger.LogInformation("Thank you for registering as a DJ on CrowdQR.");
         _logger.LogInformation("Please verify your email by clicking the link below:");
         _logger.LogInformation("{Url}", verificationUrl);
-        _logger.LogInformation("Or use the following verification code: {Token}", token);
+        _logger.LogInformation("Or use the following verification code: {Token}", sanitizedToken);
         _logger.LogInformation("This link will expire in 24 hours.");
         _logger.LogInformation("If you did not create this account, please ignore this email.");
         _logger.LogInformation("Thanks,");
@@ -52,9 +57,14 @@ public class EmailService(ILogger<EmailService> logger, IConfiguration configura
     {
         // This is a placeholder implementation that logs instead of actually sending an email
         // Replace with actual email sending logic in production
+        // Sanitize user-provided inputs
+        var sanitizedEmail = email.Replace("\r", "").Replace("\n", "");
+        var sanitizedUsername = username.Replace("\r", "").Replace("\n", "");
+        var sanitizedToken = token.Replace("\r", "").Replace("\n", "");
+
         _logger.LogInformation(
             "PASSWORD RESET EMAIL: To: {Email}, For: {Username}, Token: {Token}",
-            email, username, token);
+            sanitizedEmail, sanitizedUsername, sanitizedToken);
 
         var baseUrl = _configuration["AppSettings:BaseUrl"] ?? "https://localhost:5000";
         var resetUrl = $"{baseUrl}/reset-password?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
