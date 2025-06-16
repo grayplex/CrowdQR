@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Show loading when clicking on navigation links (except those with no-loading class)
     document.querySelectorAll('a:not(.no-loading)').forEach(link => {
         if (link.getAttribute('href') && !link.getAttribute('href').startsWith('#') &&
-            !link.getAttribute('href').startsWith('javascript:') &&
+            !/^(javascript:|data:|vbscript:)/i.test(link.getAttribute('href')) &&
             !link.getAttribute('target')) {
             link.addEventListener('click', function () {
                 showLoading();

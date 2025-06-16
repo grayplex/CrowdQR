@@ -1,6 +1,7 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Security.Cryptography;
 using CrowdQR.Api.Data;
 using CrowdQR.Api.Models;
 using CrowdQR.Shared.Models.DTOs;
@@ -74,7 +75,7 @@ public class AuthService(
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Created new user {Username} with Audience role", usernameOrEmail);
+                _logger.LogInformation("Created a new user with Audience role.");
             }
             else
             {
@@ -138,7 +139,7 @@ public class AuthService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error authenticating user {UsernameOrEmail}", usernameOrEmail);
+            _logger.LogError(ex, "Error authenticating user during authentication process.");
             return new AuthResultDto
             {
                 Success = false,
@@ -223,7 +224,8 @@ public class AuthService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error registering DJ user {Username}", registerDto.Username);
+            var sanitizedUsername = registerDto.Username.Replace(Environment.NewLine, "").Replace("\n", "").Replace("\r", "");
+            _logger.LogError(ex, "Error registering DJ user {Username}", sanitizedUsername);
             return new AuthResultDto
             {
                 Success = false,
@@ -266,7 +268,7 @@ public class AuthService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error verifying email {Email}", verifyEmailDto.Email);
+            _logger.LogError(ex, "Error verifying email during the verification process.");
             return false;
         }
     }
@@ -302,7 +304,8 @@ public class AuthService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error resending verification email to {Email}", email);
+            var hashedEmail = Convert.ToBase64String(Encoding.UTF8.GetBytes(email));
+            _logger.LogError(ex, "Error resending verification email to a user with hashed email: {HashedEmail}", hashedEmail);
             return false;
         }
     }
