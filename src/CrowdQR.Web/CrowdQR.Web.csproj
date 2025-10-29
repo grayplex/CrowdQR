@@ -13,6 +13,7 @@
 	  <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.7" />
 	</ItemGroup>
 	<ItemGroup>
+  	<PackageReference Include="KubernetesClient" Version="17.0.14" />
 		<ProjectReference Include="..\CrowdQR.Shared\CrowdQR.Shared.csproj" />
 	</ItemGroup>
 
