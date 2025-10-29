@@ -6,11 +6,11 @@
 	  <PackageReference Include="AspNetCore.HealthChecks.UI.InMemory.Storage" Version="9.0.0" />
 	  <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="9.0.0" />
 	  <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
-	  <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.16" />
-	  <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.16" />
-	  <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.5" />
-	  <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.5" />
-	  <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.5" />
+	  <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.21" />
+	  <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.21" />
+	  <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.7" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.7" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.7" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\CrowdQR.Shared\CrowdQR.Shared.csproj" />
