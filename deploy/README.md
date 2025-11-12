@@ -9,23 +9,22 @@ This directory contains scripts and documentation for deploying CrowdQR in produ
    ```bash
    # Copy production environment template
    cp .env.example .env
-   
+
    # Edit production settings
    nano .env
    ```
 
 2. **Run Deployment Test**
 
-    ```bash
-    chmod +x deploy/production-test.sh
-    ./deploy/production-test.sh
-    ```
+   ```bash
+   chmod +x deploy/production-test.sh
+   ./deploy/production-test.sh
+   ```
 
 3. **Access Application**
-
-    - Web Application: <http://localhost:8080>
-    - API: <http://localhost:5000>
-    - Health Checks: <http://localhost:8080/health>
+   - Web Application: <http://localhost:8080>
+   - API: <http://localhost:5000>
+   - Health Checks: <http://localhost:8080/health>
 
 ## Alternative: Plain Docker Deployment
 
@@ -140,35 +139,35 @@ docker network rm crowdqr-network
    ```bash
     git clone https://github.com/grayplex/crowdqr.git
     cd crowdqr
-    ```
+   ```
 
 2. **Configure Environment**
 
-    ```bash
-    cp .env.example .env
+   ```bash
+   cp .env.example .env
 
-    # Edit these critical settings:
-    # - POSTGRES_PASSWORD (use a strong password)
-    # - ASPNETCORE_ENVIRONMENT=Production
-    ```
+   # Edit these critical settings:
+   # - POSTGRES_PASSWORD (use a strong password)
+   # - ASPNETCORE_ENVIRONMENT=Production
+   ```
 
 3. **Build and Start Services**
 
-    ```bash
-    export ASPNETCORE_ENVIRONMENT=Production
-    docker-compose --env-file .env up -d --build
-    ```
+   ```bash
+   export ASPNETCORE_ENVIRONMENT=Production
+   docker-compose --env-file .env up -d --build
+   ```
 
 4. **Verify Deployment**
 
-    ```bash
-    # Check service status
-    docker-compose ps
+   ```bash
+   # Check service status
+   docker-compose ps
 
-    # Check health
-    curl http://localhost:5000/health
-    curl http://localhost:8080/health
-    ```
+   # Check health
+   curl http://localhost:5000/health
+   curl http://localhost:8080/health
+   ```
 
 ## Production Considerations
 
@@ -204,33 +203,33 @@ docker network rm crowdqr-network
 
 1. **Port Conflicts**
 
-    ```bash
-    # Check port usage
-    netstat -tulpn | grep :8080
+   ```bash
+   # Check port usage
+   netstat -tulpn | grep :8080
 
-    # Modify ports in docker-compose.yml if needed
-    ```
+   # Modify ports in docker-compose.yml if needed
+   ```
 
 2. **Database Connection Errors**
 
-    ```bash
-    # Check database logs
-    docker-compose logs db
+   ```bash
+   # Check database logs
+   docker-compose logs db
 
-    # Test database connection
-    docker-compose exec db psql -U crowdqr_prod -d crowdqr_production
-    ```
+   # Test database connection
+   docker-compose exec db psql -U crowdqr_prod -d crowdqr_production
+   ```
 
 3. **Application Not Responding**
 
-    ```bash
-    # Check application logs
-    docker-compose logs api
-    docker-compose logs web
+   ```bash
+   # Check application logs
+   docker-compose logs api
+   docker-compose logs web
 
-    # Verify environment variables
-    docker-compose exec api printenv
-    ```
+   # Verify environment variables
+   docker-compose exec api printenv
+   ```
 
 ### Log Locations
 
@@ -262,11 +261,11 @@ curl -s http://localhost:8080/health | jq
    ```bash
     docker-compose --env-file .env down
     docker-compose --env-file .env up -d --build
-    ```
+   ```
 
 3. **Verify Update**
 
-    ```bash
-    docker-compose ps
-    curl http://localhost:8080/health
-    ```
+   ```bash
+   docker-compose ps
+   curl http://localhost:8080/health
+   ```

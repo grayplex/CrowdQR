@@ -123,18 +123,18 @@ The script can be integrated with GitHub Actions or other CI/CD systems:
 ### Common Issues
 
 1. Docker not logged in
-    - `docker login ghcr.io`
+   - `docker login ghcr.io`
 2. Git tag already exists
-    - The script will prompt to overwrite
-    - Or delete manually: `git tag -d v1.0.0`
+   - The script will prompt to overwrite
+   - Or delete manually: `git tag -d v1.0.0`
 3. Image build fails
-    - Check Docker daemon is running
-    - Ensure docker-compose.yml is valid
-    - Verify source code compiles
+   - Check Docker daemon is running
+   - Ensure docker-compose.yml is valid
+   - Verify source code compiles
 4. Push fails
-    - Check registry authentication
-    - Verify repository permissions
-    - Check network connectivity
+   - Check registry authentication
+   - Verify repository permissions
+   - Check network connectivity
 
 ### Debug Mode
 

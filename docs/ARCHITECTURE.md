@@ -61,5 +61,5 @@ Container Deployment:
 For implementation details, see:
 
 - [API Documentation](../src/CrowdQR.Api/)
-- [Web Application](../src/CrowdQR.Web/)  
+- [Web Application](../src/CrowdQR.Web/)
 - [Deployment Guide](../deploy/README.md)

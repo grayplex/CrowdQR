@@ -200,7 +200,7 @@ This script provides step-by-step instructions for executing the critical user j
 
 1. **Switch to Browser 2** (audience_tester_1)
 2. **Verify**: "Bohemian Rhapsody" status shows as "Approved"
-3. **Switch to Browser 3** (audience_tester_2)  
+3. **Switch to Browser 3** (audience_tester_2)
 4. **Verify**: Same status update visible
 5. **Screenshot**: Save as `10_audience_sees_approval.png`
 
@@ -304,7 +304,7 @@ This script provides step-by-step instructions for executing the critical user j
 ### Critical Path Verification
 
 - [ ] DJ can login successfully
-- [ ] DJ can access event management dashboard  
+- [ ] DJ can access event management dashboard
 - [ ] Audience members can join events
 - [ ] Song requests can be submitted
 - [ ] Voting system works correctly
@@ -316,17 +316,17 @@ This script provides step-by-step instructions for executing the critical user j
 
 ### Performance Observations
 
-- Request submission response time: ________
-- Vote registration time: ________
-- Real-time update latency: ________
-- Dashboard load time: ________
+- Request submission response time: **\_\_\_\_**
+- Vote registration time: **\_\_\_\_**
+- Real-time update latency: **\_\_\_\_**
+- Dashboard load time: **\_\_\_\_**
 
 ### Issues Discovered
 
 | Issue | Severity | Description | Browser | Reproduction Steps |
-|-------|----------|-------------|---------|-------------------|
-| | | | | |
-| | | | | |
+| ----- | -------- | ----------- | ------- | ------------------ |
+|       |          |             |         |                    |
+|       |          |             |         |                    |
 
 ### Screenshots Captured
 
@@ -355,7 +355,7 @@ _Use this space to record any additional observations, unexpected behaviors, or 
 
 ---
 
-**Test Completed By**: ________________  
-**Date**: ________________  
-**Time**: ________________  
-**Environment**: ________________
+**Test Completed By**: **\*\***\_\_\_\_**\*\***  
+**Date**: **\*\***\_\_\_\_**\*\***  
+**Time**: **\*\***\_\_\_\_**\*\***  
+**Environment**: **\*\***\_\_\_\_**\*\***

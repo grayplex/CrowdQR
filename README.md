@@ -21,7 +21,7 @@ This app is built as part of a Software Engineering Capstone project and is desi
 ### Prerequisites
 
 - Docker 20.10+ and Docker Compose 2.0+
-- 2GB+ RAM available  
+- 2GB+ RAM available
 - Ports 5000, 8080, 5433 available
 
 ### 1-Minute Deployment
@@ -205,16 +205,16 @@ Empower independent DJs and small venue performers to create more interactive, e
 
 ## 🧱 Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | ASP.NET Razor Pages / Blazor (WebAssembly optional) |
-| **Backend** | ASP.NET Core Web API |
-| **Database** | PostgreSQL (via EF Core) |
-| **Real-Time** | SignalR |
-| **Authentication** | Session-based or JWT |
-| **Caching/Rate Limiting** | Redis (optional) |
-| **Containerization** | Docker + Docker Compose |
-| **CI/CD (optional)** | GitHub Actions (for build/test) |
+| Layer                     | Technology                                          |
+| ------------------------- | --------------------------------------------------- |
+| **Frontend**              | ASP.NET Razor Pages / Blazor (WebAssembly optional) |
+| **Backend**               | ASP.NET Core Web API                                |
+| **Database**              | PostgreSQL (via EF Core)                            |
+| **Real-Time**             | SignalR                                             |
+| **Authentication**        | Session-based or JWT                                |
+| **Caching/Rate Limiting** | Redis (optional)                                    |
+| **Containerization**      | Docker + Docker Compose                             |
+| **CI/CD (optional)**      | GitHub Actions (for build/test)                     |
 
 ---
 
