@@ -301,19 +301,19 @@ This document outlines comprehensive End-to-End (E2E) test scenarios for the Cro
 
 ### Test Environment Details
 
-- **Date of Testing**: ___________
-- **Tester Name**: ___________
-- **Application Version**: ___________
-- **Browser Versions Tested**: ___________
-- **Devices Used**: ___________
+- **Date of Testing**: \***\*\_\_\_\*\***
+- **Tester Name**: \***\*\_\_\_\*\***
+- **Application Version**: \***\*\_\_\_\*\***
+- **Browser Versions Tested**: \***\*\_\_\_\*\***
+- **Devices Used**: \***\*\_\_\_\*\***
 
 ### Issues Discovered
 
 | Issue # | Severity | Description | Reproduction Steps | Status |
-|---------|----------|-------------|-------------------|--------|
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
+| ------- | -------- | ----------- | ------------------ | ------ |
+| 1       |          |             |                    |        |
+| 2       |          |             |                    |        |
+| 3       |          |             |                    |        |
 
 ### Enhancement Suggestions
 
@@ -323,7 +323,7 @@ This document outlines comprehensive End-to-End (E2E) test scenarios for the Cro
 
 ### Performance Observations
 
-- Average request submission time: ___________
-- SignalR message delivery time: ___________
-- Dashboard load time: ___________
-- Concurrent user capacity: ___________
+- Average request submission time: \***\*\_\_\_\*\***
+- SignalR message delivery time: \***\*\_\_\_\*\***
+- Dashboard load time: \***\*\_\_\_\*\***
+- Concurrent user capacity: \***\*\_\_\_\*\***

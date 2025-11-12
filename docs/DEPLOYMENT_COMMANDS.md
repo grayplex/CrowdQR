@@ -4,13 +4,13 @@ This document provides a comprehensive reference for all deployment-related comm
 
 ## Quick Reference
 
-| Command | Description |
-|---------|-------------|
-| `docker-compose up -d` | Start all services in detached mode |
-| `docker-compose down` | Stop and remove all services |
-| `docker-compose logs -f` | Follow logs from all services |
-| `docker-compose ps` | Show running containers status |
-| `docker system prune -f` | Clean up unused Docker resources |
+| Command                  | Description                         |
+| ------------------------ | ----------------------------------- |
+| `docker-compose up -d`   | Start all services in detached mode |
+| `docker-compose down`    | Stop and remove all services        |
+| `docker-compose logs -f` | Follow logs from all services       |
+| `docker-compose ps`      | Show running containers status      |
+| `docker system prune -f` | Clean up unused Docker resources    |
 
 ## Build Commands
 
@@ -39,7 +39,7 @@ docker-compose build --no-cache
 cd src
 docker build -f CrowdQR.Api/Dockerfile -t crowdqr-api:latest .
 
-# Build Web image  
+# Build Web image
 docker build -f CrowdQR.Web/Dockerfile -t crowdqr-web:latest .
 
 # Build with specific tag
@@ -126,7 +126,7 @@ cd src/CrowdQR.Api
 dotnet run
 
 # Run Web app locally (in another terminal)
-cd src/CrowdQR.Web  
+cd src/CrowdQR.Web
 dotnet run
 ```
 
@@ -344,7 +344,7 @@ docker-compose exec -T db psql -U crowdqr_prod crowdqr_production < backup_20240
 ### Production Test
 
 ```bash
-# Run complete deployment test  
+# Run complete deployment test
 chmod +x deploy/production-test.sh
 ./deploy/production-test.sh
 
@@ -412,7 +412,7 @@ fi
 # Restart specific service
 docker-compose restart api
 
-# Force recreate service  
+# Force recreate service
 docker-compose up -d --force-recreate api
 
 # Scale service (if needed)
