@@ -181,13 +181,103 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | — | Pending |
+| ASYNC-01 | Phase 1 | Pending |
+| ASYNC-02 | Phase 1 | Pending |
+| ASYNC-03 | Phase 1 | Pending |
+| ASYNC-04 | Phase 1 | Pending |
+| ASYNC-05 | Phase 1 | Pending |
+| ASYNC-06 | Phase 1 | Pending |
+| QUERY-01 | Phase 1 | Pending |
+| QUERY-02 | Phase 1 | Pending |
+| QUERY-03 | Phase 1 | Pending |
+| QUERY-04 | Phase 1 | Pending |
+| QUERY-05 | Phase 1 | Pending |
+| QUERY-06 | Phase 1 | Pending |
+| QUERY-07 | Phase 1 | Pending |
+| INDEX-01 | Phase 1 | Pending |
+| INDEX-02 | Phase 1 | Pending |
+| INDEX-03 | Phase 1 | Pending |
+| INDEX-04 | Phase 1 | Pending |
+| INDEX-05 | Phase 1 | Pending |
+| CONN-01 | Phase 1 | Pending |
+| CONN-02 | Phase 1 | Pending |
+| CONN-03 | Phase 1 | Pending |
+| CACHE-01 | Phase 2 | Pending |
+| CACHE-02 | Phase 2 | Pending |
+| CACHE-03 | Phase 2 | Pending |
+| CACHE-04 | Phase 2 | Pending |
+| RCACHE-01 | Phase 2 | Pending |
+| RCACHE-02 | Phase 2 | Pending |
+| RCACHE-03 | Phase 2 | Pending |
+| RCACHE-04 | Phase 2 | Pending |
+| SCACHE-01 | Phase 2 | Pending |
+| SCACHE-02 | Phase 2 | Pending |
+| SCACHE-03 | Phase 2 | Pending |
+| SCACHE-04 | Phase 2 | Pending |
+| SCACHE-05 | Phase 2 | Pending |
+| VOTE-01 | Phase 2 | Pending |
+| VOTE-02 | Phase 2 | Pending |
+| VOTE-03 | Phase 2 | Pending |
+| VOTE-04 | Phase 2 | Pending |
+| SIGNALR-01 | Phase 3 | Pending |
+| SIGNALR-02 | Phase 3 | Pending |
+| SIGNALR-03 | Phase 3 | Pending |
+| SIGNALR-04 | Phase 3 | Pending |
+| SIGNALR-05 | Phase 3 | Pending |
+| SIGNALR-06 | Phase 3 | Pending |
+| SIGNALR-07 | Phase 3 | Pending |
+| COMP-01 | Phase 3 | Pending |
+| COMP-02 | Phase 3 | Pending |
+| COMP-03 | Phase 3 | Pending |
+| COMP-04 | Phase 3 | Pending |
+| PROF-01 | Phase 4 | Pending |
+| PROF-02 | Phase 4 | Pending |
+| PROF-03 | Phase 4 | Pending |
+| PROF-04 | Phase 4 | Pending |
+| OTEL-01 | Phase 4 | Pending |
+| OTEL-02 | Phase 4 | Pending |
+| OTEL-03 | Phase 4 | Pending |
+| OTEL-04 | Phase 4 | Pending |
+| OTEL-05 | Phase 4 | Pending |
+| OTEL-06 | Phase 4 | Pending |
+| METRIC-01 | Phase 4 | Pending |
+| METRIC-02 | Phase 4 | Pending |
+| METRIC-03 | Phase 4 | Pending |
+| METRIC-04 | Phase 4 | Pending |
+| METRIC-05 | Phase 4 | Pending |
+| METRIC-06 | Phase 4 | Pending |
+| METRIC-07 | Phase 4 | Pending |
+| DASH-01 | Phase 4 | Pending |
+| DASH-02 | Phase 4 | Pending |
+| DASH-03 | Phase 4 | Pending |
+| DASH-04 | Phase 4 | Pending |
+| LOAD-01 | Phase 4 | Pending |
+| LOAD-02 | Phase 4 | Pending |
+| LOAD-03 | Phase 4 | Pending |
+| LOAD-04 | Phase 4 | Pending |
+| LOAD-05 | Phase 4 | Pending |
+| VALID-01 | Phase 4 | Pending |
+| VALID-02 | Phase 4 | Pending |
+| VALID-03 | Phase 4 | Pending |
+| VALID-04 | Phase 4 | Pending |
+| VALID-05 | Phase 4 | Pending |
+| RATE-01 | Phase 5 | Pending |
+| RATE-02 | Phase 5 | Pending |
+| RATE-03 | Phase 5 | Pending |
+| RATE-04 | Phase 5 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 76 total
-- Mapped to phases: (pending roadmap creation)
-- Unmapped: (pending roadmap creation)
+- Mapped to phases: 76/76 (100%)
+- Unmapped: 0
+
+**Phase Distribution:**
+- Phase 1 (Foundation): 21 requirements
+- Phase 2 (Caching Layer): 17 requirements
+- Phase 3 (SignalR Optimization): 11 requirements
+- Phase 4 (Observability & Validation): 23 requirements
+- Phase 5 (Production Hardening): 4 requirements
 
 ---
 *Requirements defined: 2026-02-05*
-*Last updated: 2026-02-05 after initial definition*
+*Last updated: 2026-02-05 after roadmap creation*
