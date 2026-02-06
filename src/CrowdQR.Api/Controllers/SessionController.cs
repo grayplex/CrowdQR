@@ -1,4 +1,4 @@
-﻿using CrowdQR.Api.Data;
+using CrowdQR.Api.Data;
 using CrowdQR.Api.Models;
 using CrowdQR.Api.Services;
 using CrowdQR.Shared.Models.DTOs;
@@ -18,7 +18,7 @@ namespace CrowdQR.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class SessionController(
-    CrowdQRContext context, 
+    CrowdQRContext context,
     ILogger<SessionController> logger,
     IHubNotificationService hubNotificationService) : ControllerBase
 {
@@ -36,22 +36,19 @@ public class SessionController(
     public async Task<ActionResult<IEnumerable<object>>> GetSessions()
     {
         var sessions = await _context.Sessions
-            .Include(s => s.User)
-            .Include(s => s.Event)
+            .AsNoTracking()
+            .Select(s => new
+            {
+                s.SessionId,
+                User = new { s.User.UserId, s.User.Username },
+                Event = new { s.Event.EventId, s.Event.Name },
+                s.ClientIP,
+                s.LastSeen,
+                s.RequestCount
+            })
             .ToListAsync();
 
-        // Format the response to avoid circular references
-        var formattedSessions = sessions.Select(s => new
-        {
-            s.SessionId,
-            User = new { s.User.UserId, s.User.Username },
-            Event = new { s.Event.EventId, s.Event.Name },
-            s.ClientIP,
-            s.LastSeen,
-            s.RequestCount
-        }).ToList();
-
-        return Ok(formattedSessions);
+        return Ok(sessions);
     }
 
     // GET: api/session/5
@@ -65,9 +62,19 @@ public class SessionController(
     public async Task<ActionResult<object>> GetSession(int id)
     {
         var session = await _context.Sessions
-            .Include(s => s.User)
-            .Include(s => s.Event)
-            .FirstOrDefaultAsync(s => s.SessionId == id);
+            .AsNoTracking()
+            .Where(s => s.SessionId == id)
+            .Select(s => new
+            {
+                s.SessionId,
+                s.UserId,
+                User = new { s.User.UserId, s.User.Username },
+                Event = new { s.Event.EventId, s.Event.Name },
+                s.ClientIP,
+                s.LastSeen,
+                s.RequestCount
+            })
+            .FirstOrDefaultAsync();
 
         if (session == null)
         {
@@ -80,18 +87,7 @@ public class SessionController(
             return Forbid();
         }
 
-        // Format the response to avoid circular references
-        var formattedSession = new
-        {
-            session.SessionId,
-            User = new { session.User.UserId, session.User.Username },
-            Event = new { session.Event.EventId, session.Event.Name },
-            session.ClientIP,
-            session.LastSeen,
-            session.RequestCount
-        };
-
-        return Ok(formattedSession);
+        return Ok(session);
     }
 
     // GET: api/session/event/5
@@ -104,37 +100,39 @@ public class SessionController(
     [Authorize]
     public async Task<ActionResult<IEnumerable<object>>> GetSessionsByEvent(int eventId)
     {
-        // Get the event to check if the requesting user is the event DJ
-        var @event = await _context.Events.FindAsync(eventId);
-        if (@event == null)
+        // Get the event DJ user ID to check authorization
+        var djUserId = await _context.Events
+            .Where(e => e.EventId == eventId)
+            .Select(e => e.DjUserId)
+            .FirstOrDefaultAsync();
+
+        if (djUserId == 0)
         {
             return NotFound("Event not found");
         }
 
         // Only allow the event's DJ or other DJs to access all sessions
-        if (!User.IsInRole("DJ") && @event.DjUserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
+        if (!User.IsInRole("DJ") && djUserId != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
         {
             return Forbid();
         }
 
         // Get all sessions for the event
         var sessions = await _context.Sessions
+            .AsNoTracking()
             .Where(s => s.EventId == eventId)
-            .Include(s => s.User)
+            .Select(s => new
+            {
+                s.SessionId,
+                User = new { s.User.UserId, s.User.Username },
+                s.EventId,
+                s.ClientIP,
+                s.LastSeen,
+                s.RequestCount
+            })
             .ToListAsync();
 
-        // Format the response to avoid circular references
-        var formattedSessions = sessions.Select(s => new
-        {
-            s.SessionId,
-            User = new { s.User.UserId, s.User.Username },
-            s.EventId,
-            s.ClientIP,
-            s.LastSeen,
-            s.RequestCount
-        }).ToList();
-
-        return Ok(formattedSessions);
+        return Ok(sessions);
     }
 
     // GET: api/session/user/5
@@ -154,22 +152,20 @@ public class SessionController(
         }
 
         var sessions = await _context.Sessions
+            .AsNoTracking()
             .Where(s => s.UserId == userId)
-            .Include(s => s.Event)
+            .Select(s => new
+            {
+                s.SessionId,
+                s.UserId,
+                Event = new { s.Event.EventId, s.Event.Name },
+                s.ClientIP,
+                s.LastSeen,
+                s.RequestCount
+            })
             .ToListAsync();
 
-        // Format the response to avoid circular references
-        var formattedSessions = sessions.Select(s => new
-        {
-            s.SessionId,
-            s.UserId,
-            Event = new { s.Event.EventId, s.Event.Name },
-            s.ClientIP,
-            s.LastSeen,
-            s.RequestCount
-        }).ToList();
-
-        return Ok(formattedSessions);
+        return Ok(sessions);
     }
 
     // GET: api/session/event/5/user/10
@@ -185,36 +181,37 @@ public class SessionController(
     {
         // Check if this is the user's own session or the DJ for this event
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var @event = await _context.Events.FindAsync(eventId);
+        var djUserId = await _context.Events
+            .Where(e => e.EventId == eventId)
+            .Select(e => e.DjUserId)
+            .FirstOrDefaultAsync();
 
         if (!User.IsInRole("DJ") && userId != currentUserId &&
-            (@event == null || @event.DjUserId != currentUserId))
+            (djUserId == 0 || djUserId != currentUserId))
         {
             return Forbid();
         }
 
         var session = await _context.Sessions
-            .Include(s => s.User)
-            .Include(s => s.Event)
-            .FirstOrDefaultAsync(s => s.EventId == eventId && s.UserId == userId);
+            .AsNoTracking()
+            .Where(s => s.EventId == eventId && s.UserId == userId)
+            .Select(s => new
+            {
+                s.SessionId,
+                User = new { s.User.UserId, s.User.Username },
+                Event = new { s.Event.EventId, s.Event.Name },
+                s.ClientIP,
+                s.LastSeen,
+                s.RequestCount
+            })
+            .FirstOrDefaultAsync();
 
         if (session == null)
         {
             return NotFound();
         }
 
-        // Format the response to avoid circular references
-        var formattedSession = new
-        {
-            session.SessionId,
-            User = new { session.User.UserId, session.User.Username },
-            Event = new { session.Event.EventId, session.Event.Name },
-            session.ClientIP,
-            session.LastSeen,
-            session.RequestCount
-        };
-
-        return Ok(formattedSession);
+        return Ok(session);
     }
 
     // POST: api/session

@@ -60,22 +60,18 @@ public class UserController(
             return Forbid();
         }
 
-        var user = await _context.Users.FindAsync(id);
+        var user = await _context.Users
+            .AsNoTracking()
+            .Where(u => u.UserId == id)
+            .Select(u => new { u.UserId, u.Username, u.Role, u.CreatedAt })
+            .FirstOrDefaultAsync();
+
         if (user == null)
         {
             return NotFound();
         }
 
-        // Format the response to avoid circular references
-        var formattedUser = new
-        {
-            user.UserId,
-            user.Username,
-            user.Role,
-            user.CreatedAt
-        };
-
-        return Ok(formattedUser);
+        return Ok(user);
     }
 
     // GET: api/user/role/{role}
@@ -89,19 +85,12 @@ public class UserController(
     public async Task<ActionResult<IEnumerable<object>>> GetUsersByRole(UserRole role)
     {
         var users = await _context.Users
+            .AsNoTracking()
             .Where(u => u.Role == role)
+            .Select(u => new { u.UserId, u.Username, u.Role, u.CreatedAt })
             .ToListAsync();
 
-        // Format the response to avoid circular references
-        var formattedUsers = users.Select(u => new
-        {
-            u.UserId,
-            u.Username,
-            u.Role,
-            u.CreatedAt
-        }).ToList();
-
-        return Ok(formattedUsers);
+        return Ok(users);
     }
 
     // GET: api/user/username/{username}
@@ -114,23 +103,17 @@ public class UserController(
     public async Task<ActionResult<object>> GetUserByUsername(string username)
     {
         var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Username == username);
+            .AsNoTracking()
+            .Where(u => u.Username == username)
+            .Select(u => new { u.UserId, u.Username, u.Role, u.CreatedAt })
+            .FirstOrDefaultAsync();
 
         if (user == null)
         {
             return NotFound();
         }
 
-        // Format the response to avoid circular references
-        var formattedUser = new
-        {
-            user.UserId,
-            user.Username,
-            user.Role,
-            user.CreatedAt
-        };
-
-        return Ok(formattedUser);
+        return Ok(user);
     }
 
     // POST: api/user

@@ -32,60 +32,63 @@ public class ReportsController(CrowdQRContext context, ILogger<ReportsController
     {
         // Verify the event exists and the DJ owns it
         var djUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var eventEntity = await _context.Events
-            .Include(e => e.DJ)
-            .FirstOrDefaultAsync(e => e.EventId == eventId && e.DjUserId == djUserId);
+        var eventInfo = await _context.Events
+            .AsNoTracking()
+            .Where(e => e.EventId == eventId && e.DjUserId == djUserId)
+            .Select(e => new { e.EventId, e.Name, e.Slug, e.IsActive })
+            .FirstOrDefaultAsync();
 
-        if (eventEntity == null)
+        if (eventInfo == null)
         {
             return NotFound("Event not found or access denied");
         }
 
-        // Get all requests with their votes and users
-        var requests = await _context.Requests
+        // Get all requests with vote counts using server-side projection
+        var reportRows = await _context.Requests
+            .AsNoTracking()
             .Where(r => r.EventId == eventId)
-            .Include(r => r.User)
-            .Include(r => r.Votes)
             .OrderByDescending(r => r.Votes.Count)
             .ThenBy(r => r.CreatedAt)
+            .Select(r => new EventPerformanceReportRowDto
+            {
+                SongName = r.SongName,
+                ArtistName = r.ArtistName,
+                Requester = r.User.Username,
+                VoteCount = r.Votes.Count,
+                Status = r.Status.ToString(),
+                RequestedAt = r.CreatedAt,
+                StatusUpdatedAt = r.Status != Shared.Models.Enums.RequestStatus.Pending ? (DateTime?)DateTime.UtcNow : null
+            })
             .ToListAsync();
 
-        // Build report rows
-        var reportRows = requests.Select(r => new EventPerformanceReportRowDto
-        {
-            SongName = r.SongName,
-            ArtistName = r.ArtistName,
-            Requester = r.User.Username,
-            VoteCount = r.Votes.Count,
-            Status = r.Status.ToString(),
-            RequestedAt = r.CreatedAt,
-            StatusUpdatedAt = r.Status != Shared.Models.Enums.RequestStatus.Pending ? DateTime.UtcNow : null // Mock status update time
-        }).ToList();
-
-        // Calculate summary statistics
-        var uniqueParticipants = requests.Select(r => r.UserId).Distinct().Count();
-        var totalVotes = requests.Sum(r => r.Votes.Count);
+        // Calculate summary statistics from projected data
+        var uniqueParticipants = await _context.Requests
+            .AsNoTracking()
+            .Where(r => r.EventId == eventId)
+            .Select(r => r.UserId)
+            .Distinct()
+            .CountAsync();
 
         var summary = new EventPerformanceReportSummaryDto
         {
-            TotalRequests = requests.Count,
-            ApprovedRequests = requests.Count(r => r.Status == Shared.Models.Enums.RequestStatus.Approved),
-            RejectedRequests = requests.Count(r => r.Status == Shared.Models.Enums.RequestStatus.Rejected),
-            TotalVotes = totalVotes,
+            TotalRequests = reportRows.Count,
+            ApprovedRequests = reportRows.Count(r => r.Status == Shared.Models.Enums.RequestStatus.Approved.ToString()),
+            RejectedRequests = reportRows.Count(r => r.Status == Shared.Models.Enums.RequestStatus.Rejected.ToString()),
+            TotalVotes = reportRows.Sum(r => r.VoteCount),
             UniqueParticipants = uniqueParticipants
         };
 
         // Build the report
         var report = new EventPerformanceReportDto
         {
-            Title = $"Event Performance Report - {eventEntity.Name}",
+            Title = $"Event Performance Report - {eventInfo.Name}",
             GeneratedAt = DateTime.UtcNow,
             Event = new EventDto
             {
-                EventId = eventEntity.EventId,
-                Name = eventEntity.Name,
-                Slug = eventEntity.Slug,
-                IsActive = eventEntity.IsActive
+                EventId = eventInfo.EventId,
+                Name = eventInfo.Name,
+                Slug = eventInfo.Slug,
+                IsActive = eventInfo.IsActive
             },
             Rows = reportRows,
             Summary = summary
@@ -102,46 +105,47 @@ public class ReportsController(CrowdQRContext context, ILogger<ReportsController
     public async Task<ActionResult<DjAnalyticsReportDto>> GetDjAnalyticsReport()
     {
         var djUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var djUser = await _context.Users.FindAsync(djUserId);
+        var djUsername = await _context.Users
+            .Where(u => u.UserId == djUserId)
+            .Select(u => u.Username)
+            .FirstOrDefaultAsync();
 
-        if (djUser == null)
+        if (djUsername == null)
         {
             return NotFound("DJ not found");
         }
 
-        // Get all events for this DJ
-        var events = await _context.Events
+        // Get all events for this DJ with aggregated metrics using server-side projection
+        var reportRows = await _context.Events
+            .AsNoTracking()
             .Where(e => e.DjUserId == djUserId)
-            .Include(e => e.Requests)
-                .ThenInclude(r => r.Votes)
+            .Select(e => new DjAnalyticsReportRowDto
+            {
+                EventName = e.Name,
+                EventSlug = e.Slug,
+                EventDate = e.CreatedAt,
+                TotalRequests = e.Requests.Count,
+                ApprovedRequests = e.Requests.Count(r => r.Status == Shared.Models.Enums.RequestStatus.Approved),
+                RejectedRequests = e.Requests.Count(r => r.Status == Shared.Models.Enums.RequestStatus.Rejected),
+                TotalVotes = e.Requests.SelectMany(r => r.Votes).Count(),
+                UniqueParticipants = e.Requests.Select(r => r.UserId).Distinct().Count(),
+                IsActive = e.IsActive
+            })
+            .OrderByDescending(r => r.EventDate)
             .ToListAsync();
-
-        // Build report rows - one per event
-        var reportRows = events.Select(e => new DjAnalyticsReportRowDto
-        {
-            EventName = e.Name,
-            EventSlug = e.Slug,
-            EventDate = e.CreatedAt,
-            TotalRequests = e.Requests.Count,
-            ApprovedRequests = e.Requests.Count(r => r.Status == Shared.Models.Enums.RequestStatus.Approved),
-            RejectedRequests = e.Requests.Count(r => r.Status == Shared.Models.Enums.RequestStatus.Rejected),
-            TotalVotes = e.Requests.Sum(r => r.Votes.Count),
-            UniqueParticipants = e.Requests.Select(r => r.UserId).Distinct().Count(),
-            IsActive = e.IsActive
-        }).OrderByDescending(r => r.EventDate).ToList();
 
         var report = new DjAnalyticsReportDto
         {
-            Title = $"DJ Analytics Report - {djUser.Username}",
+            Title = $"DJ Analytics Report - {djUsername}",
             GeneratedAt = DateTime.UtcNow,
-            DjName = djUser.Username,
+            DjName = djUsername,
             Rows = reportRows,
             Summary = new DjAnalyticsReportSummaryDto
             {
-                TotalEvents = events.Count,
-                ActiveEvents = events.Count(e => e.IsActive),
-                TotalRequests = events.Sum(e => e.Requests.Count),
-                TotalVotes = events.SelectMany<Event, Vote>(e => e.Requests.SelectMany<Request, Vote>(r => r.Votes)).Count(),
+                TotalEvents = reportRows.Count,
+                ActiveEvents = reportRows.Count(e => e.IsActive),
+                TotalRequests = reportRows.Sum(r => r.TotalRequests),
+                TotalVotes = reportRows.Sum(r => r.TotalVotes),
                 MostPopularEvent = reportRows.OrderByDescending(r => r.TotalRequests).FirstOrDefault()?.EventName,
                 HighestEventVoteCount = reportRows.Count != 0 ? reportRows.Max(r => r.TotalVotes) : 0
             }
