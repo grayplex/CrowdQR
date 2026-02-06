@@ -30,10 +30,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Critical queries (event details, request lists) complete in under 50ms with proper indexes
   4. Connection pool metrics show no connection leaks or exhaustion under normal load
   5. Integration tests validate query counts remain under target thresholds
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] TBD (to be created via /gsd:plan-phase 1)
+- [ ] 01-01-PLAN.md — EF Core infrastructure: async analyzers, DbContext pooling, connection pool config, query logging
+- [ ] 01-02-PLAN.md — Query optimization: EventController and DashboardController (N+1 fix, projections, AsNoTracking)
+- [ ] 01-03-PLAN.md — Query optimization: Request, Vote, Session, User, Reports controllers (AsNoTracking, projections)
+- [ ] 01-04-PLAN.md — Database indexing: foreign key indexes, composite indexes, EF Core migration
+- [ ] 01-05-PLAN.md — MiniProfiler: install, configure with EF Core integration, dev-only profiling UI
+- [ ] 01-06-PLAN.md — Integration tests: query count budgets, N+1 regression detection
 
 ### Phase 2: Caching Layer
 **Goal**: Implement distributed caching with Redis to reduce database load and improve response times
@@ -102,7 +107,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/6 | Planned | - |
 | 2. Caching Layer | 0/TBD | Not started | - |
 | 3. SignalR Optimization | 0/TBD | Not started | - |
 | 4. Observability & Validation | 0/TBD | Not started | - |
