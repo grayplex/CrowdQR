@@ -28,75 +28,55 @@ public class DashboardController(CrowdQRContext context, ILogger<DashboardContro
     [HttpGet("event/{eventId}/summary")]
     public async Task<ActionResult<object>> GetEventSummary(int eventId)
     {
-        // Ensure event exists
-        var eventExists = await _context.Events.AnyAsync(e => e.EventId == eventId);
+        // Verify event exists
+        var eventExists = await _context.Events.AsNoTracking().AnyAsync(e => e.EventId == eventId);
         if (!eventExists)
         {
             return NotFound("Event not found");
         }
 
-        // Get requests with their vote counts
+        // Get requests with vote counts via projection (single efficient query)
         var requests = await _context.Requests
+            .AsNoTracking()
             .Where(r => r.EventId == eventId)
-            .Include(r => r.User)
-            .Include(r => r.Votes)
+            .Select(r => new
+            {
+                r.RequestId,
+                r.SongName,
+                r.ArtistName,
+                Requester = r.User.Username,
+                VoteCount = r.Votes.Count,
+                r.Status,
+                r.CreatedAt
+            })
             .ToListAsync();
 
-        // Get active user sessions
-        var activeSessions = await _context.Sessions
+        // Get active sessions separately (avoids cartesian with requests)
+        var activeUsers = await _context.Sessions
+            .AsNoTracking()
             .Where(s => s.EventId == eventId && s.LastSeen > DateTime.UtcNow.AddMinutes(-15))
-            .Include(s => s.User)
-            .ToListAsync();
-
-        var pendingRequests = requests
-            .Where(r => r.Status == RequestStatus.Pending)
-            .OrderByDescending(r => r.Votes.Count)
-            .Select(r => new
-            {
-                r.RequestId,
-                r.SongName,
-                r.ArtistName,
-                Requester = r.User.Username,
-                VoteCount = r.Votes.Count,
-                r.CreatedAt
-            })
-            .ToList();
-
-        var approvedRequests = requests
-            .Where(r => r.Status == RequestStatus.Approved)
-            .OrderByDescending(r => r.CreatedAt)
-            .Select(r => new
-            {
-                r.RequestId,
-                r.SongName,
-                r.ArtistName,
-                Requester = r.User.Username,
-                VoteCount = r.Votes.Count,
-                r.CreatedAt
-            })
-            .ToList();
-
-        var rejectedRequests = requests
-            .Where(r => r.Status == RequestStatus.Rejected)
-            .OrderByDescending(r => r.CreatedAt)
-            .Select(r => new
-            {
-                r.RequestId,
-                r.SongName,
-                r.ArtistName,
-                Requester = r.User.Username,
-                VoteCount = r.Votes.Count,
-                r.CreatedAt
-            })
-            .ToList();
-
-        var activeUsers = activeSessions
             .Select(s => new
             {
                 s.User.UserId,
                 s.User.Username,
                 s.LastSeen
             })
+            .ToListAsync();
+
+        // Build summary from projected results (in-memory filtering is fine on already-fetched data)
+        var pendingRequests = requests
+            .Where(r => r.Status == RequestStatus.Pending)
+            .OrderByDescending(r => r.VoteCount)
+            .ToList();
+
+        var approvedRequests = requests
+            .Where(r => r.Status == RequestStatus.Approved)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToList();
+
+        var rejectedRequests = requests
+            .Where(r => r.Status == RequestStatus.Rejected)
+            .OrderByDescending(r => r.CreatedAt)
             .ToList();
 
         var summary = new
@@ -106,7 +86,7 @@ public class DashboardController(CrowdQRContext context, ILogger<DashboardContro
             PendingRequests = pendingRequests.Count,
             ApprovedRequests = approvedRequests.Count,
             RejectedRequests = rejectedRequests.Count,
-            TotalVotes = requests.Sum(r => r.Votes.Count),
+            TotalVotes = requests.Sum(r => r.VoteCount),
             ActiveUsers = activeUsers.Count,
             TopRequests = pendingRequests.Take(10).ToList(),
             RecentlyApproved = approvedRequests.Take(5).ToList(),
@@ -132,23 +112,16 @@ public class DashboardController(CrowdQRContext context, ILogger<DashboardContro
         [FromQuery] int count = 10)
     {
         // Ensure event exists
-        var eventExists = await _context.Events.AnyAsync(e => e.EventId == eventId);
+        var eventExists = await _context.Events.AsNoTracking().AnyAsync(e => e.EventId == eventId);
         if (!eventExists)
         {
             return NotFound("Event not found");
         }
 
-        // Get top requests
+        // Get top requests with server-side projection and SQL ordering
         var requests = await _context.Requests
+            .AsNoTracking()
             .Where(r => r.EventId == eventId && r.Status == status)
-            .Include(r => r.User)
-            .Include(r => r.Votes)
-            .OrderByDescending(r => r.Votes.Count)
-            .ThenBy(r => r.CreatedAt)
-            .Take(count)
-            .ToListAsync();
-
-        var formattedRequests = requests
             .Select(r => new
             {
                 r.RequestId,
@@ -158,9 +131,12 @@ public class DashboardController(CrowdQRContext context, ILogger<DashboardContro
                 VoteCount = r.Votes.Count,
                 r.CreatedAt
             })
-            .ToList();
+            .OrderByDescending(r => r.VoteCount)
+            .ThenBy(r => r.CreatedAt)
+            .Take(count)
+            .ToListAsync();
 
-        return Ok(formattedRequests);
+        return Ok(requests);
     }
 
     // GET: api/dashboard/dj/5/event-stats
@@ -173,42 +149,33 @@ public class DashboardController(CrowdQRContext context, ILogger<DashboardContro
     public async Task<ActionResult<object>> GetDJEventStats(int djUserId)
     {
         // Ensure DJ exists
-        var djExists = await _context.Users.AnyAsync(u => u.UserId == djUserId && u.Role == UserRole.DJ);
+        var djExists = await _context.Users.AsNoTracking().AnyAsync(u => u.UserId == djUserId && u.Role == UserRole.DJ);
         if (!djExists)
         {
             return NotFound("DJ not found");
         }
 
-        // Get all events for the DJ
-        var events = await _context.Events
+        // Single projection query with SQL subqueries for counts
+        var eventStats = await _context.Events
+            .AsNoTracking()
             .Where(e => e.DjUserId == djUserId)
-            .ToListAsync();
-
-        var eventIds = events.Select(e => e.EventId).ToList();
-
-        // Get requests for all events
-        var requests = await _context.Requests
-            .Where(r => eventIds.Contains(r.EventId))
-            .Include(r => r.Votes)
-            .ToListAsync();
-
-        // Group requests by event
-        var eventStats = events.Select(e => new
-        {
-            e.EventId,
-            e.Name,
-            e.Slug,
-            e.IsActive,
-            e.CreatedAt,
-            RequestCounts = new
+            .Select(e => new
             {
-                Total = requests.Count(r => r.EventId == e.EventId),
-                Pending = requests.Count(r => r.EventId == e.EventId && r.Status == RequestStatus.Pending),
-                Approved = requests.Count(r => r.EventId == e.EventId && r.Status == RequestStatus.Approved),
-                Rejected = requests.Count(r => r.EventId == e.EventId && r.Status == RequestStatus.Rejected)
-            },
-            TotalVotes = requests.Where(r => r.EventId == e.EventId).Sum(r => r.Votes.Count)
-        }).ToList();
+                e.EventId,
+                e.Name,
+                e.Slug,
+                e.IsActive,
+                e.CreatedAt,
+                RequestCounts = new
+                {
+                    Total = e.Requests.Count,
+                    Pending = e.Requests.Count(r => r.Status == RequestStatus.Pending),
+                    Approved = e.Requests.Count(r => r.Status == RequestStatus.Approved),
+                    Rejected = e.Requests.Count(r => r.Status == RequestStatus.Rejected)
+                },
+                TotalVotes = e.Requests.SelectMany(r => r.Votes).Count()
+            })
+            .ToListAsync();
 
         return Ok(eventStats);
     }
