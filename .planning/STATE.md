@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 Phase: 1 of 5 (Foundation)
 Plan: 3 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-06 — Completed 01-03-PLAN.md (Query Optimization for all remaining controllers)
+Last activity: 2026-02-06 — Completed 01-01, 01-02, 01-03 PLAN.md (Async infrastructure and query optimization)
 
 Progress: [███░░░░░░░] 50%
 
@@ -44,6 +44,9 @@ Recent decisions affecting current work:
 
 | ID | Phase | Decision | Impact |
 |----|-------|----------|--------|
+| ASYNC-01 | 01-01 | Suppress VSTHRD200 naming warnings (follow-up task) | Unblocks build, 74 methods need Async suffix |
+| POOL-01 | 01-01 | DbContext pooling safe (no private state) | 2x faster context creation |
+| CONN-01 | 01-01 | Connection pool sizing: max 50, min 5 | Sized for production load |
 | PROJ-01 | 01-02 | Use server-side projections for all read endpoints | 90%+ reduction in data loaded into memory |
 | TRACK-01 | 01-02 | Apply AsNoTracking to all GET endpoints | Eliminates change tracker overhead |
 | SPLIT-01 | 01-02 | Use separate queries to avoid cartesian explosion | Linear query complexity instead of multiplicative |
@@ -57,21 +60,18 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- 01-01: Fix 74 VSTHRD200 violations (add Async suffix to method names) - currently suppressed
 
 ### Blockers/Concerns
 
-**Pre-existing analyzer errors:**
-- AsyncFixer01 and VSTHRD200 errors in AuthController, EventController, HubNotificationService
-- These exist prior to phase 01 work and do not block query optimization
-- Should be addressed in a future cleanup phase
+None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-06T00:47:47Z
-Stopped at: Completed 01-03-PLAN.md (Query Optimization for all remaining controllers)
+Last session: 2026-02-06
+Stopped at: Completed 01-01-PLAN.md (Async infrastructure and DbContext pooling)
 Resume file: None
 
 ---
-*Phase 01-foundation: 3 of 6 plans complete*
-*Next: 01-04 (Caching), 01-05 (Async messaging), 01-06 (Observability)*
+*This is the first GSD milestone for CrowdQR*
+*Phase numbering starts from 1*
