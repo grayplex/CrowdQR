@@ -29,25 +29,23 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
     public async Task<ActionResult<IEnumerable<object>>> GetEvents()
     {
         var events = await _context.Events
-            .Include(e => e.DJ)
+            .AsNoTracking()
+            .Select(e => new
+            {
+                e.EventId,
+                e.Name,
+                e.Slug,
+                e.CreatedAt,
+                e.IsActive,
+                DJ = new
+                {
+                    e.DJ.UserId,
+                    e.DJ.Username
+                }
+            })
             .ToListAsync();
 
-        // Format the response to avoid circular references
-        var formattedEvents = events.Select(e => new
-        {
-            e.EventId,
-            e.Name,
-            e.Slug,
-            e.CreatedAt,
-            e.IsActive,
-            DJ = new
-            {
-                e.DJ.UserId,
-                e.DJ.Username
-            }
-        }).ToList();
-
-        return Ok(formattedEvents);
+        return Ok(events);
     }
 
     // GET: api/event/5
@@ -59,40 +57,37 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
     [HttpGet("{id}")]
     public async Task<ActionResult<object>> GetEvent(int id)
     {
-        var @event = await _context.Events
-            .Include(e => e.DJ)
-            .Include(e => e.Requests)
-                .ThenInclude(r => r.Votes)
-            .FirstOrDefaultAsync(e => e.EventId == id);
+        var formattedEvent = await _context.Events
+            .AsNoTracking()
+            .Where(e => e.EventId == id)
+            .Select(e => new
+            {
+                e.EventId,
+                e.Name,
+                e.Slug,
+                e.CreatedAt,
+                e.IsActive,
+                DJ = new
+                {
+                    e.DJ.UserId,
+                    e.DJ.Username
+                },
+                Requests = e.Requests.Select(r => new
+                {
+                    r.RequestId,
+                    r.SongName,
+                    r.ArtistName,
+                    r.Status,
+                    r.CreatedAt,
+                    VoteCount = r.Votes.Count
+                }).ToList()
+            })
+            .FirstOrDefaultAsync();
 
-        if (@event == null)
+        if (formattedEvent == null)
         {
             return NotFound();
         }
-
-        // Create a version of the event without circular references
-        var formattedEvent = new
-        {
-            @event.EventId,
-            @event.Name,
-            @event.Slug,
-            @event.CreatedAt,
-            @event.IsActive,
-            DJ = new
-            {
-                @event.DJ.UserId,
-                @event.DJ.Username
-            },
-            Requests = @event.Requests.Select(r => new
-            {
-                r.RequestId,
-                r.SongName,
-                r.ArtistName,
-                r.Status,
-                r.CreatedAt,
-                VoteCount = r.Votes.Count
-            }).ToList()
-        };
 
         return Ok(formattedEvent);
     }
@@ -106,40 +101,37 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
     [HttpGet("slug/{slug}")]
     public async Task<ActionResult<object>> GetEventBySlug(string slug)
     {
-        var @event = await _context.Events
-            .Include(e => e.DJ)
-            .Include(e => e.Requests)
-                .ThenInclude(r => r.Votes)
-            .FirstOrDefaultAsync(e => e.Slug == slug);
+        var formattedEvent = await _context.Events
+            .AsNoTracking()
+            .Where(e => e.Slug == slug)
+            .Select(e => new
+            {
+                e.EventId,
+                e.Name,
+                e.Slug,
+                e.CreatedAt,
+                e.IsActive,
+                DJ = new
+                {
+                    e.DJ.UserId,
+                    e.DJ.Username
+                },
+                Requests = e.Requests.Select(r => new
+                {
+                    r.RequestId,
+                    r.SongName,
+                    r.ArtistName,
+                    r.Status,
+                    r.CreatedAt,
+                    VoteCount = r.Votes.Count
+                }).ToList()
+            })
+            .FirstOrDefaultAsync();
 
-        if (@event == null)
+        if (formattedEvent == null)
         {
             return NotFound();
         }
-
-        // Create a version of the event without circular references
-        var formattedEvent = new
-        {
-            @event.EventId,
-            @event.Name,
-            @event.Slug,
-            @event.CreatedAt,
-            @event.IsActive,
-            DJ = new
-            {
-                @event.DJ.UserId,
-                @event.DJ.Username
-            },
-            Requests = @event.Requests.Select(r => new
-            {
-                r.RequestId,
-                r.SongName,
-                r.ArtistName,
-                r.Status,
-                r.CreatedAt,
-                VoteCount = r.Votes.Count
-            }).ToList()
-        };
 
         return Ok(formattedEvent);
     }
@@ -169,28 +161,26 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
         }
 
         var events = await _context.Events
+            .AsNoTracking()
             .Where(e => e.DjUserId == djUserId)
-            .Include(e => e.DJ)
+            .Select(e => new
+            {
+                e.EventId,
+                e.Name,
+                e.Slug,
+                e.CreatedAt,
+                e.IsActive,
+                DJ = new
+                {
+                    e.DJ.UserId,
+                    e.DJ.Username
+                }
+            })
             .ToListAsync();
 
         _logger.LogInformation("Retrieved {Count} events for DJ {DjUserId}", events.Count, djUserId);
 
-        // Format the response to avoid circular references
-        var formattedEvents = events.Select(e => new
-        {
-            e.EventId,
-            e.Name,
-            e.Slug,
-            e.CreatedAt,
-            e.IsActive,
-            DJ = new
-            {
-                e.DJ.UserId,
-                e.DJ.Username
-            }
-        }).ToList();
-
-        return Ok(formattedEvents);
+        return Ok(events);
     }
 
     // POST: api/event
@@ -367,8 +357,8 @@ public class EventController(CrowdQRContext context, ILogger<EventController> lo
         return NoContent();
     }
 
-    private async Task<bool> EventExists(int id)
+    private Task<bool> EventExists(int id)
     {
-        return await _context.Events.AnyAsync(e => e.EventId == id);
+        return _context.Events.AnyAsync(e => e.EventId == id);
     }
 }

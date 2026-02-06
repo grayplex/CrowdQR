@@ -8,5 +8,6 @@
         <Company>CrowdQR</Company>
         <Authors>grayplex</Authors>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <ConfigureAwaitOptions>SuppressDefault</ConfigureAwaitOptions>
     </PropertyGroup>
 </Project>
