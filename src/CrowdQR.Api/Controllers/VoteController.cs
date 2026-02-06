@@ -35,18 +35,12 @@ public class VoteController(
     [Authorize(Roles = "DJ")]
     public async Task<ActionResult<IEnumerable<object>>> GetVotes()
     {
-        var votes = await _context.Votes.ToListAsync();
+        var votes = await _context.Votes
+            .AsNoTracking()
+            .Select(v => new { v.VoteId, v.RequestId, v.UserId, v.CreatedAt })
+            .ToListAsync();
 
-        // Convert to plain objects without reference tracking
-        var plainVotes = votes.Select(v => new
-        {
-            v.VoteId,
-            v.RequestId,
-            v.UserId,
-            v.CreatedAt
-        }).ToList();
-
-        return Ok(plainVotes);
+        return Ok(votes);
     }
 
     // GET: api/vote/5
@@ -59,23 +53,18 @@ public class VoteController(
     [Authorize]
     public async Task<ActionResult<object>> GetVote(int id)
     {
-        var vote = await _context.Votes.FindAsync(id);
+        var vote = await _context.Votes
+            .AsNoTracking()
+            .Where(v => v.VoteId == id)
+            .Select(v => new { v.VoteId, v.RequestId, v.UserId, v.CreatedAt })
+            .FirstOrDefaultAsync();
 
         if (vote == null)
         {
             return NotFound();
         }
 
-        // Convert to plain object
-        var plainVote = new
-        {
-            vote.VoteId,
-            vote.RequestId,
-            vote.UserId,
-            vote.CreatedAt
-        };
-
-        return plainVote;
+        return vote;
     }
 
     // GET: api/vote/request/5
@@ -89,19 +78,12 @@ public class VoteController(
     public async Task<ActionResult<IEnumerable<object>>> GetVotesByRequest(int requestId)
     {
         var votes = await _context.Votes
+            .AsNoTracking()
             .Where(v => v.RequestId == requestId)
+            .Select(v => new { v.VoteId, v.RequestId, v.UserId, v.CreatedAt })
             .ToListAsync();
 
-        // Convert to plain objects without reference tracking
-        var plainVotes = votes.Select(v => new
-        {
-            v.VoteId,
-            v.RequestId,
-            v.UserId,
-            v.CreatedAt
-        }).ToList();
-
-        return Ok(plainVotes);
+        return Ok(votes);
     }
 
     // POST: api/vote
