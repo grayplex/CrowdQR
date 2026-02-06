@@ -17,45 +17,45 @@ public class HubNotificationService(IHubContext<CrowdQRHub> hubContext, ILogger<
     private readonly ILogger<HubNotificationService> _logger = logger;
 
     /// <inheritdoc/>
-    public async Task NotifyRequestAdded(int eventId, int requestId, string requesterName)
+    public Task NotifyRequestAdded(int eventId, int requestId, string requesterName)
     {
         _logger.LogInformation("Broadcasting RequestAdded for event {EventId}, request {RequestId}", eventId, requestId);
-        await _hubContext.Clients.Group($"event-{eventId}")
+        return _hubContext.Clients.Group($"event-{eventId}")
             .SendAsync("requestAdded", new { eventId, requestId, requesterName });
     }
 
     /// <inheritdoc/>
-    public async Task NotifyRequestStatusUpdated(int eventId, int requestId, string newStatus)
+    public Task NotifyRequestStatusUpdated(int eventId, int requestId, string newStatus)
     {
         _logger.LogInformation("Broadcasting RequestStatusUpdated for event {EventId}, request {RequestId}, status {Status}",
             eventId, requestId, newStatus);
-        await _hubContext.Clients.Group($"event-{eventId}")
+        return _hubContext.Clients.Group($"event-{eventId}")
             .SendAsync("requestStatusUpdated", new { eventId, requestId, status = newStatus });
     }
 
     /// <inheritdoc/>
-    public async Task NotifyVoteAdded(int eventId, int requestId, int voteCount, int userId)
+    public Task NotifyVoteAdded(int eventId, int requestId, int voteCount, int userId)
     {
         _logger.LogInformation("Broadcasting VoteAdded for event {EventId}, request {RequestId}, count {VoteCount}",
             eventId, requestId, voteCount);
-        await _hubContext.Clients.Group($"event-{eventId}")
+        return _hubContext.Clients.Group($"event-{eventId}")
             .SendAsync("voteAdded", new { eventId, requestId, voteCount, userId });
     }
 
     /// <inheritdoc/>
-    public async Task NotifyVoteRemoved(int eventId, int requestId, int voteCount)
+    public Task NotifyVoteRemoved(int eventId, int requestId, int voteCount)
     {
         _logger.LogInformation("Broadcasting VoteRemoved for event {EventId}, request {RequestId}, count {VoteCount}",
             eventId, requestId, voteCount);
-        await _hubContext.Clients.Group($"event-{eventId}")
+        return _hubContext.Clients.Group($"event-{eventId}")
             .SendAsync("voteRemoved", new { eventId, requestId, voteCount });
     }
 
     /// <inheritdoc/>
-    public async Task NotifyUserJoinedEvent(int eventId, string username)
+    public Task NotifyUserJoinedEvent(int eventId, string username)
     {
         _logger.LogInformation("Broadcasting UserJoinedEvent for event {EventId}, user {Username}", eventId, username);
-        await _hubContext.Clients.Group($"event-{eventId}")
+        return _hubContext.Clients.Group($"event-{eventId}")
             .SendAsync("userJoinedEvent", new { eventId, username });
     }
 }

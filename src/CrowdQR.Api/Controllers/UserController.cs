@@ -36,18 +36,12 @@ public class UserController(
     [Authorize(Roles = "DJ")] // Only DJs should see all users
     public async Task<ActionResult<IEnumerable<object>>> GetUsers()
     {
-        var users = await _context.Users.ToListAsync();
+        var users = await _context.Users
+            .AsNoTracking()
+            .Select(u => new { u.UserId, u.Username, u.Role, u.CreatedAt })
+            .ToListAsync();
 
-        // Format the response to avoid circular references
-        var formattedUsers = users.Select(u => new
-        {
-            u.UserId,
-            u.Username,
-            u.Role,
-            u.CreatedAt
-        }).ToList();
-
-        return Ok(formattedUsers);
+        return Ok(users);
     }
 
     // GET: api/user/5
@@ -309,8 +303,8 @@ public class UserController(
         });
     }
 
-    private async Task<bool> UserExists(int id)
+    private Task<bool> UserExists(int id)
     {
-        return await _context.Users.AnyAsync(u => u.UserId == id);
+        return _context.Users.AnyAsync(u => u.UserId == id);
     }
 }

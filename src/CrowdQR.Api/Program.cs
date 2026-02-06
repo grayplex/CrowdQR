@@ -16,12 +16,21 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
 // Add services to the container.
-builder.Services.AddDbContext<CrowdQRContext>(options =>
+builder.Services.AddDbContextPool<CrowdQRContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("Default") ??
         BuildConnectionString(builder.Configuration);
 
     options.UseNpgsql(connectionString);
+
+    // Explicitly disable lazy loading to prevent accidental N+1 patterns (CONTEXT.md locked decision)
+    options.ConfigureWarnings(w => w.Throw(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.LazyLoadOnDisposedContextWarning));
+
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
+        options.EnableDetailedErrors();
+    }
 });
 
 // Add controllers and other services
@@ -265,7 +274,7 @@ static string BuildConnectionString(IConfiguration configuration)
     var username = configuration["DB_USER"] ?? "postgres";
     var password = configuration["DB_PASSWORD"] ?? "postgres";
 
-    return $"Host={host};Port={port};Database={database};Username={username};Password={password}";
+    return $"Host={host};Port={port};Database={database};Username={username};Password={password};Maximum Pool Size=50;Minimum Pool Size=5;Connection Idle Lifetime=300;Connection Pruning Interval=10";
 }
 
 namespace CrowdQR.Api

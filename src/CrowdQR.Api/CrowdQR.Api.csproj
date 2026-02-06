@@ -5,11 +5,17 @@
 	<Nullable>enable</Nullable>
 	<ImplicitUsings>enable</ImplicitUsings>
 	<PreserveCompilationContext>true</PreserveCompilationContext>
+	<!-- Suppress VSTHRD200 (Async naming convention) - will fix in follow-up task -->
+	<NoWarn>$(NoWarn);VSTHRD200</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
 	<PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
 	<PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
+	<PackageReference Include="AsyncFixer" Version="1.6.0">
+	  <PrivateAssets>all</PrivateAssets>
+	  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	</PackageReference>
 	<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.21" />
 	<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.7" />
 	<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.7">
@@ -17,6 +23,10 @@
 	  <PrivateAssets>all</PrivateAssets>
 	</PackageReference>
 	<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.7" />
+	<PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.13.2">
+	  <PrivateAssets>all</PrivateAssets>
+	  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	</PackageReference>
 	<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 	<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
 	<PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />

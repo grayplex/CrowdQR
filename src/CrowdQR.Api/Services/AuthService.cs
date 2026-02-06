@@ -347,8 +347,8 @@ public class AuthService(
                 validationParameters.ValidIssuer,
                 validationParameters.ValidAudience);
 
-            var principal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
-            var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier);
+            var result = await tokenHandler.ValidateTokenAsync(token, validationParameters);
+            var userIdClaim = result.ClaimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
             {

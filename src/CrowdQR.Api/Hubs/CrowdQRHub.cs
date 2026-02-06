@@ -18,7 +18,7 @@ public class CrowdQRHub(ILogger<CrowdQRHub> logger) : Hub
     /// Called when a client connects to the hub.
     /// </summary>
     /// <returns>A task that represents the asynchronous connection operation.</returns>
-    public override async Task OnConnectedAsync()
+    public override Task OnConnectedAsync()
     {
         var httpContext = Context.GetHttpContext();
         _logger.LogInformation(
@@ -27,7 +27,7 @@ public class CrowdQRHub(ILogger<CrowdQRHub> logger) : Hub
             httpContext?.Connection?.RemoteIpAddress,
             httpContext?.Request.Headers.UserAgent);
 
-        await base.OnConnectedAsync();
+        return base.OnConnectedAsync();
     }
 
     /// <summary>
