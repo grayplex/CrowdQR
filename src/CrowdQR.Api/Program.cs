@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using StackExchange.Profiling.EntityFrameworkCore;
+using StackExchange.Profiling;
 
 var builder = WebApplication.CreateBuilder(args);
 
