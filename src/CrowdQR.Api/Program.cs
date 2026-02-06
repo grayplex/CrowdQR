@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using StackExchange.Profiling.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -137,6 +138,20 @@ builder.Services.AddCors(options =>
         });
 });
 
+// MiniProfiler for development query profiling
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddMiniProfiler(options =>
+    {
+        options.RouteBasePath = "/profiler";
+        // Only authorize in development
+        options.ResultsAuthorize = _ => true;
+        options.ResultsListAuthorize = _ => true;
+        // Track unviewed sessions for 30 minutes
+        options.TrackConnectionOpenClose = true;
+    }).AddEntityFramework(); // EF Core query tracking
+}
+
 var app = builder.Build();
 
 // Check for --wait-for-db argument - doing this AFTER app.Build() to avoid BuildServiceProvider issue
@@ -234,6 +249,12 @@ app.UseAuthorization(); // Enable authorization middleware
 
 app.UseAuthorizationLogging(); // Custom middleware for logging authorization events
 app.UseDjRoleValidation(); // Custom middleware for DJ role validation
+
+// MiniProfiler middleware for development profiling
+if (app.Environment.IsDevelopment())
+{
+    app.UseMiniProfiler();
+}
 
 // app.UseHttpsRedirection(); // Redirect HTTP to HTTPS // Disabled while in development mode
 app.MapHub<CrowdQRHub>("/hubs/crowdqr"); // Map SignalR hub

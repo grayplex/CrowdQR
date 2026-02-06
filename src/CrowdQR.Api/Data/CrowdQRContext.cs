@@ -69,6 +69,8 @@ public class CrowdQRContext(DbContextOptions<CrowdQRContext> options) : DbContex
         {
             entity.ToTable("Event");
             entity.HasIndex(e => e.Slug).IsUnique();
+            entity.HasIndex(e => e.DjUserId)
+                  .HasDatabaseName("IX_Event_DjUserId");
             entity.Property(e => e.EventId).HasColumnName("EventID");
             entity.Property(e => e.DjUserId).HasColumnName("DJUserID");
 
@@ -84,6 +86,10 @@ public class CrowdQRContext(DbContextOptions<CrowdQRContext> options) : DbContex
             entity.ToTable("Request");
             entity.HasIndex(e => e.EventId);
             entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.UserId)
+                  .HasDatabaseName("IX_Request_UserId");
+            entity.HasIndex(e => new { e.EventId, e.Status })
+                  .HasDatabaseName("IX_Request_EventId_Status");
             entity.Property(e => e.RequestId).HasColumnName("RequestID");
             entity.Property(e => e.UserId).HasColumnName("UserID");
             entity.Property(e => e.EventId).HasColumnName("EventID");
@@ -106,6 +112,10 @@ public class CrowdQRContext(DbContextOptions<CrowdQRContext> options) : DbContex
             entity.ToTable("Vote");
             entity.HasIndex(e => new { e.UserId, e.RequestId }).IsUnique()
                   .HasDatabaseName("one_vote_per_user");
+            entity.HasIndex(e => e.RequestId)
+                  .HasDatabaseName("IX_Vote_RequestId");
+            entity.HasIndex(e => e.UserId)
+                  .HasDatabaseName("IX_Vote_UserId");
             entity.Property(e => e.VoteId).HasColumnName("VoteID");
             entity.Property(e => e.RequestId).HasColumnName("RequestID");
             entity.Property(e => e.UserId).HasColumnName("UserID");
@@ -128,6 +138,8 @@ public class CrowdQRContext(DbContextOptions<CrowdQRContext> options) : DbContex
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.EventId, e.UserId }).IsUnique()
                   .HasDatabaseName("one_session_per_user_event");
+            entity.HasIndex(e => e.EventId)
+                  .HasDatabaseName("IX_Session_EventId");
             entity.Property(e => e.SessionId).HasColumnName("SessionID");
             entity.Property(e => e.UserId).HasColumnName("UserID");
             entity.Property(e => e.EventId).HasColumnName("EventID");
