@@ -149,5 +149,10 @@
 
 
     @await RenderSectionAsync("Scripts", required: false)
+
+    @if (HostEnvironment.IsDevelopment())
+    {
+        <mini-profiler />
+    }
 </body>
 </html>

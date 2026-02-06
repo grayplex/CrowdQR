@@ -139,6 +139,19 @@ builder.Services.AddHealthChecks()
         name: "api-health",
         tags: ["api", "external"]);
 
+// MiniProfiler for development profiling
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddMiniProfiler(options =>
+    {
+        options.RouteBasePath = "/profiler";
+        // Only authorize in development
+        options.ResultsAuthorize = _ => true;
+        options.ResultsListAuthorize = _ => true;
+        // Track unviewed sessions for 30 minutes
+        options.TrackConnectionOpenClose = true;
+    });
+}
 
 // Add services to the container
 builder.Services.AddRazorPages(options =>
@@ -176,6 +189,13 @@ app.UseRouting();
 app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// MiniProfiler middleware for development profiling
+if (app.Environment.IsDevelopment())
+{
+    app.UseMiniProfiler();
+}
+
 app.UseStatusCodePagesWithRedirects("/AccessDenied?code={0}");
 app.MapRazorPages();
 

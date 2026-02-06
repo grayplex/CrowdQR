@@ -17,7 +17,7 @@ namespace CrowdQR.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.5")
+                .HasAnnotation("ProductVersion", "9.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -53,7 +53,8 @@ namespace CrowdQR.Api.Migrations
 
                     b.HasKey("EventId");
 
-                    b.HasIndex("DjUserId");
+                    b.HasIndex("DjUserId")
+                        .HasDatabaseName("IX_Event_DjUserId");
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -100,7 +101,11 @@ namespace CrowdQR.Api.Migrations
 
                     b.HasIndex("Status");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_Request_UserId");
+
+                    b.HasIndex("EventId", "Status")
+                        .HasDatabaseName("IX_Request_EventId_Status");
 
                     b.ToTable("Request", (string)null);
                 });
@@ -133,6 +138,9 @@ namespace CrowdQR.Api.Migrations
                         .HasColumnName("UserID");
 
                     b.HasKey("SessionId");
+
+                    b.HasIndex("EventId")
+                        .HasDatabaseName("IX_Session_EventId");
 
                     b.HasIndex("UserId");
 
@@ -250,7 +258,11 @@ namespace CrowdQR.Api.Migrations
 
                     b.HasKey("VoteId");
 
-                    b.HasIndex("RequestId");
+                    b.HasIndex("RequestId")
+                        .HasDatabaseName("IX_Vote_RequestId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_Vote_UserId");
 
                     b.HasIndex("UserId", "RequestId")
                         .IsUnique()

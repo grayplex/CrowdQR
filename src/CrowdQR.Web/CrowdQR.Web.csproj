@@ -11,6 +11,7 @@
 	  <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.7" />
 	  <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.7" />
 	  <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.7" />
+	  <PackageReference Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\CrowdQR.Shared\CrowdQR.Shared.csproj" />
