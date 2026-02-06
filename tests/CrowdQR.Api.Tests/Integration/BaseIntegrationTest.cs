@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net.Http.Json;
+using System.Text.Json;
 using CrowdQR.Api.Data;
 using CrowdQR.Api.Tests.Helpers;
 using Microsoft.AspNetCore.Authentication;
@@ -39,6 +40,11 @@ public abstract class BaseIntegrationTest : IDisposable
     };
 
     /// <summary>
+    /// Query counting interceptor for tracking database commands.
+    /// </summary>
+    protected static readonly QueryCountingInterceptor QueryInterceptor = new();
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="BaseIntegrationTest"/> class.
     /// </summary>
     protected BaseIntegrationTest()
@@ -72,11 +78,12 @@ public abstract class BaseIntegrationTest : IDisposable
                         services.Remove(descriptor);
                     }
 
-                    // Add in-memory database
+                    // Add in-memory database with query counting interceptor
                     services.AddDbContext<CrowdQRContext>(options =>
                     {
                         options.UseInMemoryDatabase(DatabaseName);
                         options.EnableSensitiveDataLogging();
+                        options.AddInterceptors(QueryInterceptor);
                     });
 
                     // Configure test authentication if needed
@@ -170,6 +177,17 @@ public abstract class BaseIntegrationTest : IDisposable
         var user = await GetUserFromDatabaseAsync(username);
         user.Should().NotBeNull(because);
     }
+
+    /// <summary>
+    /// Resets the query counter to zero.
+    /// </summary>
+    protected void ResetQueryCount() => QueryInterceptor.Reset();
+
+    /// <summary>
+    /// Gets the current query count since last reset.
+    /// </summary>
+    /// <returns>The number of database commands executed.</returns>
+    protected int GetQueryCount() => QueryInterceptor.QueryCount;
 
     /// <summary>
     /// Disposes of the test resources.
