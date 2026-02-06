@@ -9,36 +9,36 @@ Requirements for Performance Enhancements milestone. Each maps to roadmap phases
 
 ### Async Patterns
 
-- [ ] **ASYNC-01**: All API controllers converted to async/await
-- [ ] **ASYNC-02**: All service layer methods converted to async/await
-- [ ] **ASYNC-03**: All data access layer methods converted to async/await
-- [ ] **ASYNC-04**: All blocking calls (.Result, .Wait()) eliminated
-- [ ] **ASYNC-05**: DbContext disposal uses await using pattern
-- [ ] **ASYNC-06**: IDbContextFactory used for background tasks if applicable
+- [x] **ASYNC-01**: All API controllers converted to async/await
+- [x] **ASYNC-02**: All service layer methods converted to async/await
+- [x] **ASYNC-03**: All data access layer methods converted to async/await
+- [x] **ASYNC-04**: All blocking calls (.Result, .Wait()) eliminated
+- [x] **ASYNC-05**: DbContext disposal uses await using pattern
+- [x] **ASYNC-06**: IDbContextFactory used for background tasks if applicable
 
 ### Database Query Optimization
 
-- [ ] **QUERY-01**: N+1 query pattern in EventController GetEvent fixed
-- [ ] **QUERY-02**: AsNoTracking() applied to all read-only queries
-- [ ] **QUERY-03**: Projections (Select) used instead of full entity materialization where beneficial
-- [ ] **QUERY-04**: Eager loading (Include/ThenInclude) used for required related entities
-- [ ] **QUERY-05**: AsSplitQuery() implemented for complex joins to avoid cartesian explosion
-- [ ] **QUERY-06**: Query logging enabled to detect N+1 patterns
-- [ ] **QUERY-07**: Integration tests verify query counts for critical paths
+- [x] **QUERY-01**: N+1 query pattern in EventController GetEvent fixed
+- [x] **QUERY-02**: AsNoTracking() applied to all read-only queries
+- [x] **QUERY-03**: Projections (Select) used instead of full entity materialization where beneficial
+- [x] **QUERY-04**: Eager loading (Include/ThenInclude) used for required related entities
+- [x] **QUERY-05**: AsSplitQuery() implemented for complex joins to avoid cartesian explosion
+- [x] **QUERY-06**: Query logging enabled to detect N+1 patterns
+- [x] **QUERY-07**: Integration tests verify query counts for critical paths
 
 ### Database Indexing
 
-- [ ] **INDEX-01**: Missing indexes identified through query profiling
-- [ ] **INDEX-02**: Indexes added for foreign keys used in joins
-- [ ] **INDEX-03**: Covering indexes created for hot query paths
-- [ ] **INDEX-04**: Composite indexes added for multi-column filter/sort queries
-- [ ] **INDEX-05**: Index effectiveness validated with EXPLAIN ANALYZE
+- [x] **INDEX-01**: Missing indexes identified through query profiling
+- [x] **INDEX-02**: Indexes added for foreign keys used in joins
+- [x] **INDEX-03**: Covering indexes created for hot query paths
+- [x] **INDEX-04**: Composite indexes added for multi-column filter/sort queries
+- [x] **INDEX-05**: Index effectiveness validated with EXPLAIN ANALYZE
 
 ### Connection Management
 
-- [ ] **CONN-01**: PostgreSQL connection pool sizing configured appropriately
-- [ ] **CONN-02**: Connection pool metrics monitored
-- [ ] **CONN-03**: Connection leaks prevented via proper disposal patterns
+- [x] **CONN-01**: PostgreSQL connection pool sizing configured appropriately
+- [x] **CONN-02**: Connection pool metrics monitored
+- [x] **CONN-03**: Connection leaks prevented via proper disposal patterns
 
 ### Caching Infrastructure
 
