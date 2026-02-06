@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 1 of 5 (Foundation)
-Plan: 3 of 6 in current phase
+Plan: 5 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-06 — Completed 01-01, 01-02, 01-03 PLAN.md (Async infrastructure and query optimization)
+Last activity: 2026-02-05 — Completed 01-05-PLAN.md (MiniProfiler integration for query profiling)
 
-Progress: [███░░░░░░░] 50%
+Progress: [████░░░░░░] 83%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 8 min
-- Total execution time: 0.4 hours
+- Total plans completed: 5
+- Average duration: 6 min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 3/6 | 24 min | 8 min |
+| 01-foundation | 5/6 | 28 min | 6 min |
 
 **Recent Trend:**
-- Last 3 plans: 01-01 (8min), 01-02 (8min), 01-03 (8min)
-- Trend: Consistent velocity
+- Last 3 plans: 01-02 (8min), 01-03 (8min), 01-05 (4min)
+- Trend: Improving velocity
 
 *Updated after each plan completion*
 
@@ -52,6 +52,9 @@ Recent decisions affecting current work:
 | SPLIT-01 | 01-02 | Use separate queries to avoid cartesian explosion | Linear query complexity instead of multiplicative |
 | PROJ-02 | 01-03 | Vote counts via SQL COUNT in projections | Avoids loading full vote collections into memory |
 | AUTH-01 | 01-03 | Extract auth fields via Select before full query | Minimizes data transfer for authorization checks |
+| PROF-01 | 01-05 | MiniProfiler enabled only in development | Zero production overhead, profiling only during development |
+| PROF-02 | 01-05 | Query count budgets per endpoint category | 1 query for simple GETs, 1-2 for related data, 2-3 for dashboards |
+| PROF-03 | 01-05 | Response time targets: p50 <20ms, p95 <50ms, p99 <100ms | CONTEXT.md locked decision for aggressive performance |
 
 **Milestone decisions:**
 - v1.1 Milestone: Follow foundation-first approach (async + queries before caching)
@@ -68,8 +71,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-06
-Stopped at: Completed 01-01-PLAN.md (Async infrastructure and DbContext pooling)
+Last session: 2026-02-05
+Stopped at: Completed 01-05-PLAN.md (MiniProfiler integration for query profiling)
 Resume file: None
 
 ---
