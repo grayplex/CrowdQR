@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 1 of 5 (Foundation)
-Plan: 5 of 6 in current phase
-Status: In progress
-Last activity: 2026-02-05 — Completed 01-04 and 01-05 PLAN.md (Database indexing and MiniProfiler integration)
+Plan: 6 of 6 in current phase
+Status: Phase complete
+Last activity: 2026-02-05 — Completed 01-06 (Query count integration tests)
 
-Progress: [████░░░░░░] 83%
+Progress: [██████░░░░] 100% Phase 1 complete
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: 7 min
-- Total execution time: 0.6 hours
+- Total execution time: 0.7 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 5/6 | 33 min | 7 min |
+| 01-foundation | 6/6 | 43 min | 7 min |
 
 **Recent Trend:**
-- Last 3 plans: 01-03 (8min), 01-04 (5min), 01-05 (4min)
-- Trend: Improving velocity
+- Last 3 plans: 01-04 (5min), 01-05 (4min), 01-06 (10min)
+- Trend: Consistent velocity, final plan slightly longer (test infrastructure setup)
 
 *Updated after each plan completion*
 
@@ -59,6 +59,9 @@ Recent decisions affecting current work:
 | PROF-01 | 01-05 | MiniProfiler enabled only in development | Zero production overhead, profiling only during development |
 | PROF-02 | 01-05 | Query count budgets per endpoint category | 1 query for simple GETs, 1-2 for related data, 2-3 for dashboards |
 | PROF-03 | 01-05 | Response time targets: p50 <20ms, p95 <50ms, p99 <100ms | CONTEXT.md locked decision for aggressive performance |
+| TEST-01 | 01-06 | Use DbCommandInterceptor for query counting | Accurate count of all database commands with thread-safe implementation |
+| TEST-02 | 01-06 | Use TestAuthenticationHandler for integration tests | Simpler test setup without password/token management |
+| TEST-03 | 01-06 | Generous query budgets to avoid flaky tests | Allow 1-2 extra queries while still catching N+1 patterns (10+ queries) |
 
 **Milestone decisions:**
 - v1.1 Milestone: Follow foundation-first approach (async + queries before caching)
@@ -76,8 +79,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 01-04 and 01-05 PLAN.md (Database indexing and MiniProfiler integration)
+Stopped at: Completed Phase 1 (01-06: Query count integration tests)
 Resume file: None
+Next: Phase 2 - Caching & SignalR
 
 ---
 *This is the first GSD milestone for CrowdQR*
